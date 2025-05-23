@@ -1,0 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700&display=swap');
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Comfortaa', sans-serif;
+  background-color: #f3f4f6;
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+.login-page {
+  display: flex;
+  height: 100%;
+}
+
+
+.login-leftside {
+  width: 50%;
+  height: 100vh;
+  background: 
+    linear-gradient(136deg, rgba(107, 0, 2, 0.8) 0%, rgba(164, 50, 52, 0.8) 50%, rgba(231, 219, 219, 0.8) 100%),
+    url('../assets/background.svg') center/cover no-repeat;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.container-imagelogo {
+  display: flex;
+  width: 25%;
+  height: 25%;
+  padding: 0px 36.954px 0px 37px;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  aspect-ratio: 1/1;
+}
+
+.vector1 {
+  width: 242.771px;
+  height: 345.977px;
+  flex-shrink: 0;
+}
+
+.vector2 {
+  width: 407.262px;
+  height: 515px;
+  flex-shrink: 0;
+  left: -50px;
+  bottom: 5px;
+}
+
+.container-subtitle {
+  text-align: center;
+  padding: 1rem;
+  font-weight: 100;
+}
+
+.login-subtitle {
+  font-weight: 300;
+  color: white;
+  font-family: 'Comfortaa', sans-serif;
+  text-align: center;
+  text-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+  font-size: 64px;
+  font-style: normal;
+  line-height: normal;
+  top: auto;
+}
+
+/* LADO DIREITO (login) */
+.login-container {
+  width: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+}
+
+.login-logo {
+  display: inline-block;
+  width: 75%;
+  height: 75%;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.login-box {
+  text-align: center;
+}
+
+.login-title {
+  font-family: 'Comfortaa', sans-serif;
+  font-size: 75px;
+  font-weight: 400;
+  line-height: normal;
+  color: #333;
+  font-style: normal;
+  margin-bottom: 2rem;
+}
+
+/* Botão de login */
+.login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 320px;
+  height: 50px;
+  font-size: 20px;
+  border: 1px solid #ccc;
+  border-radius: 25px;
+  background-color: #fff;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+}
+
+.login-button:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Ícone do Google */
+.google-icon {
+  width: 18px;
+  height: 18px;
+}
