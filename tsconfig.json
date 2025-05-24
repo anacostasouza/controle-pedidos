@@ -1,14 +1,19 @@
 {
   "compilerOptions": {
-	"target": "ESNext",
-	"module": "ESNext",
-	"moduleResolution": "Node",
-	"strict": true,
-	"jsx": "react-jsx",
-	"esModuleInterop": true,
-	"skipLibCheck": true,
-	"forceConsistentCasingInFileNames": true,
-	"types": ["vite/client"]
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "strict": true,
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["vite/client"],
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
-  "include": ["src/"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts"]
 }

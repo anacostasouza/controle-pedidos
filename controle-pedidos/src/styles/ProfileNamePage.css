@@ -1,0 +1,284 @@
+
+@import url("https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700&display=swap");
+
+:root {
+  --card-bg-color: #cdc0c0;
+  --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --card-border-radius: 12px;
+  --button-bg-color: #a43234; 
+  --button-hover-bg-color: #8a2a2c;
+  --button-active-bg-color: #7a2426;
+  --button-text-color: #ffffff;
+  --title-color: #212529;
+  --subtitle-color: #6c757d;
+  --input-border-color: #ced4da;
+  --input-focus-border-color: #a43234;
+  --input-focus-shadow: 0 0 0 0.2rem rgba(164, 50, 52, 0.25);
+  --error-bg-color: #f8d7da;
+  --error-text-color: #721c24;
+  --error-border-color: #f5c6cb;
+  --select-arrow-color: #495057;
+}
+
+.profile-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #f3f4f6;
+  padding: 1rem;
+  box-sizing: border-box;
+  font-family: "Comfortaa", sans-serif;
+}
+
+.profile-container {
+  width: 100%;
+  max-width: 500px;
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.profile-card {
+  background-color: var(--card-bg-color);
+  border-radius: var(--card-border-radius);
+  box-shadow: var(--card-shadow);
+  padding: 2.5rem;
+  text-align: center;
+  transition: box-shadow 0.3s ease;
+}
+
+.profile-card:hover {
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
+}
+
+.profile-logo {
+  width: 100px;
+  height: auto;
+  margin-bottom: 1.5rem;
+  transition: transform 0.3s ease;
+}
+
+.profile-logo:hover {
+  transform: scale(1.05);
+}
+
+.profile-title {
+  font-family: "Comfortaa", sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--title-color);
+  margin: 0 0 0.5rem 0;
+}
+
+.profile-subtitle {
+  font-family: "Comfortaa", sans-serif;
+  font-size: 1rem;
+  color: var(--subtitle-color);
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.profile-form {
+  text-align: left;
+}
+
+.profile-error {
+  color: var(--error-text-color);
+  background-color: var(--error-bg-color);
+  border: 1px solid var(--error-border-color);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+  font-family: "Comfortaa", sans-serif;
+  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
+  40%, 60% { transform: translate3d(3px, 0, 0); }
+}
+
+.input-group {
+  margin-bottom: 1.5rem;
+}
+
+.profile-label {
+  display: block;
+  font-family: "Comfortaa", sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--title-color);
+  margin-bottom: 0.5rem;
+  transition: color 0.2s ease;
+}
+
+.profile-input,
+.profile-select {
+  display: block;
+  width: 100%;
+  height: 48px;
+  padding: 0.375rem 0.75rem;
+  font-family: "Comfortaa", sans-serif;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #495057;
+  background-color: #fff;
+  background-clip: padding-box;
+  border: 1px solid var(--input-border-color);
+  border-radius: 8px;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out, transform 0.2s ease;
+  box-sizing: border-box;
+}
+
+/* Estilização específica para o select */
+.profile-select {
+  appearance: none; /* Remove estilo padrão */
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23495057' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 16px 12px;
+  padding-right: 2rem; /* Espaço para o ícone */
+  cursor: pointer;
+}
+
+.profile-select::-ms-expand {
+  display: none; /* Remove seta padrão no IE */
+}
+
+.profile-input:focus,
+.profile-select:focus {
+  border-color: var(--input-focus-border-color);
+  outline: 0;
+  box-shadow: var(--input-focus-shadow);
+  transform: translateY(-1px);
+}
+
+.profile-input:hover,
+.profile-select:hover {
+  border-color: var(--input-focus-border-color);
+}
+
+.profile-button {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  font-family: "Comfortaa", sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+  text-align: center;
+  color: var(--button-text-color);
+  background-color: var(--button-bg-color);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  margin-top: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-button::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.1);
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+}
+
+.profile-button:hover {
+  background-color: var(--button-hover-bg-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.profile-button:hover::after {
+  transform: translateX(0);
+}
+
+.profile-button:active {
+  background-color: var(--button-active-bg-color);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  transform: translateY(0);
+}
+
+.profile-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Loading spinner para o botão */
+.profile-button.loading {
+  position: relative;
+  color: transparent;
+}
+
+.profile-button.loading::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Media queries para responsividade */
+@media (max-width: 576px) {
+  .profile-card {
+    padding: 1.5rem;
+    border-radius: 8px;
+  }
+  
+  .profile-title {
+    font-size: 2rem;
+  }
+  
+  .profile-logo {
+    width: 80px;
+  }
+  
+  .profile-input,
+  .profile-select,
+  .profile-button {
+    border-radius: 6px;
+    height: 44px;
+  }
+}
+
+/* Estilos para dispositivos muito pequenos */
+@media (max-width: 360px) {
+  .profile-card {
+    padding: 1.25rem;
+  }
+  
+  .profile-title {
+    font-size: 1.75rem;
+  }
+  
+  .profile-subtitle {
+    font-size: 0.9rem;
+  }
+}

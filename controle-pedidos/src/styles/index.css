@@ -1,9 +1,16 @@
-body {
-  height: 100vh;
-  width: 100vw;
-  margin: 0;
-  padding: 0;
-  font-family: 'comfortaa', sans-serif;
-  overflow: hidden;
-}
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;700&display=swap');
 
+:root {
+  --card-bg-color: #ffffff;
+  --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --card-border-radius: 12px;
+  --button-bg-color: #f8f9fa; /* Lighter gray for button */
+  --button-hover-bg-color: #e9ecef;
+  --button-active-bg-color: #dee2e6;
+  --button-text-color: #343a40;
+  --title-color: #212529; /* Darker title color */
+  --error-bg-color: #f8d7da;
+  --error-text-color: #721c24;
+  --error-border-color: #f5c6cb;
+  font-family: 'Comfortaa', sans-serif;
+}

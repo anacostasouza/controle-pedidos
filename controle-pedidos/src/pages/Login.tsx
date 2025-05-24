@@ -16,7 +16,12 @@ export default function Login() {
       const user = result.user;
       console.log("Usuário logado:", user.displayName);
 
-      navigate("/dashboard");
+      
+      localStorage.setItem("userId", user.uid);
+      localStorage.setItem("userEmail", user.email ?? "");
+
+      
+      navigate("/");
     } catch (error) {
       console.error("Erro ao logar:", error);
 
@@ -48,7 +53,7 @@ export default function Login() {
           {loginError && <p className="login-error-message">{loginError}</p>}
 
           <button onClick={handleLogin} className="login-button" aria-label="Entrar com sua conta Google">
-            <svg className="google-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 22" aria-hidden="true" focusable="false">
+            <svg className="google-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 22">
               <title>Ícone do Google</title>
               <path d="M21.0009 10.833C21.0009 9.96998 20.9289 9.33997 20.7739 8.68597H10.715V12.583H16.6199C16.5009 13.551 15.858 15.01 14.429 15.99L14.4089 16.12L17.59 18.535L17.8099 18.556C19.8339 16.725 21.0009 14.03 21.0009 10.833Z" fill="#4285F4"/>
               <path d="M10.7139 21.1C13.6069 21.1 16.035 20.167 17.809 18.557L14.4279 15.99C13.5229 16.608 12.3089 17.04 10.7139 17.04C7.88093 17.04 5.47596 15.208 4.61896 12.677L4.49292 12.687L1.18591 15.195L1.14294 15.313C2.90394 18.743 6.52293 21.1 10.7139 21.1Z" fill="#34A853"/>
@@ -58,11 +63,7 @@ export default function Login() {
             Entrar com Google
           </button>
         </div>
-        <div className="login-footer">
-          
-        </div>
       </div>
     </div>
   );
 }
-

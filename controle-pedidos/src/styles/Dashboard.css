@@ -1,0 +1,105 @@
+.dashboard-page {
+  padding: 2rem;
+  font-family: 'Comfortaa', sans-serif;
+  background-color: #f3f4f6;
+  box-sizing: border-box;
+}
+
+.container-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.container-title h2 {
+  font-size: 2rem;
+  color: var(--title-color);
+  margin: 0;
+}
+
+.container-title button {
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-family: 'Comfortaa', sans-serif;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.container-title button:hover {
+  background-color: var(--button-hover-bg-color);
+  transform: translateY(-1px);
+}
+
+.container-title button:active {
+  background-color: var(--button-active-bg-color);
+  transform: translateY(0);
+}
+
+.dashboard-page > button {
+  background-color: var(--button-bg-color);
+  color: var(--button-text-color);
+  border: none;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-family: 'Comfortaa', sans-serif;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-bottom: 1rem;
+  transition: all 0.2s ease;
+}
+
+.dashboard-page > button:hover {
+  background-color: var(--button-hover-bg-color);
+  transform: translateY(-1px);
+}
+
+.dashboard-page > button:active {
+  background-color: var(--button-active-bg-color);
+  transform: translateY(0);
+}
+
+/* Tabela de pedidos */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--card-bg-color);
+  box-shadow: var(--card-shadow);
+  border-radius: var(--card-border-radius);
+  overflow: hidden;
+}
+
+thead {
+  background-color: #dee2e6;
+  color: #212529;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #ccc;
+  font-size: 0.95rem;
+}
+
+tbody tr:hover {
+  background-color: #f1f3f5;
+}
+
+td button {
+  background-color: #e9ecef;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Comfortaa', sans-serif;
+  transition: all 0.2s ease;
+}
+
+td button:hover {
+  background-color: #ced4da;
+}

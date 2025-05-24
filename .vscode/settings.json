@@ -1,6 +1,9 @@
 {
     "cSpell.words": [
+        "Confortaa",
         "containar",
+        "cpolyline",
+        "csvg",
         "desenharlogo",
         "firebaseapp",
         "firebasestorage",
@@ -8,13 +11,17 @@
         "Firestore",
         "FMKG",
         "galpao",
+        "gestao",
         "gestaopedidos",
         "imagelogo",
         "leftside",
         "logologin",
         "LYKM",
+        "producao",
+        "profilename",
         "responsavel",
         "servico",
-        "Usuario"
+        "Usuario",
+        "usuariosetor"
     ]
 }
