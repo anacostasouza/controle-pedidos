@@ -4,4 +4,5 @@ export interface Usuario {
   nome: string;
   setor: string;
   admin: boolean;
+  statusConta: boolean;
 }

@@ -1,33 +1,20 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getFirestore, collection, addDoc, Timestamp } from "firebase/firestore";
+import type { Pedido } from "../types/Pedidos";
+import HeaderPage from '../components/headerPage';
 
-interface NovoPedido {
-  arte: boolean;
-  galpao: boolean;
-  nomeCliente: string;
-  numeroPedido: number;
-  pedidoID: string;
-  prazoArte: Timestamp | null;
-  prazoDeEntrega: Timestamp | null;
-  responsavel: string;
-  servico: string;
-  statusGalpao: string;
-  statusPedido: string;
-  tipoDeEntrega: string;
-  createdAt: Timestamp;
-}
 
 export default function NovoPedido() {
   const navigate = useNavigate();
   const [userName] = useState(localStorage.getItem("profileName") ?? "");
-  const [formData, setFormData] = useState<Omit<NovoPedido, 'pedidoID' | 'createdAt'>>({
+  const [formData, setFormData] = useState<Omit<Pedido, 'pedidoID' | 'createdAt'>>({
     arte: false,
     galpao: false,
     nomeCliente: "",
     numeroPedido: 0,
-    prazoArte: null,
-    prazoDeEntrega: null,
+    prazoArte: "",
+    prazoDeEntrega: "",
     responsavel: "",
     servico: "",
     statusGalpao: "",
@@ -78,8 +65,7 @@ export default function NovoPedido() {
   return (
     <div className="novo-pedido-page">
       <div className="container-title">
-        <h2>Controle de Pedidos</h2>
-        <button onClick={() => navigate("/ProfileEdit")}>👤 {userName}</button>
+        <HeaderPage />
       </div>
       
       <h1>Cadastro de Novo Pedido</h1>

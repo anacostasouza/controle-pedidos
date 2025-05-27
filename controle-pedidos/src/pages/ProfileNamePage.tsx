@@ -4,11 +4,8 @@ import { doc, setDoc, getFirestore } from "firebase/firestore";
 import "../styles/ProfileNamePage.css";
 import logoImage from "../assets/logologin.png";
 import type { JSX } from "react/jsx-dev-runtime";
-
-interface Setor {
-  value: string;
-  label: string;
-}
+import type { Setores } from "../types/Setores";
+//import type { Usuarios } from "../types/Usuarios";
 
 export default function ProfileNamePage(): JSX.Element {
   const navigate = useNavigate();
@@ -19,13 +16,14 @@ export default function ProfileNamePage(): JSX.Element {
   const [userId, setUserId] = useState("");
   const [userEmail, setUserEmail] = useState("");
 
-  const setores: Setor[] = [
-    { value: "producao_loja", label: "Produção Loja" },
-    { value: "producao_galpao", label: "Produção Galpão" },
-    { value: "comercial", label: "Comercial" },
-    { value: "gestao", label: "Gestão (Administrador)" },
+  const setores: Setores[] = [
+    { value: "producao_loja", label: "Produção/Loja" },
+    { value: "gestao", label: "Gestão" },
     { value: "rh", label: "RH" },
     { value: "financeiro", label: "Financeiro" },
+    { value: "comercial", label: "Comercial" },
+    { value: "producao_galpao", label: "Produção Galpão" },
+    { value: "suporte", label: "Suporte" }
   ];
 
   useEffect(() => {
@@ -62,12 +60,14 @@ export default function ProfileNamePage(): JSX.Element {
       const setorSelecionado = setores.find((s) => s.value === setor);
 
       const userData = {
+        usuarioID: userId,
         displayName: profileName,
         email: userEmail,
         setor,
         setorNome: setorSelecionado?.label ?? "",
         createdAt: new Date(),
         updatedAt: new Date(),
+        statusConta: true
       };
 
       await setDoc(userRef, userData, { merge: true });

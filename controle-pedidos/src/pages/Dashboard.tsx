@@ -1,32 +1,19 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getFirestore, collection, getDocs, Timestamp } from "firebase/firestore";
+import { getFirestore, collection, getDocs } from "firebase/firestore";
 import "../styles/Dashboard.css"; 
-interface Pedido {
-  id: string; 
-  arte: boolean;
-  galpao: boolean;
-  nomeCliente: string;
-  numeroPedido: number;
-  pedidoID: number;
-  prazoArte: Timestamp; 
-  prazoDeEntrega: Timestamp;
-  responsavel: string;
-  servico: string;
-  statusGalpao: string;
-  statusPedido: string;
-  tipoDeEntrega: string;
-}
+import HeaderPage from '../components/headerPage'; // Importando o HeaderPage
+import type { Pedido } from "../types/Pedidos";
 
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
-  const [userName, setUserName] = useState("");
+  const [ , setUserName ] = useState("");
 
   const userSetor = localStorage.getItem("userSetor");
 
-  const podeEditarStatus = userSetor === "producao_loja" || userSetor === "gestao";
+  const podeEditarStatus = userSetor === "producao_loja" || userSetor === "gestao" || userSetor === "suporte"; 
 
   useEffect(() => {
     const fetchPedidos = async () => {
@@ -45,19 +32,14 @@ export default function Dashboard() {
     fetchPedidos();
   }, []);
 
-  const irParaPerfil = () => {
-    navigate("/ProfileEdit");
-  };
-
   return (
     <div className="dashboard-page">
       <div className="container-title">
-        <h2>Controle de Pedidos</h2>
-        <button onClick={irParaPerfil}>👤 {userName}</button>
+        <HeaderPage/>
       </div>
 
       <button onClick={() => navigate("/NovoPedido")} className="novo-pedido-button">
-        ➕ Novo Pedido
+        Novo Pedido
       </button>
 
       <table border={1} cellPadding={10}>
@@ -65,8 +47,10 @@ export default function Dashboard() {
           <tr>
             <th>Nº Pedido</th>
             <th>Cliente</th>
+            <th>Responsável</th>
             <th>Serviço</th>
             <th>Prazo Entrega</th>
+            <th>Tipo de Entrega</th>
             <th>Status</th>
             {podeEditarStatus && <th>Ações</th>}
           </tr>
@@ -76,9 +60,20 @@ export default function Dashboard() {
             <tr key={pedido.id}>
               <td>{pedido.numeroPedido}</td>
               <td>{pedido.nomeCliente}</td>
+              <td>{pedido.responsavel}</td>
               <td>{pedido.servico}</td>
-              <td>{new Date(pedido.prazoDeEntrega.seconds * 1000).toLocaleString()}</td>
+              <td>
+                {pedido.prazoDeEntrega?.toDate().toLocaleString('pt-BR', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </td>
+              <td>{pedido.tipoDeEntrega}</td>
               <td>{pedido.statusPedido}</td>
+
               {podeEditarStatus && (
                 <td>
                   <button onClick={() => alert(`Editar status do pedido ${pedido.numeroPedido}`)}>
