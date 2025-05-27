@@ -1,105 +1,203 @@
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;700&display=swap');
+
 .dashboard-page {
-  padding: 2rem;
   font-family: 'Comfortaa', sans-serif;
   background-color: #f3f4f6;
+  min-height: 100vh;
+  padding: 2rem;
   box-sizing: border-box;
 }
 
-.container-title {
+.dashboard-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
 }
 
-.container-title h2 {
+.dashboard-controls h2 {
+  color: #212529;
+  font-weight: 700;
   font-size: 2rem;
-  color: var(--title-color);
   margin: 0;
 }
 
-.container-title button {
-  background-color: var(--button-bg-color);
-  color: var(--button-text-color);
-  border: none;
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
+.primary-button {
   font-family: 'Comfortaa', sans-serif;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.container-title button:hover {
-  background-color: var(--button-hover-bg-color);
-  transform: translateY(-1px);
-}
-
-.container-title button:active {
-  background-color: var(--button-active-bg-color);
-  transform: translateY(0);
-}
-
-.dashboard-page > button {
-  background-color: var(--button-bg-color);
-  color: var(--button-text-color);
+  background-color: #ffffff;
+  color: #343a40;
   border: none;
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
-  font-family: 'Comfortaa', sans-serif;
-  font-size: 1rem;
+  border-radius: 26px;
+  padding: 0.8rem 1.5rem;
+  font-weight: 500;
   cursor: pointer;
-  margin-bottom: 1rem;
-  transition: all 0.2s ease;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: all 0.25s ease;
 }
 
-.dashboard-page > button:hover {
-  background-color: var(--button-hover-bg-color);
-  transform: translateY(-1px);
+.primary-button:hover {
+  background-color: #e9ecef;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.dashboard-page > button:active {
-  background-color: var(--button-active-bg-color);
-  transform: translateY(0);
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  padding: 1rem;
 }
 
-/* Tabela de pedidos */
-table {
+.pedidos-table {
   width: 100%;
   border-collapse: collapse;
-  background-color: var(--card-bg-color);
-  box-shadow: var(--card-shadow);
-  border-radius: var(--card-border-radius);
-  overflow: hidden;
 }
 
-thead {
-  background-color: #dee2e6;
-  color: #212529;
-}
-
-th,
-td {
+.pedidos-table th {
   text-align: left;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #ccc;
-  font-size: 0.95rem;
+  padding: 1rem;
+  color: #212529;
+  font-weight: 700;
+  border-bottom: 2px solid #e9ecef;
 }
 
-tbody tr:hover {
-  background-color: #f1f3f5;
+.pedidos-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e9ecef;
+  vertical-align: middle;
 }
 
-td button {
-  background-color: #e9ecef;
-  border: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  cursor: pointer;
+.pedido-row:hover {
+  background-color: #f8f9fa;
+}
+
+.servico-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.subservico {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+.setor-badges {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.7rem;
+  color: white;
+}
+
+.badge.arte {
+  background-color: #6f42c1;
+}
+
+.badge.galpao {
+  background-color: #fd7e14;
+}
+
+.status {
+  padding: 0.3rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.9rem;
+  display: inline-block;
+}
+
+.status.iniciado {
+  background-color: #e3f2fd;
+  color: #91d6f1;
+}
+
+.status.em-aprovacao {
+  background-color: #fff3e0;
+  color: #ce7c39;
+}
+
+.status.concluido {
+  background-color: #e8f5e9;
+  color: #7deb82;
+}
+
+.action-button {
   font-family: 'Comfortaa', sans-serif;
+  background-color: #ffffff;
+  color: #343a40;
+  border: 1px solid #dee2e6;
+  border-radius: 20px;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  cursor: pointer;
   transition: all 0.2s ease;
 }
 
-td button:hover {
-  background-color: #ced4da;
+.action-button:hover {
+  background-color: #e9ecef;
+  transform: translateY(-1px);
+}
+
+.no-permission {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  color: #6c757d;
+  font-weight: 400;
+}
+
+.error-message {
+  color: #721c24;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 992px) {
+  .dashboard-page {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .pedidos-table {
+    min-width: 600px;
+  }
+}
+
+@media (max-width: 576px) {
+  .dashboard-page {
+    padding: 1rem;
+  }
+  
+  .dashboard-controls h2 {
+    font-size: 1.5rem;
+  }
+  
+  .primary-button {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
 }

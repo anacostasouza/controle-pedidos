@@ -5,7 +5,7 @@ import "../styles/ProfileNamePage.css";
 import logoImage from "../assets/logologin.png";
 import type { JSX } from "react/jsx-dev-runtime";
 import type { Setores } from "../types/Setores";
-//import type { Usuarios } from "../types/Usuarios";
+
 
 export default function ProfileNamePage(): JSX.Element {
   const navigate = useNavigate();

@@ -32,10 +32,9 @@
   letter-spacing: 0.5px;
 }
 
-
-.user-profile {
-  background: none;
-  border: none;
+.user-profile-button {
+  background: var(--user-profile-bg-color, #d68383);
+  border: 1px solid var(--user-profile-border-color, #e0e3e7);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -43,7 +42,20 @@
   padding: 8px 12px;
   border-radius: 20px;
   transition: all 0.3s ease;
-  border: 1px solid transparent;
+}
+
+
+
+.user-profile {
+  background: var(--user-profile-bg-color, #642121);
+  border: 1px solid var(--user-profile-border-color, #e0e3e7);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 20px;
+  transition: all 0.3s ease;
 }
 
 

@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, Navigate } from 'react-router-dom';
-import { auth } from "../services/firebase";
+import { useNavigate } from 'react-router-dom';
+import { auth } from "../../services/firebase"
 import { getFirestore, doc, getDoc } from "firebase/firestore";
-import "../styles/HeaderPage.css";
+import "../../styles/HeaderPage.css";
+
+
+
 
 interface UserProfile {
   nome: string;

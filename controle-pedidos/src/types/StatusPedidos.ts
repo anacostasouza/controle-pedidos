@@ -1,14 +1,15 @@
 import { Timestamp } from 'firebase/firestore';
-export type StatusPedido = Pedido['statusPedido'];
-export type StatusGalpao = Pedido['statusGalpao'];
-import type { Setores } from './Setores';
 import type { Pedido } from './Pedidos';
+import type { Servicos } from './Servicos';
+
+export type StatusPedido = Pedido extends { StatusPedido: infer T } ? T : never;
 
 export interface FiltrosPedidos {
     status?: StatusPedido;
     dataInicio?: Timestamp;
     dataFim?: Timestamp;
-    setor?: Setores['value'];
+    Servicos?: Servicos;
+    subServicos?: string;
     responsavel?: string;
     tipoDeEntrega?: string;
     arte?: boolean;
