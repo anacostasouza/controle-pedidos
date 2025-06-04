@@ -12,20 +12,13 @@ export default function Dashboard() {
   const userSetor = localStorage.getItem("userSetor") ?? "";
  
 
-  
-  const podeEditarPedido = (pedido: Pedido) => {
-    // Administradores podem editar qualquer pedido
-    if (["Gestão", "Suporte"].includes(userSetor)) return true;
-    
-    // Se o pedido tem setores específicos, verifica se o usuário pertence a um deles
-    if (pedido.setoresResponsaveis && pedido.setoresResponsaveis.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return pedido.setoresResponsaveis.includes(userSetor as any);
-    }
-    
-    // Caso padrão (pedidos antigos sem setores específicos)
-    return ["Produção Loja", "Galpão"].includes(userSetor);
+  const podeEditarPedido = (pedido: Pedido): boolean => {
+    if (userSetor === "GESTAO" || userSetor === "SUPORTE" || userSetor === "PRODUCAO_LOJA") return true;
+    if (pedido.requerArte && userSetor === "ARTE") return true;
+    if (pedido.requerGalpao && userSetor === "GALPAO") return true;
+    return false;
   };
+
 
   useEffect(() => {
     const fetchPedidos = async () => {
@@ -67,7 +60,8 @@ export default function Dashboard() {
         {loading ? (
           <div className="loading">Carregando pedidos...</div>
         ) : (
-          <table>
+        <div className="table-responsive">
+          <table className="pedidos-table">
             <thead>
               <tr>
                 <th>Nº Pedido</th>
@@ -80,7 +74,7 @@ export default function Dashboard() {
             </thead>
             <tbody>
               {pedidos.map((pedido) => (
-                <tr key={pedido.id}>
+                <tr key={pedido.id} className="pedidos-row">
                   <td>{pedido.numeroPedido}</td>
                   <td>{pedido.nomeCliente}</td>
                   <td>
@@ -103,6 +97,7 @@ export default function Dashboard() {
               ))}
             </tbody>
           </table>
+        </div>
         )}
       </div>
     </div>

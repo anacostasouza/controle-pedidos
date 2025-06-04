@@ -255,9 +255,8 @@ export default function NovoPedido() {
             />
           </div>
 
-          {formData.tipoDeEntrega === "Retirada" && (
             <div className="form-group">
-              <label htmlFor="horario-retirada-select">Horário de Retirada *</label>
+              <label htmlFor="horario-retirada-select">Horário de entrega *</label>
               <select
                 id="horario-retirada-select"
                 value={formData.horarioRetirada}
@@ -274,7 +273,6 @@ export default function NovoPedido() {
                 ))}
               </select>
             </div>
-          )}
         </div>
 
         <div className="form-row">

@@ -72,32 +72,48 @@
   width: 100%;
 }
 
-.table-responsive {
-  width: 100%;
-  overflow-x: auto;
-  background-color: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  padding: 1rem;
-}
-
 .pedidos-table {
   width: 100%;
   border-collapse: collapse;
+  font-family: 'Comfortaa', sans-serif;
+}
+
+.pedidos-table th, .pedidos-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+  vertical-align: middle;
 }
 
 .pedidos-table th {
-  text-align: left;
-  padding: 1rem;
-  color: #212529;
-  font-weight: 700;
-  border-bottom: 2px solid #e9ecef;
+  background-color: #f3f3f3;
+  font-weight: bold;
 }
 
-.pedidos-table td {
-  padding: 1rem;
-  border-bottom: 1px solid #e9ecef;
-  vertical-align: middle;
+.pedidos-table td:nth-child(1) {
+  min-width: 100px; /* Nº Pedido */
+}
+
+.pedidos-table td:nth-child(2) {
+  min-width: 200px; /* Cliente */
+}
+
+.pedidos-table td:nth-child(3) {
+  min-width: 220px; /* Serviço */
+}
+
+.pedidos-table td:nth-child(4),
+.pedidos-table td:nth-child(5) {
+  min-width: 100px; /* Prazo, Status */
+}
+
+.pedidos-table td:nth-child(6) {
+  min-width: 80px; /* Ações */
+  text-align: center;
+}
+
+.table-responsive {
+  overflow-x: auto;
 }
 
 .pedido-row:hover {

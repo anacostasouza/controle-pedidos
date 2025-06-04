@@ -1,6 +1,6 @@
 import { Timestamp } from "firebase/firestore";
 import type { TipoServico, SubTipoServico } from "./Servicos";
-import type { Setores } from "./Setores";
+import type { SetorValue } from './Setores';
 
 export type StatusPedido =
   | "Iniciado"
@@ -31,7 +31,7 @@ export interface Pedido {
   responsavel: string;
   requerArte?: boolean;
   requerGalpao?: boolean;
-  setoresResponsaveis: Setores[];
+  setoresResponsaveis: SetorValue[];
   statusAtual: StatusPedido;
   historicoStatus: Array<{
     status: StatusPedido;
