@@ -81,7 +81,18 @@ export default function Dashboard() {
                     {pedido.servico.tipo}
                     {pedido.servico.subTipo && ` (${pedido.servico.subTipo})`}
                   </td>
-                  <td>{formatDate(pedido.prazos.entrega)}</td>
+                  <td>{formatDate(pedido.prazos.entrega)}
+                      if (pedido.prazos.arte) {
+                        <span className="arte-prazo">
+                          (Arte: {formatDate(pedido.prazos.arte)})
+                        </span>
+                      }
+                      if (pedido.prazos.producao) {
+                        <span className="producao-prazo">
+                          (Produção: {formatDate(pedido.prazos.producao)})
+                        </span>
+                      }
+                  </td>
                   <td>{pedido.statusAtual}</td>
                   <td>
                     {podeEditarPedido(pedido) && (
