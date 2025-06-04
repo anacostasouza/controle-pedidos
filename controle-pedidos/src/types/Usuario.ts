@@ -1,8 +1,10 @@
 export interface Usuario {
-  id?: string; 
-  usuarioID: number;
-  nome: string;
-  setor: string;
-  admin: boolean;
+  usuarioID: string;
+  displayName: string;
+  email: string;
+  setor: string; 
+  setorNome: string;
+  createdAt: Date;
+  updatedAt: Date;
   statusConta: boolean;
 }

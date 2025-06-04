@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { auth } from "../../services/firebase"
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import "../../styles/HeaderPage.css";
+import type { Usuario } from "../../types/Usuario";
 
 
 
 
 interface UserProfile {
-  nome: string;
-  setorNome: string;
+  nome: Usuario["displayName"];
+  setorNome: Usuario["setorNome"];
 }
 
 const HeaderPage: React.FC = () => {
@@ -33,13 +34,13 @@ const HeaderPage: React.FC = () => {
         if (userDocSnap.exists()) {
           const data = userDocSnap.data();
           setUserProfile({
-            nome: data.nome ?? "Usuário",
-            setorNome: data.setorNome ?? "Admin"
+            nome: data.displayName ?? "Usuário",
+            setorNome: data.setorNome ?? "Sem setor"
           });
         } else {
           setUserProfile({
             nome: "Usuário",
-            setorNome: "Admin"
+            setorNome: "Sem setor"
           });
         }
       } catch (error) {

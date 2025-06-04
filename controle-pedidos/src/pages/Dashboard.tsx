@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getFirestore, collection, getDocs, query, orderBy, Timestamp } from "firebase/firestore";
 import "../styles/Dashboard.css";
 import HeaderPage from '../components/layout/headerPage';
-import type { Pedido } from "../types/Pedidos";
+import type { Pedido } from '../types/Pedidos';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -12,10 +12,10 @@ export default function Dashboard() {
   const userSetor = localStorage.getItem("userSetor") ?? "";
  
 
-  // Verifica se o usuário pode editar o status de um pedido específico
+  
   const podeEditarPedido = (pedido: Pedido) => {
     // Administradores podem editar qualquer pedido
-    if (["gestao", "suporte"].includes(userSetor)) return true;
+    if (["Gestão", "Suporte"].includes(userSetor)) return true;
     
     // Se o pedido tem setores específicos, verifica se o usuário pertence a um deles
     if (pedido.setoresResponsaveis && pedido.setoresResponsaveis.length > 0) {
@@ -24,7 +24,7 @@ export default function Dashboard() {
     }
     
     // Caso padrão (pedidos antigos sem setores específicos)
-    return ["producao_loja", "producao_galpao"].includes(userSetor);
+    return ["Produção Loja", "Galpão"].includes(userSetor);
   };
 
   useEffect(() => {
@@ -55,15 +55,15 @@ export default function Dashboard() {
       <HeaderPage />
       
       <div className="table-container">
-        <h2>Pedidos</h2>
-        
-        <button 
-          className="new-order-button" 
-          onClick={() => navigate("/novo-pedido")}
-        >
-        Novo Pedido
-        </button>
-        
+        <div className="header-dashboard">
+          <h2>Pedidos ({pedidos.length}) </h2>
+          <button 
+            className="new-order-button" 
+            onClick={() => navigate("/novo-pedido")}
+          >
+          Novo Pedido
+          </button>
+        </div>
         {loading ? (
           <div className="loading">Carregando pedidos...</div>
         ) : (
@@ -86,8 +86,6 @@ export default function Dashboard() {
                   <td>
                     {pedido.servico.tipo}
                     {pedido.servico.subTipo && ` (${pedido.servico.subTipo})`}
-                    {pedido.requerArte && <span className="badge arte">Arte</span>}
-                    {pedido.requerGalpao && <span className="badge galpao">Galpão</span>}
                   </td>
                   <td>{formatDate(pedido.prazos.entrega)}</td>
                   <td>{pedido.statusAtual}</td>

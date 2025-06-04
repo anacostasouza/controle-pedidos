@@ -4,7 +4,7 @@ import { doc, setDoc, getFirestore } from "firebase/firestore";
 import "../styles/ProfileNamePage.css";
 import logoImage from "../assets/logologin.png";
 import type { JSX } from "react/jsx-dev-runtime";
-import type { Setores } from "../types/Setores";
+import { setores } from "../types/Setores";
 
 
 export default function ProfileNamePage(): JSX.Element {
@@ -15,17 +15,7 @@ export default function ProfileNamePage(): JSX.Element {
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState("");
   const [userEmail, setUserEmail] = useState("");
-
-  const setores: Setores[] = [
-    { value: "producao_loja", label: "Produção/Loja" },
-    { value: "gestao", label: "Gestão" },
-    { value: "rh", label: "RH" },
-    { value: "financeiro", label: "Financeiro" },
-    { value: "comercial", label: "Comercial" },
-    { value: "producao_galpao", label: "Produção Galpão" },
-    { value: "suporte", label: "Suporte" }
-  ];
-
+ 
   useEffect(() => {
     const storedUserId = localStorage.getItem("userId");
     const storedUserEmail = localStorage.getItem("userEmail");

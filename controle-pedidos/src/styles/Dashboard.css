@@ -1,5 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;700&display=swap');
 
+.header-dashboard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
 .dashboard-page {
   font-family: 'Comfortaa', sans-serif;
   background-color: #f3f4f6;
@@ -39,6 +46,30 @@
   background-color: #e9ecef;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.new-order-button {
+  font-family: 'Comfortaa', sans-serif;
+  background-color: #d68383;
+  color: #ffffff;
+  border: none;
+  border-radius: 26px;
+  padding: 0.8rem 1.5rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: all 0.25s ease;
+}
+
+.new-order-button:hover {
+  background-color: #a85353;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.table-container {
+  margin-top: 3rem;
+  width: 100%;
 }
 
 .table-responsive {
