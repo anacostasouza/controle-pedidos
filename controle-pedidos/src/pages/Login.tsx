@@ -14,8 +14,29 @@ export default function Login() {
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      console.log("Usuário logado:", user.displayName);
 
+      
+      const allowedSuffixes = [
+        "desenhar@gmail.com", 
+        "@desenhardigital.com.br",
+        "@copiadoradesenhar.com.br"
+      ];
+
+      const userEmail = user.email?.toLowerCase() ?? "";
+
+      const isAllowed = allowedSuffixes.some(suffix =>
+        userEmail.endsWith(suffix.replace(/^@/, "")) 
+      );
+
+      if (!isAllowed) {
+        setLoginError("Acesso negado.");
+        alert("Acesso negado. Você não tem permissão para acessar esta aplicação.");
+        console.log("Usuário não autorizado:", userEmail);
+        await auth.signOut();
+        return;
+      }
+
+      console.log("Usuário logado:", user.displayName);
       
       localStorage.setItem("userId", user.uid);
       localStorage.setItem("userEmail", user.email ?? "");
