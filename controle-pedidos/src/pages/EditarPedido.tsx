@@ -46,8 +46,9 @@ export default function EditarPedido() {
       navigate("/dashboard");
     } catch (error) {
       console.error("Erro ao excluir pedido:", error);
-      alert("Erro ao excluir pedido");
-    }
+        alert("Erro ao excluir pedido");
+      }
+    };
 
   const getStatusDisponiveis = (): StatusPedido[] => {
     if (!pedido) return [];

@@ -5,6 +5,7 @@ import { getAuth } from "firebase/auth";
 import { TipoServico } from "../types/Servicos";
 import HeaderPage from '../components/layout/headerPage';
 import type { Pedido } from "../types/Pedidos";
+import type { SetorValue } from "../types/Setores";
 import "../styles/NovoPedido.css";
 
 // Função utilitária para gerar opções de horário
@@ -69,9 +70,11 @@ export default function NovoPedido() {
       const now = Timestamp.now();
       
       // Determina setores responsáveis
-      const setoresResponsaveis = ["producao_loja"];
-      if (formData.requerArte) setoresResponsaveis.push("arte");
-      if (formData.requerGalpao) setoresResponsaveis.push("producao_galpao");
+      const setoresResponsaveis: SetorValue[] = ["PRODUCAO_LOJA"];
+
+      if (formData.requerArte) setoresResponsaveis.push("ARTE");
+      if (formData.requerGalpao) setoresResponsaveis.push("GALPAO");
+
 
       // Combina data e horário
       const [hours, minutes] = (formData.horarioRetirada ?? "08:00").split(':');
@@ -176,7 +179,7 @@ export default function NovoPedido() {
                   ...formData,
                   servico: {
                     tipo,
-                    subTipo: undefined,
+                    subTipo: null,
                     servicoID: tiposServico.findIndex(s => s.value === tipo) + 1
                   }
                 });

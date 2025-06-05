@@ -25,7 +25,7 @@ export interface Pedido {
   nomeCliente: string;
   servico: {
     tipo: TipoServicoValue;
-    subTipo?: SubTipoServicoValue;
+    subTipo?: SubTipoServicoValue | null;
     servicoID: number;
   };
   responsavel: string;

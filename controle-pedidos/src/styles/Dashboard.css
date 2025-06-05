@@ -29,6 +29,61 @@
   margin: 0;
 }
 
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  flex-grow: 1;
+  justify-content: flex-end;
+}
+
+.filters input[type="text"],
+.filters select {
+  font-size: auto;
+  max-width: 180px;
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+  min-width: 150px;
+  transition: border-color 0.3s ease;
+  background: #fff;
+  color: #333;
+  font-family: 'Comfortaa', sans-serif;
+}
+
+.filters input[type="text"]:focus,
+.filters select:focus {
+  border-color: #d68383; /* azul suave */
+  outline: none;
+  box-shadow: 0 0 6px rgba(127, 156, 245, 0.5);
+}
+
+.filters select[aria-label="Filtro de serviço"] {
+  background-color: #ffffff;
+  font-size: 15px;
+  width: 100%;
+  max-width: fit-content;
+}
+
+
+.filtro-atrasado-checkbox {
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  color: #343a40;
+  gap: 0.4rem;
+}
+
+.atrasado-alert {
+  color: #e53e3e; /* vermelho forte */
+  font-weight: 700;
+  margin-left: 8px;
+  font-size: 0.9rem;
+}
+
+
 .primary-button {
   font-family: 'Comfortaa', sans-serif;
   background-color: #ffffff;
@@ -134,6 +189,8 @@
 .table-responsive {
   overflow-x: auto;
 }
+
+
 
 .pedido-row:hover {
   background-color: #f8f9fa;
@@ -266,5 +323,32 @@
   .primary-button {
     padding: 0.6rem 1.2rem;
     font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .header-dashboard {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1;
+  }
+
+  .filters input[type="text"],
+  .filters select {
+    flex-grow: 1;
+    min-width: 0;
+  }
+
+  .new-order-button {
+    width: 100%;
+    text-align: center;
   }
 }
