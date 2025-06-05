@@ -48,6 +48,25 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+.edit-button {
+  font-family: 'Comfortaa', sans-serif;
+  background-color: #ffffff;
+  color: #343a40;
+  border: none;
+  border-radius: 26px;
+  padding: 0.8rem 1.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: all 0.25s ease;
+}
+
+.edit-button:hover {
+  background-color: #e9ecef;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
 .new-order-button {
   font-family: 'Comfortaa', sans-serif;
   background-color: #d68383;

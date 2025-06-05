@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getFirestore, doc, getDoc, updateDoc, Timestamp } from "firebase/firestore";
+import { getFirestore, doc, getDoc, updateDoc, Timestamp, deleteDoc } from 'firebase/firestore';
 import HeaderPage from '../components/layout/headerPage';
 import type { Pedido, StatusPedido } from "../types/Pedidos";
 import "../styles/EditarPedido.css";
@@ -31,6 +31,23 @@ export default function EditarPedido() {
 
     fetchPedido();
   }, [id]);
+
+
+  const deletarPedido = async () => {
+    if (!id) return;
+
+    const confirmacao = window.confirm("Tem certeza que deseja excluir este pedido?");
+    if (!confirmacao) return;
+
+    try {
+      const db = getFirestore();
+      const pedidoRef = doc(db, "pedidos", id);
+      await deleteDoc(pedidoRef);
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Erro ao excluir pedido:", error);
+      alert("Erro ao excluir pedido");
+    }
 
   const getStatusDisponiveis = (): StatusPedido[] => {
     if (!pedido) return [];
@@ -135,10 +152,8 @@ export default function EditarPedido() {
           </button>
           <button className="delete-button" onClick={() => {
             if (window.confirm("Tem certeza que deseja excluir este pedido?")) {
-              // Lógica para excluir o pedido
-              alert("Pedido excluído (lógica de exclusão não implementada)");
-            }
-          }
+              deletarPedido();
+          }}
           }>
             Excluir Pedido
           </button>
