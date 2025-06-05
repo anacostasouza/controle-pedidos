@@ -21,7 +21,6 @@ const generateTimeOptions = (interval: number = 30) => {
   return options;
 };
 
-// Constantes de configuração
 const tiposServico = [
   { value: TipoServico.ARTE, label: "Arte" },
   { 

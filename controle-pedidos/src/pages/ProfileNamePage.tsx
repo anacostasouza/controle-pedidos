@@ -63,7 +63,7 @@ export default function ProfileNamePage(): JSX.Element {
       await setDoc(userRef, userData, { merge: true });
 
       localStorage.setItem("profileName", profileName);
-      localStorage.setItem("userSetor", setor);
+      localStorage.setItem("userSetor", setor.toUpperCase());
       localStorage.setItem("userSetorNome", setorSelecionado?.label ?? "");
 
       navigate("/dashboard");

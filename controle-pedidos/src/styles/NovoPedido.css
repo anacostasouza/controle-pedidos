@@ -104,7 +104,7 @@
 
 .submit-button {
   font-family: 'Comfortaa', sans-serif;
-  background-color: #a9adb1;
+  background-color: #d68383;
   color: white;
   border: none;
   border-radius: 26px;
@@ -115,7 +115,7 @@
 }
 
 .submit-button:hover {
-  background-color: #75787a;
+  background-color: #a85353;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -133,7 +133,7 @@
 }
 
 .cancel-button:hover {
-  background-color: #e9ecef;
+  background-color: #c7c9cc;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }

@@ -64,4 +64,12 @@ export class PedidoService {
     const snapshot = await query.orderBy('prazos.entrega').get();
     return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Pedido));
   }
+
+  async buscarPorId(pedidoId: string): Promise<Pedido | null> {
+    const doc = await this.pedidosRef.doc(pedidoId).get();
+    if (!doc.exists) return null;
+    return { id: doc.id, ...doc.data() } as Pedido;
+  }
+
+  
 }

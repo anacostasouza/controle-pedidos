@@ -4,22 +4,8 @@ import { getFirestore, doc, getDoc, updateDoc, Timestamp } from "firebase/firest
 import HeaderPage from '../components/layout/headerPage';
 import type { Pedido, StatusPedido } from "../types/Pedidos";
 import "../styles/EditarPedido.css";
-
-const statusPorServico: Record<string, StatusPedido[] | Record<string, StatusPedido[]>> = {
-  "Arte": ["Iniciado", "Em Aprovação", "Concluído"],
-  "Gráfica Rápida": {
-    "Impressão Rápida": ["Impressão", "Concluído"],
-    "Impressão com Acabamento": ["Impressão", "Acabamento", "Concluído"],
-    "Carimbo": ["Impressão", "Montagem", "Concluído"],
-    "Acabamento": ["Acabamento", "Concluído"]
-  },
-  "Impressão Digital": ["Impressão", "Acabamento", "Concluído"],
-  "Comunicação Visual": {
-    "Placa Simples": ["Corte e Preparação", "Montagem/Acabamento", "Concluído"],
-    "Placa Complexa": ["Corte", "Estrutura", "Pintura", "Elétrica", "Montagem", "Concluído"]
-  },
-  "Terceirizado": ["Pedido Feito", "Acabamento", "Liberado"]
-};
+import { TipoServicoLabels, SubTipoServicoLabels } from '../types/Servicos';
+import { statusPorServico } from "../types/StatusPedidos";
 
 export default function EditarPedido() {
   const { id } = useParams();
@@ -49,18 +35,19 @@ export default function EditarPedido() {
   const getStatusDisponiveis = (): StatusPedido[] => {
     if (!pedido) return [];
     
-    const servico = pedido.servico.tipo as string;
-    const subTipo = pedido.servico.subTipo;
-    
-    if (servico === "Gráfica Rápida" || servico === "Comunicação Visual") {
-      const statusObj = statusPorServico[servico];
-      if (typeof statusObj === "object" && !Array.isArray(statusObj)) {
-        return statusObj[subTipo as string] ?? [];
-      }
-      return [];
+    const  tipoLabel = TipoServicoLabels[pedido.servico.tipo];
+    const subTipoLabel = pedido.servico.subTipo ? pedido.servico.subTipo : undefined;
+
+    const statusEntry = statusPorServico[tipoLabel];
+
+    if (
+      typeof statusEntry === "object" && 
+      !Array.isArray(statusEntry) &&
+      subTipoLabel
+    ) {
+      return statusEntry[subTipoLabel] ?? [];
     }
-    
-    return (statusPorServico[servico] as StatusPedido[]) || [];
+    return Array.isArray(statusEntry) ? statusEntry : [];
   };
 
   const handleStatusChange = async () => {
@@ -100,47 +87,62 @@ export default function EditarPedido() {
   return (
     <div className="editar-pedido-container">
       <HeaderPage />
-      
-      <h1>Editar Pedido #{pedido.numeroPedido}</h1>
-      
-      <div className="pedido-info">
-        <p><strong>Cliente:</strong> {pedido.nomeCliente}</p>
-        <p><strong>Serviço:</strong> {pedido.servico.tipo} {pedido.servico.subTipo && `(${pedido.servico.subTipo})`}</p>
-        <p><strong>Status Atual:</strong> {pedido.statusAtual}</p>
-      </div>
-
-      <div className="status-form">
-        <label htmlFor="novo-status-select">Novo Status:</label>
-        <select
-          id="novo-status-select"
-          value={novoStatus}
-          onChange={(e) => setNovoStatus(e.target.value as StatusPedido)}
-        >
-          {statusDisponiveis.map((status: StatusPedido) => (
-            <option key={status} value={status}>
-              {status}
-            </option>
-          ))}
-        </select>
+      <div className="container-editar-pedido">
+        <h1>Editar Pedido #{pedido.numeroPedido}</h1>
         
-        <button 
-          onClick={handleStatusChange}
-          disabled={novoStatus === pedido.statusAtual}
-          className="update-button"
-        >
-          Atualizar Status
-        </button>
-      </div>
+        <div className="pedido-info">
+          <p><strong>Cliente:</strong> {pedido.nomeCliente}</p>
+          <p><strong>Serviço:</strong> {TipoServicoLabels[pedido.servico.tipo] ?? pedido.servico.tipo} {pedido.servico.subTipo && `(${pedido.servico.subTipo})`}</p>
+          <p><strong>Status Atual:</strong> {pedido.statusAtual}</p>
+        </div>
 
-      <div className="historico">
-        <h3>Histórico de Status</h3>
-        <ul>
-          {pedido.historicoStatus.map((item) => (
-            <li key={`${item.status}-${item.data?.seconds ?? ''}-${item.responsavel}`}>
-              <strong>{item.status}</strong> - {item.data.toDate().toLocaleString()} por {item.responsavel}
-            </li>
-          ))}
-        </ul>
+        <div className="status-form">
+          <label htmlFor="novo-status-select">Novo Status:</label>
+          <select
+            id="novo-status-select"
+            value={novoStatus}
+            onChange={(e) => setNovoStatus(e.target.value as StatusPedido)}
+          >
+            {statusDisponiveis.map((status: StatusPedido) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+          
+          <button 
+            onClick={handleStatusChange}
+            disabled={novoStatus === pedido.statusAtual}
+            className="update-button"
+          >
+            Atualizar Status
+          </button>
+        </div>
+
+        <div className="historico">
+          <h3>Histórico de Status</h3>
+          <ul>
+            {pedido.historicoStatus.map((item) => (
+              <li key={`${item.status}-${item.data?.seconds ?? ''}-${item.responsavel}`}>
+                <strong>{item.status}</strong> - {item.data.toDate().toLocaleString()} por {item.responsavel}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="actions">
+          <button className="back-button" onClick={() => navigate("/dashboard")}>
+            Voltar para Dashboard
+          </button>
+          <button className="delete-button" onClick={() => {
+            if (window.confirm("Tem certeza que deseja excluir este pedido?")) {
+              // Lógica para excluir o pedido
+              alert("Pedido excluído (lógica de exclusão não implementada)");
+            }
+          }
+          }>
+            Excluir Pedido
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,13 @@
+.container-editar-pedido {
+  margin-top: 2rem;
+  width: 100%;
+ 
+}
+
 .editar-pedido-container {
   max-width: 800px;
-  margin: 2rem auto;
-  background-color: var(--card-bg-color);
+  margin: auto;
+  background-color: #e7dcdc;
   box-shadow: var(--card-shadow);
   border-radius: var(--card-border-radius);
   padding: 2rem;
@@ -73,6 +79,51 @@
 .update-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.back-button {
+  font-family: 'Comfortaa', sans-serif;
+  background-color: #ffffff;
+  color: #343a40;
+  border: none;
+  border-radius: 26px;
+  padding: 0.8rem 1.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: all 0.25s ease;
+}
+
+.back-button:hover {
+ background-color: #e9ecef;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.delete-button {
+  font-family: 'Comfortaa', sans-serif;
+  background-color: #8f2f2f;
+  color: #ffffff;
+  border: none;
+  border-radius: 26px;
+  padding: 0.8rem 1.5rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  transition: all 0.25s ease;
+}
+
+.delete-button:hover {
+ background-color: #5f1919;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
 }
 
 .historico {

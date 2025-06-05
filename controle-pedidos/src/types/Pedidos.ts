@@ -1,5 +1,5 @@
 import { Timestamp } from "firebase/firestore";
-import type { TipoServico, SubTipoServico } from "./Servicos";
+import { TipoServico, SubTipoServico, type TipoServicoValue, type SubTipoServicoValue } from "./Servicos";
 import type { SetorValue } from './Setores';
 
 export type StatusPedido =
@@ -24,8 +24,8 @@ export interface Pedido {
   numeroPedido: number;
   nomeCliente: string;
   servico: {
-    tipo: TipoServico;
-    subTipo?: SubTipoServico;
+    tipo: TipoServicoValue;
+    subTipo?: SubTipoServicoValue;
     servicoID: number;
   };
   responsavel: string;
