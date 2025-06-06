@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getFirestore, doc, getDoc, updateDoc, Timestamp, deleteDoc } from 'firebase/firestore';
 import HeaderPage from '../components/layout/headerPage';
 import type { Pedido, StatusPedido } from "../types/Pedidos";
 import "../styles/EditarPedido.css";
-import { TipoServicoLabels, SubTipoServicoLabels } from '../types/Servicos';
-import { statusPorServico } from "../types/StatusPedidos";
+import {
+  fetchPedidoById,
+  deletarPedidoPorId,
+  atualizarStatusPedido,
+  getStatusDisponiveis
+} from "../utils/utilsEditarPedido";
+
 
 export default function EditarPedido() {
   const { id } = useParams();
@@ -15,81 +19,24 @@ export default function EditarPedido() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPedido = async () => {
+    const carregarPedido = async () => {
       if (!id) return;
-      
-      const db = getFirestore();
-      const docRef = doc(db, "pedidos", id);
-      const docSnap = await getDoc(docRef);
-      
-      if (docSnap.exists()) {
-        setPedido(docSnap.data() as Pedido);
-        setNovoStatus(docSnap.data().statusAtual);
+      const pedidoCarregado = await fetchPedidoById(id);
+      if (pedidoCarregado) {
+        setPedido(pedidoCarregado);
+        setNovoStatus(pedidoCarregado.statusAtual);
       }
       setLoading(false);
     };
-
-    fetchPedido();
+    carregarPedido();
   }, [id]);
-
-
-  const deletarPedido = async () => {
-    if (!id) return;
-
-    const confirmacao = window.confirm("Tem certeza que deseja excluir este pedido?");
-    if (!confirmacao) return;
-
-    try {
-      const db = getFirestore();
-      const pedidoRef = doc(db, "pedidos", id);
-      await deleteDoc(pedidoRef);
-      navigate("/dashboard");
-    } catch (error) {
-      console.error("Erro ao excluir pedido:", error);
-        alert("Erro ao excluir pedido");
-      }
-    };
-
-  const getStatusDisponiveis = (): StatusPedido[] => {
-    if (!pedido) return [];
-    
-    const  tipoLabel = TipoServicoLabels[pedido.servico.tipo];
-    const subTipoLabel = pedido.servico.subTipo ? pedido.servico.subTipo : undefined;
-
-    const statusEntry = statusPorServico[tipoLabel];
-
-    if (
-      typeof statusEntry === "object" && 
-      !Array.isArray(statusEntry) &&
-      subTipoLabel
-    ) {
-      return statusEntry[subTipoLabel] ?? [];
-    }
-    return Array.isArray(statusEntry) ? statusEntry : [];
-  };
 
   const handleStatusChange = async () => {
     if (!id || !pedido || !novoStatus) return;
-    
+
     try {
-      const db = getFirestore();
-      const pedidoRef = doc(db, "pedidos", id);
-      const now = Timestamp.now();
-      const user = localStorage.getItem("profileName") ?? "Sistema";
-      
-      await updateDoc(pedidoRef, {
-        statusAtual: novoStatus,
-        historicoStatus: [
-          ...pedido.historicoStatus,
-          {
-            status: novoStatus,
-            data: now,
-            responsavel: user
-          }
-        ],
-        atualizadoEm: now
-      });
-      
+      const userSetor = localStorage.getItem("setor") ?? "Sistema";
+      await atualizarStatusPedido(id, pedido, novoStatus, userSetor);
       navigate("/dashboard");
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
@@ -97,20 +44,34 @@ export default function EditarPedido() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!id) return;
+    const confirmacao = window.confirm("Tem certeza que deseja excluir este pedido?");
+    if (!confirmacao) return;
+
+    try {
+      await deletarPedidoPorId(id);
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Erro ao excluir pedido:", error);
+      alert("Erro ao excluir pedido");
+    }
+  };
+
   if (loading) return <div>Carregando...</div>;
   if (!pedido) return <div>Pedido não encontrado</div>;
 
-  const statusDisponiveis: StatusPedido[] = getStatusDisponiveis();
+  const statusDisponiveis: StatusPedido[] = getStatusDisponiveis(pedido);
 
   return (
     <div className="editar-pedido-container">
       <HeaderPage />
       <div className="container-editar-pedido">
         <h1>Editar Pedido #{pedido.numeroPedido}</h1>
-        
+
         <div className="pedido-info">
           <p><strong>Cliente:</strong> {pedido.nomeCliente}</p>
-          <p><strong>Serviço:</strong> {TipoServicoLabels[pedido.servico.tipo] ?? pedido.servico.tipo} {pedido.servico.subTipo && `(${pedido.servico.subTipo})`}</p>
+          <p><strong>Serviço:</strong> {pedido.servico.tipo} {pedido.servico.subTipo && `(${pedido.servico.subTipo})`}</p>
           <p><strong>Status Atual:</strong> {pedido.statusAtual}</p>
         </div>
 
@@ -121,13 +82,11 @@ export default function EditarPedido() {
             value={novoStatus}
             onChange={(e) => setNovoStatus(e.target.value as StatusPedido)}
           >
-            {statusDisponiveis.map((status: StatusPedido) => (
-              <option key={status} value={status}>
-                {status}
-              </option>
+            {statusDisponiveis.map((status) => (
+              <option key={status} value={status}>{status}</option>
             ))}
           </select>
-          
+
           <button 
             onClick={handleStatusChange}
             disabled={novoStatus === pedido.statusAtual}
@@ -147,20 +106,12 @@ export default function EditarPedido() {
             ))}
           </ul>
         </div>
+
         <div className="actions">
-          <button className="back-button" onClick={() => navigate("/dashboard")}>
-            Voltar para Dashboard
-          </button>
-          <button className="delete-button" onClick={() => {
-            if (window.confirm("Tem certeza que deseja excluir este pedido?")) {
-              deletarPedido();
-          }}
-          }>
-            Excluir Pedido
-          </button>
+          <button className="back-button" onClick={() => navigate("/dashboard")}>Voltar para Dashboard</button>
+          <button className="delete-button" onClick={handleDelete}>Excluir Pedido</button>
         </div>
       </div>
     </div>
   );
 }
-

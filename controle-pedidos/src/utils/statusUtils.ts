@@ -1,4 +1,19 @@
+import { Timestamp } from "firebase/firestore"
+import { type StatusPedido } from "../types/Pedidos"
+
 export type StatusArte = "Iniciado" | "Em Aprovação" | "Concluído";
+
+export interface StatusArteHist {
+  status: StatusArte;
+  data: Timestamp;
+  responsavel: string;
+}
+
+export interface StatusGalpaoHist {
+  status: StatusGalpao
+  data: Timestamp;
+  responsavel: string;
+}
 
 export type StatusGraficaRapida =
   | "Impressão"
@@ -20,6 +35,34 @@ export type StatusComunicacaoVisualPlacaComplexa =
   | "Elétrica"
   | "Montagem"
   | "Concluído";
+
+export type StatusGalpao = 
+  | "Corte e Preparação do Material"
+  | "Montagem / Acabamento"
+  | "Concluído"
+  | "Corte"
+  | "Estrutura"
+  | "Pintura"
+  | "Elétrica"
+  | "Montagem"
+  | "Concluído";
+
+  // utils/statusUtils.ts
+
+export const StatusArteOptions: StatusPedido[] = [
+  "Iniciado",
+  "Em Aprovação",
+  "Concluído",
+  // ... outros status válidos para Arte
+];
+
+export const StatusGalpaoOptions: StatusPedido[] = [
+  "Impressão",
+  "Acabamento",
+  "Montagem",
+  // ... outros status válidos para Galpão
+];
+
 
 export type StatusTerceirizado = "Pedido Feito" | "Acabamento" | "Liberado";
 

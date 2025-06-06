@@ -1,6 +1,7 @@
 import { Timestamp } from "firebase/firestore";
 import { TipoServico, SubTipoServico, type TipoServicoValue, type SubTipoServicoValue } from "./Servicos";
 import type { SetorValue } from './Setores';
+import type { StatusArteHist, StatusGalpaoHist } from '../utils/statusUtils';
 
 export type StatusPedido =
   | "Iniciado"
@@ -17,7 +18,6 @@ export type StatusPedido =
   | "Pintura"
   | "Elétrica"
   | "Corte e Preparação";
-
 export interface Pedido {
   id?: string;
   pedidoID: number;
@@ -30,7 +30,9 @@ export interface Pedido {
   };
   responsavel: string;
   requerArte?: boolean;
+  StatusArte?: StatusArteHist[];
   requerGalpao?: boolean;
+  StatusGalpao?: StatusGalpaoHist[];
   setoresResponsaveis: SetorValue[];
   statusAtual: StatusPedido;
   historicoStatus: Array<{

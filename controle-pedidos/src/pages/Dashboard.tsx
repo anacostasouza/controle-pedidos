@@ -4,7 +4,7 @@ import { getFirestore, collection, getDocs, query, orderBy } from "firebase/fire
 import "../styles/Dashboard.css";
 import HeaderPage from '../components/layout/headerPage';
 import type { Pedido } from '../types/Pedidos';
-import { TipoServicoLabels, SubTipoServicoLabels, SubTipoServico } from "../types/Servicos";
+import { TipoServicoLabels, SubTipoServicoLabels, SubTipoServico, TipoServico } from '../types/Servicos';
 import { formatDate, filtrarPedidos, isPedidoAtrasado } from "../utils/dashboardUtils";
 
 export default function Dashboard() {
@@ -20,9 +20,15 @@ export default function Dashboard() {
 
   const podeEditarPedido = (pedido: Pedido): boolean => {
     console.log("Verificando permissões para o setor:", userSetor);
+
+    if (pedido.servico.tipo === TipoServico.COMUNICACAO_VISUAL && userSetor === "GALPAO") return true;
+    if (pedido.servico.tipo === TipoServico.ARTE && userSetor === "ARTE") return true;
+
     if (userSetor === "GESTAO" || userSetor === "SUPORTE" || userSetor === "PRODUCAO_LOJA") return true;
-    if (pedido.requerArte && userSetor === "ARTE") return true;
-    if (pedido.requerGalpao && userSetor === "GALPAO") return true;
+    if (pedido.requerArte === true && userSetor === "ARTE") return true;
+    if (pedido.requerGalpao === true && userSetor === "GALPAO") return true;
+
+
     return false;
   };
 
