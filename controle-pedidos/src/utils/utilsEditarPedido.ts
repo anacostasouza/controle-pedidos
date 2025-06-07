@@ -1,75 +1,98 @@
-import { getFirestore, doc, getDoc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
-import type { Pedido, StatusPedido, StatusArte, StatusGalpao } from '../types/Pedidos';
-import { TipoServicoLabels, SubTipoServicoLabels } from '../types/Servicos';
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  deleteDoc,
+  Timestamp,
+  type DocumentData
+} from "firebase/firestore";
+import { db } from "../services/firebase";
+import type { Pedido, StatusPedido } from "../types/Pedidos";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { TipoServicoLabels } from "../types/Servicos";
 import { statusPorServico } from '../types/StatusPedidos';
+import type { StatusArte, StatusArteHist, StatusGalpao } from "../utils/statusUtils"
 
-export const fetchPedidoById = async (id: string): Promise<Pedido | null> => {
-  const db = getFirestore();
+// Busca um pedido por ID
+export async function fetchPedidoById(id: string): Promise<Pedido | null> {
   const docRef = doc(db, "pedidos", id);
-  const docSnap = await getDoc(docRef);
-
-  if (docSnap.exists()) {
-    return docSnap.data() as Pedido;
+  const pedidoSnap = await getDoc(docRef);
+  if (pedidoSnap.exists()) {
+    const data = pedidoSnap.data() as DocumentData;
+    return {
+      ...data,
+      dataCadastro: data.dataCadastro?.toDate?.() ?? new Date(),
+      historicoStatus: data.historicoStatus ?? [],
+      statusAtual: data.statusAtual,
+    } as unknown as Pedido;
   }
-
   return null;
-};
+}
 
-export const deletarPedidoPorId = async (id: string): Promise<void> => {
-  const db = getFirestore();
-  const pedidoRef = doc(db, "pedidos", id);
-  await deleteDoc(pedidoRef);
-};
-
-export const atualizarStatusPedido = async (
+// Atualiza status do pedido (geral + arte + galpão)
+export async function atualizarStatusPedido(
   id: string,
   pedido: Pedido,
   novoStatus: StatusPedido,
-  responsavel: string
-): Promise<void> => {
-  const db = getFirestore();
+  userSetor: string,
+  novoStatusArte?: StatusArte,
+  novoStatusGalpao?: StatusGalpao
+) {
   const pedidoRef = doc(db, "pedidos", id);
-  const now = Timestamp.now();
 
-  const updateData: Partial<Pedido> = {
+  const updates: Partial<Pedido> = {
     statusAtual: novoStatus,
     historicoStatus: [
-      ...pedido.historicoStatus,
+      ...(pedido.historicoStatus || []),
       {
         status: novoStatus,
-        data: now,
-        responsavel,
-        setor: responsavel // Adiciona o campo setor, assumindo que responsavel representa o setor
+        data: Timestamp.now(),
+        responsavel: userSetor,
+        setor: ""
       }
-    ],
-    atualizadoEm: now,
+    ]
   };
 
-  // Se for ARTE ou GALPÃO, atualizar também o campo específico
-  if (responsavel === 'ARTE') {
-    updateData.StatusArte = [
-      ...(pedido.StatusArte ?? []),
+  if (
+    pedido.requerArte &&
+    novoStatusArte &&
+    novoStatusArte !== (pedido.StatusArte?.[pedido.StatusArte.length - 1]?.status)
+  ) {
+    updates.StatusArte = [
+      ...(pedido.StatusArte || []),
       {
-        status: novoStatus as StatusArte, // Cast to StatusArte if you are sure it's compatible
-        data: now,
-        responsavel
-      }
-    ];
-  } else if (responsavel === 'GALPÃO') {
-    updateData.StatusGalpao = [
-      ...(pedido.StatusGalpao ?? []),
-      {
-        status: novoStatus as StatusGalpao, // Cast to StatusGalpao if needed
-        data: now,
-        responsavel
+        status: novoStatusArte as StatusArte,
+        data: Timestamp.now(),
+        responsavel: userSetor
       }
     ];
   }
 
-  await updateDoc(pedidoRef, updateData);
-};
+  if (
+    pedido.requerGalpao &&
+    novoStatusGalpao &&
+    novoStatusGalpao !== (pedido.StatusGalpao?.[pedido.StatusGalpao.length - 1]?.status)
+  ) {
+    updates.StatusGalpao = [
+      ...(pedido.StatusGalpao || []),
+      {
+        status: novoStatusGalpao as StatusGalpao,
+        data: Timestamp.now(),
+        responsavel: userSetor
+      }
+    ];
+  }
 
-export const getStatusDisponiveis = (pedido: Pedido): StatusPedido[] => {
+  await updateDoc(pedidoRef, updates);
+}
+
+// Exclui um pedido por ID
+export async function deletarPedidoPorId(id: string): Promise<void> {
+  await deleteDoc(doc(db, "pedidos", id));
+}
+
+// Obtém lista de status disponíveis com base no serviço
+export function getStatusDisponiveis(pedido: Pedido): StatusPedido[] {
   const tipoLabel = TipoServicoLabels[pedido.servico.tipo];
   const subTipoLabel = pedido.servico.subTipo;
 
@@ -84,4 +107,14 @@ export const getStatusDisponiveis = (pedido: Pedido): StatusPedido[] => {
   }
 
   return Array.isArray(statusEntry) ? statusEntry : [];
-};
+
+  return [];
+}
+
+export function getStatusArteDisponiveis(): StatusArte[] {
+  return ["Iniciado", "Em Aprovação", "Concluído"];
+}
+
+export function getStatusGalpaoDisponiveis(): StatusGalpao[] {
+  return ["Corte e Preparação do Material", "Elétrica", "Estrutura", "Montagem / Acabamento", "Pintura", "Concluído"]
+}

@@ -1,7 +1,30 @@
 import { Timestamp } from "firebase/firestore";
 import { TipoServico, SubTipoServico, type TipoServicoValue, type SubTipoServicoValue } from "./Servicos";
 import type { SetorValue } from './Setores';
-import type { StatusArteHist, StatusGalpaoHist } from '../utils/statusUtils';
+
+export type StatusArte = "Iniciado" | "Em Aprovação" | "Concluído";
+export interface StatusArteHist {
+  status: StatusArte;
+  data: Timestamp;
+  responsavel: string;
+}
+
+export type StatusGalpao = 
+  | "Corte e Preparação do Material"
+  | "Montagem / Acabamento"
+  | "Concluído"
+  | "Corte"
+  | "Estrutura"
+  | "Pintura"
+  | "Elétrica"
+  | "Montagem"
+  | "Concluído";
+
+export interface StatusGalpaoHist {
+  status: StatusGalpao
+  data: Timestamp;
+  responsavel: string;
+}
 
 export type StatusPedido =
   | "Iniciado"

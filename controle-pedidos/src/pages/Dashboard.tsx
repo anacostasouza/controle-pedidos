@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getFirestore, collection, getDocs, query, orderBy } from "firebase/firestore";
+import { getFirestore, collection, getDocs, query, orderBy, doc, getDoc } from "firebase/firestore";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import "../styles/Dashboard.css";
 import HeaderPage from '../components/layout/headerPage';
 import type { Pedido } from '../types/Pedidos';
@@ -16,23 +17,45 @@ export default function Dashboard() {
   const [filtroStatus, setFiltroStatus] = useState("");
   const [filtroAtrasados, setFiltroAtrasados] = useState(false);
   const [pedidosFiltrados, setPedidosFiltrados] = useState<Pedido[]>([]);
-  const userSetor = (localStorage.getItem("userSetor") ?? "").toUpperCase();
+  const [userSetor, setUserSetor] = useState("");
+
+  // Buscar setor do usuário autenticado
+  useEffect(() => {
+    const auth = getAuth();
+    const db = getFirestore();
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userDocRef = doc(db, "usuarios", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          setUserSetor((userData.setor ?? "").toUpperCase());
+        } else {
+          console.warn("Usuário não encontrado no Firestore.");
+        }
+      } else {
+        console.warn("Usuário não autenticado.");
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const podeEditarPedido = (pedido: Pedido): boolean => {
-    console.log("Verificando permissões para o setor:", userSetor);
+    if (!userSetor) return false;
 
     if (pedido.servico.tipo === TipoServico.COMUNICACAO_VISUAL && userSetor === "GALPAO") return true;
     if (pedido.servico.tipo === TipoServico.ARTE && userSetor === "ARTE") return true;
-
     if (userSetor === "GESTAO" || userSetor === "SUPORTE" || userSetor === "PRODUCAO_LOJA") return true;
     if (pedido.requerArte === true && userSetor === "ARTE") return true;
     if (pedido.requerGalpao === true && userSetor === "GALPAO") return true;
 
-
     return false;
   };
 
-
+  // Buscar pedidos do Firestore
   useEffect(() => {
     const fetchPedidos = async () => {
       const db = getFirestore();
@@ -52,23 +75,22 @@ export default function Dashboard() {
     fetchPedidos();
   }, []);
 
+  // Aplicar filtros
   useEffect(() => {
-  const pedidosFiltrados = filtrarPedidos(
-    pedidos,
-    buscaCliente,
-    filtroServico,
-    filtroStatus,
-    filtroAtrasados
-  );
-  setPedidosFiltrados(pedidosFiltrados);
+    const pedidosFiltrados = filtrarPedidos(
+      pedidos,
+      buscaCliente,
+      filtroServico,
+      filtroStatus,
+      filtroAtrasados
+    );
+    setPedidosFiltrados(pedidosFiltrados);
   }, [pedidos, buscaCliente, filtroServico, filtroStatus, filtroAtrasados]);
-
-
 
   return (
     <div className="dashboard-page">
       <HeaderPage />
-      
+
       <div className="table-container">
         <div className="header-dashboard">
           <h2>Pedidos ({pedidos.length}) </h2>
@@ -116,12 +138,12 @@ export default function Dashboard() {
                 type="checkbox"
                 checked={filtroAtrasados}
                 onChange={(e) => setFiltroAtrasados(e.target.checked)}
-              />
-               Mostrar apenas pedidos atrasados
+              />{" "}
+              Mostrar apenas pedidos atrasados
             </label>
             <button 
-            className="new-order-button" 
-            onClick={() => navigate("/novo-pedido")}
+              className="new-order-button" 
+              onClick={() => navigate("/novo-pedido")}
             >
               Novo Pedido
             </button>
@@ -149,11 +171,15 @@ export default function Dashboard() {
                     <td>{pedido.nomeCliente}</td>
                     <td>
                       {TipoServicoLabels[pedido.servico.tipo] ?? pedido.servico.tipo}
-                      {pedido.servico.subTipo && SubTipoServicoLabels[pedido.servico.subTipo as SubTipoServico]
-                        ? ` (${SubTipoServicoLabels[pedido.servico.subTipo as SubTipoServico]})`
-                        : pedido.servico.subTipo
-                        ? ` (${pedido.servico.subTipo})`
-                        : ""}
+                      {(() => {
+                        let subTipoLabel = "";
+                        if (pedido.servico.subTipo && SubTipoServicoLabels[pedido.servico.subTipo as SubTipoServico]) {
+                          subTipoLabel = `(${SubTipoServicoLabels[pedido.servico.subTipo as SubTipoServico]})`;
+                        } else if (pedido.servico.subTipo) {
+                          subTipoLabel = `(${pedido.servico.subTipo})`;
+                        }
+                        return subTipoLabel;
+                      })()}
                     </td>
                     <td>
                       {formatDate(pedido.prazos.entrega)}
@@ -165,10 +191,10 @@ export default function Dashboard() {
                     <td>
                       {podeEditarPedido(pedido) ? (
                         <button
-                        className="edit-button"
-                        onClick={() => navigate(`/editar-pedido/${pedido.id}`)}
+                          className="edit-button"
+                          onClick={() => navigate(`/editar-pedido/${pedido.id}`)}
                         >
-                          Editar  
+                          Editar
                         </button>
                       ) : (
                         <span className="no-edit-permission">Sem permissão</span>

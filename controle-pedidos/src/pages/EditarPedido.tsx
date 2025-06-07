@@ -1,22 +1,69 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import HeaderPage from '../components/layout/headerPage';
+import HeaderPage from "../components/layout/headerPage";
 import type { Pedido, StatusPedido } from "../types/Pedidos";
 import "../styles/EditarPedido.css";
 import {
   fetchPedidoById,
   deletarPedidoPorId,
   atualizarStatusPedido,
-  getStatusDisponiveis
+  getStatusDisponiveis,
+  getStatusArteDisponiveis,
+  getStatusGalpaoDisponiveis,
 } from "../utils/utilsEditarPedido";
-
+import type { StatusArte, StatusGalpao } from "../utils/statusUtils";
+import { getAuth } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../services/firebase";
 
 export default function EditarPedido() {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [novoStatus, setNovoStatus] = useState<StatusPedido>();
+  const [novoStatusArte, setNovoStatusArte] = useState<StatusArte>();
+  const [novoStatusGalpao, setNovoStatusGalpao] = useState<StatusGalpao>();
   const [loading, setLoading] = useState(true);
+  const [userSetor, setUserSetor] = useState<string | null>(null);
+
+  const setoresPermitidosArte = ["ARTE", "SUPORTE", "GESTAO"];
+  const setoresPermitidosGalpao = ["GALPAO", "SUPORTE", "GESTAO"];
+
+  const podeEditarStatusArte = setoresPermitidosArte.includes(userSetor ?? "");
+  const podeEditarStatusGalpao = setoresPermitidosGalpao.includes(userSetor ?? "");
+
+  useEffect(() => {
+    const fetchUserSetor = async () => {
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
+
+      if (!currentUser) {
+        alert("Usuário não autenticado. Redirecionando para login.");
+        navigate("/");
+        return;
+      }
+
+      try {
+        const docRef = doc(db, "usuarios", currentUser.uid);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const usuarioData = docSnap.data();
+          setUserSetor(usuarioData.setor);
+        } else {
+          alert("Usuário não encontrado. Redirecionando.");
+          navigate("/");
+        }
+      } catch (error) {
+        console.error("Erro ao buscar usuário:", error);
+        alert("Erro ao buscar dados do usuário.");
+        navigate("/");
+      }
+    };
+
+    fetchUserSetor();
+  }, [navigate]);
 
   useEffect(() => {
     const carregarPedido = async () => {
@@ -25,18 +72,36 @@ export default function EditarPedido() {
       if (pedidoCarregado) {
         setPedido(pedidoCarregado);
         setNovoStatus(pedidoCarregado.statusAtual);
+
+        if (pedidoCarregado.requerArte) {
+          const ultimoStatusArte = pedidoCarregado.StatusArte?.at(-1)?.status;
+          setNovoStatusArte(ultimoStatusArte);
+        }
+
+        if (pedidoCarregado.requerGalpao) {
+          const ultimoStatusGalpao = pedidoCarregado.StatusGalpao?.at(-1)?.status;
+          setNovoStatusGalpao(ultimoStatusGalpao);
+        }
       }
       setLoading(false);
     };
+
     carregarPedido();
   }, [id]);
 
   const handleStatusChange = async () => {
-    if (!id || !pedido || !novoStatus) return;
+    if (!id || !pedido || !novoStatus || !userSetor) return;
 
     try {
-      const userSetor = localStorage.getItem("setor") ?? "Sistema";
-      await atualizarStatusPedido(id, pedido, novoStatus, userSetor);
+      await atualizarStatusPedido(
+        id,
+        pedido,
+        novoStatus,
+        userSetor,
+        pedido.requerArte ? (novoStatusArte as StatusArte) : undefined,
+        pedido.requerGalpao ? (novoStatusGalpao as StatusGalpao) : undefined
+      );
+
       navigate("/dashboard");
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
@@ -62,6 +127,8 @@ export default function EditarPedido() {
   if (!pedido) return <div>Pedido não encontrado</div>;
 
   const statusDisponiveis: StatusPedido[] = getStatusDisponiveis(pedido);
+  const statusDisponiveisArte: StatusArte[] = getStatusArteDisponiveis();
+  const statusDisponiveisGalpao: StatusGalpao[] = getStatusGalpaoDisponiveis();
 
   return (
     <div className="editar-pedido-container">
@@ -86,15 +153,59 @@ export default function EditarPedido() {
               <option key={status} value={status}>{status}</option>
             ))}
           </select>
-
-          <button 
-            onClick={handleStatusChange}
-            disabled={novoStatus === pedido.statusAtual}
-            className="update-button"
-          >
-            Atualizar Status
-          </button>
         </div>
+
+        {pedido.requerArte && (
+          <div className="status-form">
+            <label htmlFor="status-arte-select">Status da Arte:</label>
+            <select
+              id="status-arte-select"
+              value={novoStatusArte}
+              onChange={(e) => setNovoStatusArte(e.target.value as StatusArte)}
+              disabled={!podeEditarStatusArte}
+            >
+              {statusDisponiveisArte.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+            {!podeEditarStatusArte && (
+              <p className="status-warning">Você não tem permissão para alterar o status da arte.</p>
+            )}
+          </div>
+        )}
+
+        {pedido.requerGalpao && (
+          <div className="status-form">
+            <label htmlFor="status-galpao-select">Status Galpão:</label>
+            <select
+              id="status-galpao-select"
+              value={novoStatusGalpao}
+              onChange={(e) => setNovoStatusGalpao(e.target.value as StatusGalpao)}
+              disabled={!podeEditarStatusGalpao}
+            >
+              {statusDisponiveisGalpao.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+            {!podeEditarStatusGalpao && (
+              <p className="status-warning">Você não tem permissão para alterar o status do galpão.</p>
+            )}
+          </div>
+        )}
+
+        <button 
+          onClick={handleStatusChange}
+          disabled={
+            novoStatus === pedido.statusAtual &&
+            (!pedido.requerArte || novoStatusArte === pedido.StatusArte?.at(-1)?.status) &&
+            (!pedido.requerGalpao || novoStatusGalpao === pedido.StatusGalpao?.at(-1)?.status)
+          }
+          className="update-button"
+        >
+          Atualizar Status
+        </button>
 
         <div className="historico">
           <h3>Histórico de Status</h3>
