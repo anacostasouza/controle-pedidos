@@ -1,4 +1,4 @@
-import { type Pedido } from "../types/Pedidos";
+import type { Pedido, StatusPedido } from "../types/Pedidos";
 import { Timestamp } from "firebase/firestore";
 
 /**
@@ -43,3 +43,12 @@ export function filtrarPedidos(
     return clienteMatch && servicoMatch && statusMatch && atrasoMatch;
   });
 }
+
+export function isStatusPedido(value: unknown): value is StatusPedido {
+  return [
+    "Iniciado", "Em Aprovação", "Concluído", "Impressão", "Acabamento",
+    "Montagem", "Montagem/Acabamento", "Pedido Feito", "Liberado",
+    "Corte", "Estrutura", "Pintura", "Elétrica", "Corte e Preparação"
+  ].includes(value as string);
+}
+

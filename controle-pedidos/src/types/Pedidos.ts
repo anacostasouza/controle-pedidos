@@ -11,14 +11,13 @@ export interface StatusArteHist {
 
 export type StatusGalpao = 
   | "Corte e Preparação do Material"
-  | "Montagem / Acabamento"
+  | "Montagem/Acabamento"
   | "Concluído"
   | "Corte"
   | "Estrutura"
   | "Pintura"
   | "Elétrica"
-  | "Montagem"
-  | "Concluído";
+  | "Montagem";
 
 export interface StatusGalpaoHist {
   status: StatusGalpao

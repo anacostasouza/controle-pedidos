@@ -20,20 +20,7 @@ export type StatusPedido =
   | "Montagem/Acabamento"
   | "Montagem"
   | "Montagem/Acabamento";
-
-/* export interface FiltrosPedidos {
-    status?: StatusPedido;
-    dataInicio?: Timestamp;
-    dataFim?: Timestamp;
-    Servicos?: Servicos;
-    subServicos?: string;
-    responsavel?: string;
-    tipoDeEntrega?: string;
-    arte?: boolean;
-    galpao?: boolean;
-    numeroPedido?: number;
-} */
-
+  
 export const statusPorServico: Record<string, StatusPedido[] | Record<string, StatusPedido[]>> = {
   "Arte": ["Iniciado", "Em Aprovação", "Concluído"],
   "Gráfica Rápida": {

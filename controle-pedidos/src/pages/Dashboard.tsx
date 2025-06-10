@@ -6,7 +6,9 @@ import "../styles/Dashboard.css";
 import HeaderPage from '../components/layout/headerPage';
 import type { Pedido } from '../types/Pedidos';
 import { TipoServicoLabels, SubTipoServicoLabels, SubTipoServico, TipoServico } from '../types/Servicos';
-import { formatDate, filtrarPedidos, isPedidoAtrasado } from "../utils/dashboardUtils";
+import { formatDate, filtrarPedidos, isPedidoAtrasado, isStatusPedido } from "../utils/dashboardUtils";
+import { getEtapaAtual } from "../utils/statusUtils";
+import { getStatusDisponiveis, getStatusArteDisponiveis, getStatusGalpaoDisponiveis } from "../utils/utilsEditarPedido";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -19,7 +21,6 @@ export default function Dashboard() {
   const [pedidosFiltrados, setPedidosFiltrados] = useState<Pedido[]>([]);
   const [userSetor, setUserSetor] = useState("");
 
-  // Buscar setor do usuário autenticado
   useEffect(() => {
     const auth = getAuth();
     const db = getFirestore();
@@ -55,7 +56,6 @@ export default function Dashboard() {
     return false;
   };
 
-  // Buscar pedidos do Firestore
   useEffect(() => {
     const fetchPedidos = async () => {
       const db = getFirestore();
@@ -75,7 +75,6 @@ export default function Dashboard() {
     fetchPedidos();
   }, []);
 
-  // Aplicar filtros
   useEffect(() => {
     const pedidosFiltrados = filtrarPedidos(
       pedidos,
@@ -160,48 +159,91 @@ export default function Dashboard() {
                   <th>Cliente</th>
                   <th>Serviço</th>
                   <th>Prazo</th>
+                  <th>Etapas</th>
                   <th>Status</th>
                   <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {pedidosFiltrados.map((pedido) => (
-                  <tr key={pedido.id} className="pedidos-row">
-                    <td>{pedido.numeroPedido}</td>
-                    <td>{pedido.nomeCliente}</td>
-                    <td>
-                      {TipoServicoLabels[pedido.servico.tipo] ?? pedido.servico.tipo}
-                      {(() => {
-                        let subTipoLabel = "";
-                        if (pedido.servico.subTipo && SubTipoServicoLabels[pedido.servico.subTipo as SubTipoServico]) {
-                          subTipoLabel = `(${SubTipoServicoLabels[pedido.servico.subTipo as SubTipoServico]})`;
-                        } else if (pedido.servico.subTipo) {
-                          subTipoLabel = `(${pedido.servico.subTipo})`;
-                        }
-                        return subTipoLabel;
-                      })()}
-                    </td>
-                    <td>
-                      {formatDate(pedido.prazos.entrega)}
-                      {isPedidoAtrasado(pedido.prazos.entrega) && (
-                        <span className="atrasado-alert">Atrasado!</span>
-                      )}
-                    </td>
-                    <td>{pedido.statusAtual}</td>
-                    <td>
-                      {podeEditarPedido(pedido) ? (
-                        <button
-                          className="edit-button"
-                          onClick={() => navigate(`/editar-pedido/${pedido.id}`)}
-                        >
-                          Editar
-                        </button>
-                      ) : (
-                        <span className="no-edit-permission">Sem permissão</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {pedidosFiltrados.map((pedido) => {
+
+                      const statusDisponiveis = getStatusDisponiveis(pedido);
+                      const etapaAtual = getEtapaAtual(pedido.statusAtual, statusDisponiveis);
+
+                      // Status e etapa da ARTE
+                      const statusArteHist = pedido.StatusArte?.at(-1);
+                      const statusAtualArte = statusArteHist?.status;
+
+                      const statusDisponiveisArte = pedido.requerArte && isStatusPedido(statusAtualArte)
+                        ? getStatusArteDisponiveis({ ...pedido, statusAtual: statusAtualArte })
+                        : [];
+
+                      const etapaAtualArte = pedido.requerArte && isStatusPedido(statusAtualArte)
+                        ? getEtapaAtual(statusAtualArte, statusDisponiveisArte)
+                        : null;
+
+                      // Status e etapa do GALPÃO
+                      const statusGalpaoHist = pedido.StatusGalpao?.at(-1);
+                      const statusAtualGalpao = statusGalpaoHist?.status;
+
+                      const statusDisponiveisGalpao = pedido.requerGalpao && isStatusPedido(statusAtualGalpao)
+                        ? getStatusGalpaoDisponiveis({ ...pedido, statusAtual: statusAtualGalpao })
+                        : [];
+
+                      const etapaAtualGalpao = pedido.requerGalpao && isStatusPedido(statusAtualGalpao)
+                        ? getEtapaAtual(statusAtualGalpao, statusDisponiveisGalpao)
+                        : null;
+
+
+                  return (
+                    <tr key={pedido.id} className="pedidos-row">
+                      <td>{pedido.numeroPedido}</td>
+                      <td>{pedido.nomeCliente}</td>
+                      <td>
+                        {TipoServicoLabels[pedido.servico.tipo] ?? pedido.servico.tipo}
+                        {(() => {
+                          let subTipoLabel = "";
+                          if (pedido.servico.subTipo && SubTipoServicoLabels[pedido.servico.subTipo as SubTipoServico]) {
+                            subTipoLabel = `(${SubTipoServicoLabels[pedido.servico.subTipo as SubTipoServico]})`;
+                          } else if (pedido.servico.subTipo) {
+                            subTipoLabel = `(${pedido.servico.subTipo})`;
+                          }
+                          return subTipoLabel;
+                        })()}
+                      </td>
+                      <td>
+                        {formatDate(pedido.prazos.entrega)}
+                        {isPedidoAtrasado(pedido.prazos.entrega) && (
+                          <span className="atrasado-alert">Atrasado!</span>
+                        )}
+                      </td>
+                      <td>
+                          <div>
+                            <span><strong>Geral:</strong> {etapaAtual}/{statusDisponiveis.length}</span><br />
+                            {pedido.requerArte && (
+                              <span><strong>Arte:</strong> {etapaAtualArte}/{statusDisponiveisArte.length}</span>
+                            )}<br />
+                            {pedido.requerGalpao && (
+                              <span><strong>Galpão:</strong> {etapaAtualGalpao}/{statusDisponiveisGalpao.length}</span>
+                            )}
+                          </div>
+                      </td>
+                      <td>{pedido.statusAtual}</td>
+                      <td>
+                        {podeEditarPedido(pedido) ? (
+                          <button
+                            className="edit-button"
+                            onClick={() => navigate(`/editar-pedido/${pedido.id}`)}
+                          >
+                            Editar
+                          </button>
+                        ) : (
+                          <span className="no-edit-permission">Sem permissão</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

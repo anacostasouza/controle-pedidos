@@ -38,14 +38,13 @@ export type StatusComunicacaoVisualPlacaComplexa =
 
 export type StatusGalpao = 
   | "Corte e Preparação do Material"
-  | "Montagem / Acabamento"
+  | "Montagem/Acabamento"
   | "Concluído"
   | "Corte"
   | "Estrutura"
   | "Pintura"
   | "Elétrica"
-  | "Montagem"
-  | "Concluído";
+  | "Montagem";
 
   // utils/statusUtils.ts
 
@@ -92,3 +91,9 @@ export const statusPorServico = {
 export function obterStatusValidos(servico: string): readonly string[] {
   return statusPorServico[servico as keyof typeof statusPorServico] ?? [];
 }
+
+export function getEtapaAtual(statusAtual: string, statusDisponiveis: string[]): number {
+  const index = statusDisponiveis.indexOf(statusAtual);
+  return index === -1 ? 0 : index + 1;
+}
+

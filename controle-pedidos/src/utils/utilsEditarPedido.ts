@@ -7,11 +7,12 @@ import {
   type DocumentData
 } from "firebase/firestore";
 import { db } from "../services/firebase";
-import type { Pedido, StatusPedido } from "../types/Pedidos";
+import type { Pedido, StatusArteHist, StatusGalpaoHist, StatusPedido } from "../types/Pedidos";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { TipoServicoLabels } from "../types/Servicos";
+import { TipoServicoLabels, type SubTipoServicoValue, type TipoServicoValue } from "../types/Servicos";
 import { statusPorServico } from '../types/StatusPedidos';
 import type { StatusArte, StatusArteHist, StatusGalpao } from "../utils/statusUtils"
+import type { SetorValue } from "../types/Setores";
 
 // Busca um pedido por ID
 export async function fetchPedidoById(id: string): Promise<Pedido | null> {
@@ -108,13 +109,12 @@ export function getStatusDisponiveis(pedido: Pedido): StatusPedido[] {
 
   return Array.isArray(statusEntry) ? statusEntry : [];
 
-  return [];
 }
 
-export function getStatusArteDisponiveis(): StatusArte[] {
+export function getStatusArteDisponiveis(pedido?: Pedido): StatusArte[] {
   return ["Iniciado", "Em Aprovação", "Concluído"];
 }
 
-export function getStatusGalpaoDisponiveis(): StatusGalpao[] {
-  return ["Corte e Preparação do Material", "Elétrica", "Estrutura", "Montagem / Acabamento", "Pintura", "Concluído"]
+export function getStatusGalpaoDisponiveis(pedido?: Pedido): StatusGalpao[] {
+  return ["Corte e Preparação do Material", "Elétrica", "Estrutura", "Montagem/Acabamento", "Pintura", "Concluído"]
 }
