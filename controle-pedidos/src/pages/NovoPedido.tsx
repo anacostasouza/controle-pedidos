@@ -8,7 +8,6 @@ import type { Pedido } from "../types/Pedidos";
 import type { SetorValue } from "../types/Setores";
 import "../styles/NovoPedido.css";
 
-// Função utilitária para gerar opções de horário
 const generateTimeOptions = (interval: number = 30) => {
   const options = [];
   for (let hour = 8; hour < 18; hour++) {
@@ -69,14 +68,14 @@ export default function NovoPedido() {
       const db = getFirestore();
       const now = Timestamp.now();
       
-      // Determina setores responsáveis
+      
       const setoresResponsaveis: SetorValue[] = ["PRODUCAO_LOJA"];
 
       if (formData.requerArte) setoresResponsaveis.push("ARTE");
       if (formData.requerGalpao) setoresResponsaveis.push("GALPAO");
 
 
-      // Combina data e horário
+      
       const [hours, minutes] = (formData.horarioRetirada ?? "08:00").split(':');
       const entregaDate = formData.prazos.entrega.toDate();
       entregaDate.setHours(parseInt(hours), parseInt(minutes));

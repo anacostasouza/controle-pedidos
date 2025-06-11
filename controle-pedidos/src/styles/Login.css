@@ -4,11 +4,11 @@
   --card-bg-color: #ffffff;
   --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   --card-border-radius: 12px;
-  --button-bg-color: #f8f9fa; /* Lighter gray for button */
+  --button-bg-color: #f8f9fa; 
   --button-hover-bg-color: #e9ecef;
   --button-active-bg-color: #dee2e6;
   --button-text-color: #343a40;
-  --title-color: #212529; /* Darker title color */
+  --title-color: #212529;
   --error-bg-color: #f8d7da;
   --error-text-color: #721c24;
   --error-border-color: #f5c6cb;
@@ -23,9 +23,9 @@ body {
 
 .login-page {
   display: flex;
-  width: 100%; /* Garante que a página ocupe a largura total */
-  min-height: 100vh; /* Garante que a página ocupe a altura total da viewport */
-  box-sizing: border-box; /* Inclui padding e border no tamanho total */
+  width: 100%;
+  min-height: 100vh; 
+  box-sizing: border-box; 
 }
 
 .login-leftside {
@@ -52,9 +52,9 @@ body {
   font-family: 'Comfortaa', sans-serif;
   text-align: center;
   text-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
-  font-size: clamp(32px, 5vw, 64px); /* Tamanho de fonte */
+  font-size: clamp(32px, 5vw, 64px); 
   font-style: normal;
-  line-height: 1.2; /* Ajustado para melhor legibilidade */
+  line-height: 1.2;
   margin: 0; 
 }
 
@@ -73,7 +73,7 @@ body {
   align-items: center;
   justify-content: center;
   background-color: #f3f4f6;
-  padding: 3rem; /* Adicionado padding */
+  padding: 3rem; 
   box-sizing: border-box;
 }
 
@@ -99,7 +99,6 @@ body {
   margin-bottom: 1.5rem; 
 }
 
-/* Mensagem de erro */
 .login-error-message {
   color: var(--error-text-color);
   background-color: var(--error-bg-color);
@@ -113,7 +112,6 @@ body {
   text-align: left;
 }
 
-/* Botão de login */
 .login-button {
   display: inline-flex;
   align-items: center;
@@ -154,17 +152,17 @@ body {
   height: 20px;
 }
 
-/* Telas menores (tablets e celulares grandes em paisagem) */
+
 @media (max-width: 992px) {
   .login-page {
-    flex-direction: column; /* Empilha as seções verticalmente */
-    min-height: 0; /* Ajusta altura para compatibilidade */
+    flex-direction: column; 
+    min-height: 0;
   }
 
   .login-leftside,
   .login-container {
-    width: 100%; /* Ocupa largura total */
-    min-height: 50vh; /* Divide a altura da tela */
+    width: 100%;
+    min-height: 50vh; 
   }
 
   .login-leftside {

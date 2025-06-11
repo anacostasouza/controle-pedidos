@@ -58,7 +58,7 @@
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #6f42c1;
+  border-color: #8a2a2c;
 }
 
 .form-group textarea {
@@ -104,7 +104,7 @@
 
 .submit-button {
   font-family: 'Comfortaa', sans-serif;
-  background-color: #d68383;
+  background-color: #8a2a2c;
   color: white;
   border: none;
   border-radius: 26px;
@@ -115,7 +115,7 @@
 }
 
 .submit-button:hover {
-  background-color: #a85353;
+  background-color: #681c1d;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }

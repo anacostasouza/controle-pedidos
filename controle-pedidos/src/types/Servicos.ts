@@ -1,4 +1,4 @@
-// Tipos de serviço
+
 export enum TipoServico {
   ARTE = "ARTE",
   GRAFICA_RAPIDA = "GRAFICA_RAPIDA",
@@ -7,7 +7,7 @@ export enum TipoServico {
   TERCEIRIZADO = "TERCEIRIZADO"
 }
 
-// Subtipos de serviço
+
 export enum SubTipoServico {
   IMPRESSAO_RAPIDA = "IMPRESSAO_RAPIDA",
   IMPRESSAO_COM_ACABAMENTO = "IMPRESSAO_COM_ACABAMENTO",
@@ -17,14 +17,14 @@ export enum SubTipoServico {
   PLACA_COMPLEXA = "PLACA_COMPLEXA"
 }
 
-// Arrays de valores para uso em menus, selects, validações etc.
+
 export const TipoServicoValues = Object.values(TipoServico);
 export type TipoServicoValue = (typeof TipoServicoValues)[number];
 
 export const SubTipoServicoValues = Object.values(SubTipoServico);
 export type SubTipoServicoValue = (typeof SubTipoServicoValues)[number];
 
-// Labels legíveis para exibição na interface
+
 export const TipoServicoLabels: Record<TipoServico, string> = {
   [TipoServico.ARTE]: "Arte",
   [TipoServico.GRAFICA_RAPIDA]: "Gráfica Rápida",
@@ -42,9 +42,16 @@ export const SubTipoServicoLabels: Record<SubTipoServico, string> = {
   [SubTipoServico.PLACA_COMPLEXA]: "Placa Complexa"
 };
 
-// Funções auxiliares para validação
 export const isTipoServico = (value: string): value is TipoServicoValue =>
   TipoServicoValues.includes(value as TipoServicoValue);
 
 export const isSubTipoServico = (value: string): value is SubTipoServicoValue =>
   SubTipoServicoValues.includes(value as SubTipoServicoValue);
+
+export const getTipoServicoLabel = (tipo: TipoServicoValue): string => {
+  return TipoServicoLabels[tipo] || tipo;
+};
+
+export const getSubTipoServicoLabel = (subTipo?: SubTipoServicoValue): string => {
+  return subTipo ? SubTipoServicoLabels[subTipo] || subTipo : "-";
+};

@@ -1,32 +1,23 @@
 import type { Pedido, StatusPedido } from "../types/Pedidos";
 import { Timestamp } from "firebase/firestore";
 
-/**
- * Converte um timestamp do Firebase em string formatada.
- */
 export function formatDate(timestamp?: Timestamp): string {
   if (!timestamp) return "-";
   return timestamp.toDate().toLocaleDateString("pt-BR");
 }
 
-/**
- * Verifica se um pedido está atrasado com base na data de entrega.
- */
 export function isPedidoAtrasado(entrega?: Timestamp): boolean {
   if (!entrega) return false;
   const entregaDate = entrega.toDate();
   const hoje = new Date();
 
-  // Zera a hora para comparação apenas de datas
+ 
   hoje.setHours(0, 0, 0, 0);
   entregaDate.setHours(0, 0, 0, 0);
 
   return entregaDate < hoje;
 }
 
-/**
- * Filtra os pedidos com base nos critérios fornecidos.
- */
 export function filtrarPedidos(
   pedidos: Pedido[],
   buscaCliente: string,

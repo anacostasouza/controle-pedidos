@@ -14,7 +14,6 @@ import { statusPorServico } from '../types/StatusPedidos';
 import type { StatusArte, StatusArteHist, StatusGalpao } from "../utils/statusUtils"
 import type { SetorValue } from "../types/Setores";
 
-// Busca um pedido por ID
 export async function fetchPedidoById(id: string): Promise<Pedido | null> {
   const docRef = doc(db, "pedidos", id);
   const pedidoSnap = await getDoc(docRef);
@@ -30,7 +29,6 @@ export async function fetchPedidoById(id: string): Promise<Pedido | null> {
   return null;
 }
 
-// Atualiza status do pedido (geral + arte + galpão)
 export async function atualizarStatusPedido(
   id: string,
   pedido: Pedido,
@@ -87,12 +85,10 @@ export async function atualizarStatusPedido(
   await updateDoc(pedidoRef, updates);
 }
 
-// Exclui um pedido por ID
 export async function deletarPedidoPorId(id: string): Promise<void> {
   await deleteDoc(doc(db, "pedidos", id));
 }
 
-// Obtém lista de status disponíveis com base no serviço
 export function getStatusDisponiveis(pedido: Pedido): StatusPedido[] {
   const tipoLabel = TipoServicoLabels[pedido.servico.tipo];
   const subTipoLabel = pedido.servico.subTipo;

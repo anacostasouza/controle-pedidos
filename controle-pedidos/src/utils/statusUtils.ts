@@ -46,20 +46,18 @@ export type StatusGalpao =
   | "Elétrica"
   | "Montagem";
 
-  // utils/statusUtils.ts
 
 export const StatusArteOptions: StatusPedido[] = [
   "Iniciado",
   "Em Aprovação",
   "Concluído",
-  // ... outros status válidos para Arte
+
 ];
 
 export const StatusGalpaoOptions: StatusPedido[] = [
   "Impressão",
   "Acabamento",
   "Montagem",
-  // ... outros status válidos para Galpão
 ];
 
 

@@ -131,98 +131,98 @@ export default function EditarPedido() {
   const statusDisponiveisGalpao: StatusGalpao[] = getStatusGalpaoDisponiveis();
 
   return (
-    <div className="editar-pedido-container">
+    <><div className="HeaderPage">
       <HeaderPage />
-      <div className="container-editar-pedido">
-        <h1>Editar Pedido #{pedido.numeroPedido}</h1>
+    </div><div className="editar-pedido-container">
 
-        <div className="pedido-info">
-          <p><strong>Cliente:</strong> {pedido.nomeCliente}</p>
-          <p><strong>Serviço:</strong> {pedido.servico.tipo} {pedido.servico.subTipo && `(${pedido.servico.subTipo})`}</p>
-          <p><strong>Status Atual:</strong> {pedido.statusAtual}</p>
-        </div>
+        <div className="container-editar-pedido">
+          <h1>Editar Pedido {pedido.numeroPedido}</h1>
 
-        <div className="status-form">
-          <label htmlFor="novo-status-select">Novo Status:</label>
-          <select
-            id="novo-status-select"
-            value={novoStatus}
-            onChange={(e) => setNovoStatus(e.target.value as StatusPedido)}
-          >
-            {statusDisponiveis.map((status) => (
-              <option key={status} value={status}>{status}</option>
-            ))}
-          </select>
-        </div>
-
-        {pedido.requerArte && (
-          <div className="status-form">
-            <label htmlFor="status-arte-select">Status da Arte:</label>
-            <select
-              id="status-arte-select"
-              value={novoStatusArte}
-              onChange={(e) => setNovoStatusArte(e.target.value as StatusArte)}
-              disabled={!podeEditarStatusArte}
-            >
-              {statusDisponiveisArte.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-            {!podeEditarStatusArte && (
-              <p className="status-warning">Você não tem permissão para alterar o status da arte.</p>
-            )}
+          <div className="pedido-info">
+            <p><strong>Cliente:</strong> {pedido.nomeCliente}</p>
+            <p><strong>Serviço:</strong> {pedido.servico.tipo} {pedido.servico.subTipo && `(${pedido.servico.subTipo})`}</p>
+            <p><strong>Status Atual:</strong> {pedido.statusAtual}</p>
           </div>
-        )}
 
-        {pedido.requerGalpao && (
           <div className="status-form">
-            <label htmlFor="status-galpao-select">Status Galpão:</label>
+            <label htmlFor="novo-status-select">Novo Status:</label>
             <select
-              id="status-galpao-select"
-              value={novoStatusGalpao}
-              onChange={(e) => setNovoStatusGalpao(e.target.value as StatusGalpao)}
-              disabled={!podeEditarStatusGalpao}
+              id="novo-status-select"
+              value={novoStatus}
+              onChange={(e) => setNovoStatus(e.target.value as StatusPedido)}
             >
-              {statusDisponiveisGalpao.map((status) => (
+              {statusDisponiveis.map((status) => (
                 <option key={status} value={status}>{status}</option>
               ))}
             </select>
-            {!podeEditarStatusGalpao && (
-              <p className="status-warning">Você não tem permissão para alterar o status do galpão.</p>
-            )}
           </div>
-        )}
 
-        <button 
-          onClick={handleStatusChange}
-          disabled={
-            novoStatus === pedido.statusAtual &&
-            (!pedido.requerArte || novoStatusArte === pedido.StatusArte?.at(-1)?.status) &&
-            (!pedido.requerGalpao || novoStatusGalpao === pedido.StatusGalpao?.at(-1)?.status)
-          }
-          className="update-button"
-        >
-          Atualizar Status
-        </button>
+          {pedido.requerArte && (
+            <div className="status-form">
+              <label htmlFor="status-arte-select">Status da Arte:</label>
+              <select
+                id="status-arte-select"
+                value={novoStatusArte}
+                onChange={(e) => setNovoStatusArte(e.target.value as StatusArte)}
+                disabled={!podeEditarStatusArte}
+              >
+                {statusDisponiveisArte.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+              {!podeEditarStatusArte && (
+                <p className="status-warning">Você não tem permissão para alterar o status da arte.</p>
+              )}
+            </div>
+          )}
 
-        <div className="historico">
-          <h3>Histórico de Status</h3>
-          <ul>
-            {pedido.historicoStatus.map((item) => (
-              <li key={`${item.status}-${item.data?.seconds ?? ''}-${item.responsavel}`}>
-                <strong>{item.status}</strong> - {item.data.toDate().toLocaleString()} por {item.responsavel}
-              </li>
-            ))}
-          </ul>
+          {pedido.requerGalpao && (
+            <div className="status-form">
+              <label htmlFor="status-galpao-select">Status Galpão:</label>
+              <select
+                id="status-galpao-select"
+                value={novoStatusGalpao}
+                onChange={(e) => setNovoStatusGalpao(e.target.value as StatusGalpao)}
+                disabled={!podeEditarStatusGalpao}
+              >
+                {statusDisponiveisGalpao.map((status) => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+              {!podeEditarStatusGalpao && (
+                <p className="status-warning">Você não tem permissão para alterar o status do galpão.</p>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={handleStatusChange}
+            disabled={novoStatus === pedido.statusAtual &&
+              (!pedido.requerArte || novoStatusArte === pedido.StatusArte?.at(-1)?.status) &&
+              (!pedido.requerGalpao || novoStatusGalpao === pedido.StatusGalpao?.at(-1)?.status)}
+            className="update-button"
+          >
+            Atualizar Status
+          </button>
+
+          <div className="historico">
+            <h3>Histórico de Status</h3>
+            <ul>
+              {pedido.historicoStatus.map((item) => (
+                <li key={`${item.status}-${item.data?.seconds ?? ''}-${item.responsavel}`}>
+                  <strong>{item.status}</strong> - {item.data.toDate().toLocaleString()} por {item.responsavel}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="actions">
+            <button className="back-button" onClick={() => navigate("/dashboard")}>Voltar para Dashboard</button>
+            <button className="delete-button" onClick={handleDelete}>Excluir Pedido</button>
+          </div>
         </div>
-
-        <div className="actions">
-          <button className="back-button" onClick={() => navigate("/dashboard")}>Voltar para Dashboard</button>
-          <button className="delete-button" onClick={handleDelete}>Excluir Pedido</button>
-        </div>
-      </div>
-    </div>
+      </div></>
   );
 }

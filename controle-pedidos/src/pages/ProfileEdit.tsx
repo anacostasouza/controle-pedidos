@@ -2,7 +2,7 @@ import React, { useEffect, useState, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { doc, getDoc, updateDoc, getFirestore, collection, getDocs, query } from "firebase/firestore"; // Adicionado collection, getDocs, query, where
 import { getAuth } from "firebase/auth";
-import "../styles/ProfileEdit.css"; // reaproveita o mesmo estilo
+import "../styles/ProfileEdit.css"; 
 import logoImage from "../assets/logologin.png";
 import { setores } from "../types/Setores";
 
@@ -27,9 +27,9 @@ export default function EditProfilePage(): JSX.Element {
   const [userEmail, setUserEmail] = useState("");
   const [usuarioLogado, setUsuarioLogado] = useState<Usuario | null>(null);
 
-  // NOVO ESTADO: Para armazenar todos os usuários (visível apenas para admins)
+  
   const [allUsers, setAllUsers] = useState<Usuario[]>([]);
-  // NOVO ESTADO: Para controlar qual usuário está sendo editado no momento (se for admin editando outro)
+  
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editingUserName, setEditingUserName] = useState<string>("");
   const [editingUserSetor, setEditingUserSetor] = useState<string>("");
@@ -39,21 +39,21 @@ export default function EditProfilePage(): JSX.Element {
   const setoresAdmin = React.useMemo(() => ["SUPORTE", "GESTAO"], []);
   const usuarioLogadoSetor = usuarioLogado?.setorNome ?? "";
 
-  // Helper para verificar se o usuário logado é admin
+
   const isCurrentUserAdmin = setoresAdmin.includes(usuarioLogadoSetor);
 
   const podeSelecionarSetor = (setorValue: string) => {
     const setorParaVerificar = setores.find(s => s.value === setorValue);
     const setorNomeParaVerificar = setorParaVerificar?.label ?? "";
 
-    if (isCurrentUserAdmin) { // Se o usuário logado for admin, ele pode selecionar qualquer setor
+    if (isCurrentUserAdmin) {
       return true;
     }
-    // Se o usuário logado NÃO for admin, ele NÃO pode selecionar um setor admin
+    
     if (setoresAdmin.includes(setorNomeParaVerificar)) {
       return false;
     }
-    return true; // Se não for admin e o setor não for admin, ele pode selecionar
+    return true;
   };
 
   useEffect(() => {
@@ -92,16 +92,15 @@ export default function EditProfilePage(): JSX.Element {
           };
           setUsuarioLogado(loggedUser);
 
-          // Se o usuário logado é admin, buscar todos os usuários
           if (setoresAdmin.includes(loggedUser.setorNome)) {
             const usersCollectionRef = collection(db, "usuarios");
-            const q = query(usersCollectionRef); // Pode adicionar .where para filtrar se necessário
+            const q = query(usersCollectionRef); 
             const querySnapshot = await getDocs(q);
             const loadedUsers: Usuario[] = [];
             querySnapshot.forEach((doc) => {
                 const userData = doc.data();
                 loadedUsers.push({
-                    usuarioID: doc.id, // O ID do documento é o usuarioID
+                    usuarioID: doc.id, 
                     displayName: userData.displayName ?? "",
                     email: userData.email ?? "",
                     setor: userData.setor ?? "",
@@ -120,9 +119,9 @@ export default function EditProfilePage(): JSX.Element {
     };
 
     fetchUserData();
-  }, [navigate, setoresAdmin]); // Adicionado 'navigate' nas dependências para ESLint
+  }, [navigate, setoresAdmin]); 
 
-  // Função auxiliar para validar edição do próprio usuário
+
   const validateSelfEdit = (): string | null => {
     if (!profileName.trim()) {
       return "Por favor, insira seu nome.";
@@ -133,7 +132,6 @@ export default function EditProfilePage(): JSX.Element {
     return null;
   };
 
-  // Função auxiliar para validar edição de outro usuário (admin)
   const validateAdminEdit = (): string | null => {
     if (!editingUserName.trim()) {
       return "Por favor, insira o nome do usuário.";
@@ -218,9 +216,9 @@ export default function EditProfilePage(): JSX.Element {
   const handleEditOtherUser = (user: Usuario) => {
     setEditingUserId(user.usuarioID);
     setEditingUserName(user.displayName);
-    setEditingUserSetor(user.setor); // O ID do setor
+    setEditingUserSetor(user.setor); 
     setEditingUserStatus(user.statusConta);
-    setError(""); // Limpa erros anteriores
+    setError(""); 
   };
 
   const handleCancelEdit = () => {
@@ -302,7 +300,7 @@ export default function EditProfilePage(): JSX.Element {
                         </button>
                     </div>
                 </>
-            ) : ( // Formulário para o próprio usuário editar seu perfil
+            ) : ( 
                 <>
                     <div className="input-group">
                         <label htmlFor="profileName" className="profile-label">Nome completo</label>
@@ -345,8 +343,7 @@ export default function EditProfilePage(): JSX.Element {
           </form>
         </div>
 
-        {/* LISTA DE USUÁRIOS PARA ADMINS */}
-        {isCurrentUserAdmin && !editingUserId && ( // Exibir a lista apenas se for admin e não estiver editando um usuário
+        {isCurrentUserAdmin && !editingUserId && ( 
             <div className="users-list-card">
                 <h2>Todos os Usuários</h2>
                 {allUsers.length === 0 ? (

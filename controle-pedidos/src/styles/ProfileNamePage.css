@@ -139,19 +139,18 @@
   box-sizing: border-box;
 }
 
-/* Estilização específica para o select */
 .profile-select {
-  appearance: none; /* Remove estilo padrão */
+  appearance: none;
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23495057' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   background-size: 16px 12px;
-  padding-right: 2rem; /* Espaço para o ícone */
+  padding-right: 2rem; 
   cursor: pointer;
 }
 
 .profile-select::-ms-expand {
-  display: none; /* Remove seta padrão no IE */
+  display: none; 
 }
 
 .profile-input:focus,
@@ -221,7 +220,6 @@
   box-shadow: none;
 }
 
-/* Loading spinner para o botão */
 .profile-button.loading {
   position: relative;
   color: transparent;
@@ -245,7 +243,6 @@
   to { transform: rotate(360deg); }
 }
 
-/* Media queries para responsividade */
 @media (max-width: 576px) {
   .profile-card {
     padding: 1.5rem;
@@ -268,7 +265,6 @@
   }
 }
 
-/* Estilos para dispositivos muito pequenos */
 @media (max-width: 360px) {
   .profile-card {
     padding: 1.25rem;

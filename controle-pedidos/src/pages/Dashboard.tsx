@@ -170,7 +170,7 @@ export default function Dashboard() {
                       const statusDisponiveis = getStatusDisponiveis(pedido);
                       const etapaAtual = getEtapaAtual(pedido.statusAtual, statusDisponiveis);
 
-                      // Status e etapa da ARTE
+                     
                       const statusArteHist = pedido.StatusArte?.at(-1);
                       const statusAtualArte = statusArteHist?.status;
 
@@ -182,7 +182,7 @@ export default function Dashboard() {
                         ? getEtapaAtual(statusAtualArte, statusDisponiveisArte)
                         : null;
 
-                      // Status e etapa do GALPÃO
+                      
                       const statusGalpaoHist = pedido.StatusGalpao?.at(-1);
                       const statusAtualGalpao = statusGalpaoHist?.status;
 
@@ -206,7 +206,7 @@ export default function Dashboard() {
                           if (pedido.servico.subTipo && SubTipoServicoLabels[pedido.servico.subTipo as SubTipoServico]) {
                             subTipoLabel = `(${SubTipoServicoLabels[pedido.servico.subTipo as SubTipoServico]})`;
                           } else if (pedido.servico.subTipo) {
-                            subTipoLabel = `(${pedido.servico.subTipo})`;
+                            subTipoLabel = ` (${pedido.servico.subTipo})`;
                           }
                           return subTipoLabel;
                         })()}

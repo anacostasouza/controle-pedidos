@@ -1,5 +1,5 @@
 import { Timestamp } from "firebase/firestore";
-import { TipoServico, SubTipoServico, type TipoServicoValue, type SubTipoServicoValue } from "./Servicos";
+import { TipoServico, SubTipoServico, type TipoServicoValue, type SubTipoServicoValue, SubTipoServicoValue } from './Servicos';
 import type { SetorValue } from './Setores';
 
 export type StatusArte = "Iniciado" | "Em Aprovação" | "Concluído";
@@ -47,7 +47,7 @@ export interface Pedido {
   nomeCliente: string;
   servico: {
     tipo: TipoServicoValue;
-    subTipo?: SubTipoServicoValue | null;
+    subTipo?: SubTipoServicoValue;
     servicoID: number;
   };
   responsavel: string;
