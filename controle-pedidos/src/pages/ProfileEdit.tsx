@@ -1,140 +1,139 @@
-import React, { useEffect, useState, type JSX } from "react";
+import React, { useEffect, useState, useMemo, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
-import { doc, getDoc, updateDoc, getFirestore, collection, getDocs, query } from "firebase/firestore"; // Adicionado collection, getDocs, query, where
+import { doc, getDoc, updateDoc, collection, getDocs, query, Timestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import "../styles/ProfileEdit.css"; 
-import logoImage from "../assets/logologin.png";
-import { setores } from "../types/Setores";
+import { db } from "../services/firebase";
 
-export interface Usuario {
-  usuarioID: string;
-  displayName: string;
-  email: string;
-  setor: string;
-  setorNome: string;
-  createdAt: Date;
-  updatedAt: Date;
-  statusConta: boolean;
-}
+import "../styles/ProfileEdit.css";
+
+import { setores, type SetorValue, type Setor } from "../types/Setores";
+import type { Usuario } from "../types/Usuario";
 
 export default function EditProfilePage(): JSX.Element {
   const navigate = useNavigate();
-  const [profileName, setProfileName] = useState("");
-  const [setor, setSetor] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [userId, setUserId] = useState("");
-  const [userEmail, setUserEmail] = useState("");
+
+  const [profileName, setProfileName] = useState<string>("");
+  const [setor, setSetor] = useState<SetorValue | "">("");
   const [usuarioLogado, setUsuarioLogado] = useState<Usuario | null>(null);
 
-  
   const [allUsers, setAllUsers] = useState<Usuario[]>([]);
-  
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editingUserName, setEditingUserName] = useState<string>("");
-  const [editingUserSetor, setEditingUserSetor] = useState<string>("");
+  const [editingUserSetor, setEditingUserSetor] = useState<SetorValue | "">("");
   const [editingUserStatus, setEditingUserStatus] = useState<boolean>(true);
 
+  const [showManageUsers, setShowManageUsers] = useState<boolean>(false);
 
-  const setoresAdmin = React.useMemo(() => ["SUPORTE", "GESTAO"], []);
-  const usuarioLogadoSetor = usuarioLogado?.setorNome ?? "";
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>("");
 
+  const setoresAdminLabels = useMemo(() => ["Suporte", "Gestão"], []);
 
-  const isCurrentUserAdmin = setoresAdmin.includes(usuarioLogadoSetor);
-
-  const podeSelecionarSetor = (setorValue: string) => {
-    const setorParaVerificar = setores.find(s => s.value === setorValue);
-    const setorNomeParaVerificar = setorParaVerificar?.label ?? "";
-
-    if (isCurrentUserAdmin) {
-      return true;
-    }
-    
-    if (setoresAdmin.includes(setorNomeParaVerificar)) {
-      return false;
-    }
-    return true;
-  };
+  const isCurrentUserAdmin = useMemo(() =>
+    setoresAdminLabels.includes(usuarioLogado?.setorNome ?? ""),
+    [usuarioLogado, setoresAdminLabels]
+  );
 
   useEffect(() => {
     const auth = getAuth();
-    const user = auth.currentUser;
+    const currentUser = auth.currentUser;
 
-    if (!user) {
-      navigate("/");
-      return;
-    }
+    const fetchInitialData = async () => {
+      setLoading(true);
+      setError("");
 
-    const db = getFirestore();
-    const userRef = doc(db, "usuarios", user.uid);
+      if (!currentUser) {
+        console.warn("Usuário não autenticado. Redirecionando para login.");
+        navigate("/");
+        setLoading(false);
+        return;
+      }
 
-    const fetchUserData = async () => {
       try {
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          setProfileName(data.displayName ?? "");
-          setSetor(data.setor ?? "");
-          setUserId(user.uid);
-          setUserEmail(user.email ?? "");
+        const userDocRef = doc(db, "usuarios", currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
 
-          const setorAtualLabel = setores.find(s => s.value === (data.setor ?? ""))?.label ?? "";
+        if (userDocSnap.exists()) {
+          const data = userDocSnap.data();
+          const currentSetorObj = setores.find(s => s.value === data.setor);
+          const currentSetorLabel = currentSetorObj?.label || "";
 
-          const loggedUser: Usuario = {
-            usuarioID: user.uid,
-            displayName: data.displayName ?? "",
-            email: user.email ?? "",
-            setor: data.setor ?? "",
-            setorNome: setorAtualLabel,
-            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
-            updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(),
+          const loadedLoggedUser: Usuario = {
+            usuarioID: currentUser.uid,
+            displayName: data.displayName || "",
+            email: data.email || currentUser.email || "",
+            setor: (data.setor as SetorValue) || "",
+            setorNome: currentSetorLabel,
+            createdAt: (data.createdAt instanceof Timestamp) ? data.createdAt.toDate() : new Date(),
+            updatedAt: (data.updatedAt instanceof Timestamp) ? data.updatedAt.toDate() : new Date(),
             statusConta: data.statusConta ?? true,
           };
-          setUsuarioLogado(loggedUser);
+          setUsuarioLogado(loadedLoggedUser);
+          setProfileName(loadedLoggedUser.displayName);
+          setSetor(loadedLoggedUser.setor);
 
-          if (setoresAdmin.includes(loggedUser.setorNome)) {
+          if (setoresAdminLabels.includes(loadedLoggedUser.setorNome)) {
             const usersCollectionRef = collection(db, "usuarios");
-            const q = query(usersCollectionRef); 
+            const q = query(usersCollectionRef);
             const querySnapshot = await getDocs(q);
             const loadedUsers: Usuario[] = [];
-            querySnapshot.forEach((doc) => {
-                const userData = doc.data();
-                loadedUsers.push({
-                    usuarioID: doc.id, 
-                    displayName: userData.displayName ?? "",
-                    email: userData.email ?? "",
-                    setor: userData.setor ?? "",
-                    setorNome: userData.setorNome ?? "",
-                    createdAt: userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date(),
-                    updatedAt: userData.updatedAt?.toDate ? userData.updatedAt.toDate() : new Date(),
-                    statusConta: userData.statusConta ?? true,
-                });
+            querySnapshot.forEach((docSnap) => {
+              const userData = docSnap.data();
+              const userSetorObj = setores.find(s => s.value === userData.setor);
+              const userSetorLabel = userSetorObj?.label || "";
+              loadedUsers.push({
+                usuarioID: docSnap.id,
+                displayName: userData.displayName || "",
+                email: userData.email || "",
+                setor: (userData.setor as SetorValue) || "",
+                setorNome: userSetorLabel,
+                createdAt: (userData.createdAt instanceof Timestamp) ? userData.createdAt.toDate() : new Date(),
+                updatedAt: (userData.updatedAt instanceof Timestamp) ? userData.updatedAt.toDate() : new Date(),
+                statusConta: userData.statusConta ?? true,
+              });
             });
             setAllUsers(loadedUsers);
           }
+
+        } else {
+          setError("Seu perfil não foi encontrado. Contate o suporte.");
+          navigate("/");
         }
-      } catch (error) {
-        console.error("Erro ao buscar dados do usuário ou todos os usuários:", error);
+      } catch (err) {
+        console.error("ERRO ao carregar dados iniciais:", err);
+        setError("Erro ao carregar dados. Tente novamente.");
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchUserData();
-  }, [navigate, setoresAdmin]); 
-
+    fetchInitialData();
+  }, [navigate, setoresAdminLabels]);
 
   const validateSelfEdit = (): string | null => {
     if (!profileName.trim()) {
-      return "Por favor, insira seu nome.";
+      return "O nome de exibição não pode ser vazio.";
     }
     if (!setor) {
       return "Por favor, selecione seu setor.";
+    }
+
+    const selectedSetorObj = setores.find(s => s.value === setor);
+    const selectedSetorLabel = selectedSetorObj?.label;
+
+    if (!selectedSetorLabel) {
+        return "Setor selecionado inválido.";
+    }
+
+    if (!isCurrentUserAdmin && setoresAdminLabels.includes(selectedSetorLabel)) {
+      return `Você não tem permissão para mudar seu setor para ${selectedSetorLabel}.`;
     }
     return null;
   };
 
   const validateAdminEdit = (): string | null => {
     if (!editingUserName.trim()) {
-      return "Por favor, insira o nome do usuário.";
+      return "O nome do usuário não pode ser vazio.";
     }
     if (!editingUserSetor) {
       return "Por favor, selecione o setor do usuário.";
@@ -145,68 +144,89 @@ export default function EditProfilePage(): JSX.Element {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
-    const validationError = !editingUserId ? validateSelfEdit() : validateAdminEdit();
+    const validationError = editingUserId ? validateAdminEdit() : validateSelfEdit();
     if (validationError) {
       setError(validationError);
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
     try {
-      const db = getFirestore();
-      const targetUserId = editingUserId ?? userId;
-      const userToUpdateRef = doc(db, "usuarios", targetUserId);
-
-      let dataToUpdate: any = {};
-      if (!editingUserId) {
-        const setorSelecionado = setores.find((s) => s.value === setor);
-        dataToUpdate = {
-          displayName: profileName,
-          setor,
-          setorNome: setorSelecionado?.label ?? "",
-          updatedAt: new Date(),
-        };
-      } else {
-        const setorSelecionado = setores.find((s) => s.value === editingUserSetor);
-        dataToUpdate = {
-          displayName: editingUserName,
-          setor: editingUserSetor,
-          setorNome: setorSelecionado?.label ?? "",
-          statusConta: editingUserStatus,
-          updatedAt: new Date(),
-        };
+      const targetUserId = editingUserId ?? (usuarioLogado?.usuarioID || "");
+      if (!targetUserId) {
+        setError("ID do usuário não encontrado para atualização.");
+        setLoading(false);
+        return;
       }
 
-      await updateDoc(userToUpdateRef, dataToUpdate);
+      const userDocRef = doc(db, "usuarios", targetUserId);
+      let dataToUpdate: any = {};
+      let updatedSetorLabel: string;
+      let updatedSetorValue: SetorValue | "";
 
-      if (isCurrentUserAdmin && editingUserId) {
+      if (editingUserId) { // Admin editando outro usuário
+        updatedSetorValue = editingUserSetor;
+        updatedSetorLabel = setores.find(s => s.value === editingUserSetor)?.label || "";
+        dataToUpdate = {
+          displayName: editingUserName,
+          setor: updatedSetorValue,
+          setorNome: updatedSetorLabel,
+          statusConta: editingUserStatus,
+          updatedAt: Timestamp.now(),
+        };
+        await updateDoc(userDocRef, dataToUpdate);
+
         const usersCollectionRef = collection(db, "usuarios");
-        const querySnapshot = await getDocs(usersCollectionRef);
-        const loadedUsers: Usuario[] = [];
-        querySnapshot.forEach((doc) => {
-          const userData = doc.data();
-          loadedUsers.push({
-            usuarioID: doc.id,
-            displayName: userData.displayName ?? "",
-            email: userData.email ?? "",
-            setor: userData.setor ?? "",
-            setorNome: userData.setorNome ?? "",
-            createdAt: userData.createdAt?.toDate ? userData.createdAt.toDate() : new Date(),
-            updatedAt: userData.updatedAt?.toDate ? userData.updatedAt.toDate() : new Date(),
+        const querySnapshot = await getDocs(query(usersCollectionRef));
+        const reloadedUsers: Usuario[] = [];
+        querySnapshot.forEach((docSnap) => {
+          const userData = docSnap.data();
+          const userSetorObj = setores.find(s => s.value === userData.setor);
+          const userSetorLabel = userSetorObj?.label || "";
+          reloadedUsers.push({
+            usuarioID: docSnap.id,
+            displayName: userData.displayName || "",
+            email: userData.email || "",
+            setor: (userData.setor as SetorValue) || "",
+            setorNome: userSetorLabel,
+            createdAt: (userData.createdAt instanceof Timestamp) ? userData.createdAt.toDate() : new Date(),
+            updatedAt: (userData.updatedAt instanceof Timestamp) ? userData.updatedAt.toDate() : new Date(),
             statusConta: userData.statusConta ?? true,
           });
         });
-        setAllUsers(loadedUsers);
-        setEditingUserId(null);
+        setAllUsers(reloadedUsers);
+        setEditingUserId(null); // Sai do modo de edição
         setEditingUserName("");
         setEditingUserSetor("");
         setEditingUserStatus(true);
-      } else {
+        setError(""); // Limpa qualquer erro após sucesso
+
+      } else { // Usuário editando o próprio perfil
+        updatedSetorValue = setor;
+        updatedSetorLabel = setores.find(s => s.value === setor)?.label || "";
+        dataToUpdate = {
+          displayName: profileName,
+          setor: updatedSetorValue,
+          setorNome: updatedSetorLabel,
+          updatedAt: Timestamp.now(),
+        };
+        await updateDoc(userDocRef, dataToUpdate);
+
+        setUsuarioLogado(prev => prev ? {
+          ...prev,
+          displayName: profileName,
+          setor: updatedSetorValue,
+          setorNome: updatedSetorLabel,
+          updatedAt: (dataToUpdate.updatedAt instanceof Timestamp) ? dataToUpdate.updatedAt.toDate() : new Date()
+        } : null);
+
         navigate("/dashboard");
       }
+
     } catch (err) {
-      console.error("Erro ao atualizar perfil:", err);
+      console.error("ERRO ao salvar o perfil:", err);
       setError("Erro ao salvar dados. Tente novamente.");
     } finally {
       setLoading(false);
@@ -214,11 +234,14 @@ export default function EditProfilePage(): JSX.Element {
   };
 
   const handleEditOtherUser = (user: Usuario) => {
+    if (!isCurrentUserAdmin || !showManageUsers) {
+        return;
+    }
     setEditingUserId(user.usuarioID);
     setEditingUserName(user.displayName);
-    setEditingUserSetor(user.setor); 
+    setEditingUserSetor(user.setor as SetorValue);
     setEditingUserStatus(user.statusConta);
-    setError(""); 
+    setError("");
   };
 
   const handleCancelEdit = () => {
@@ -229,144 +252,197 @@ export default function EditProfilePage(): JSX.Element {
     setError("");
   };
 
+  const handleToggleManageUsers = () => {
+    if (editingUserId) {
+        handleCancelEdit();
+    }
+    setShowManageUsers(prev => !prev);
+  };
+
+  if (loading) {
+    return (
+      <div className="profile-page loading">
+        <p>Carregando perfil e dados...</p>
+      </div>
+    );
+  }
+
+  if (!usuarioLogado) {
+    return (
+      <div className="profile-page error-state">
+        <p className="profile-error">Não foi possível carregar o perfil do usuário. Por favor, tente novamente mais tarde ou contate o suporte.</p>
+        <button onClick={() => navigate("/")} className="profile-button">Voltar para o Login</button>
+      </div>
+    );
+  }
+
   return (
-    <div className="profile-page">
-      <div className="profile-container">
-        <div className="profile-card">
-          <img src={logoImage} alt="Logo" className="profile-logo" />
-          <h1 className="profile-title">
-            {editingUserId ? "Editar Usuário" : "Perfil"}
-          </h1>
-          <p className="profile-subtitle">
-            {editingUserId ? "Atualize as informações do usuário." : "Atualize suas informações abaixo."}
-          </p>
+    <div className="settings-page">
+      <main className="profile-content">
+          <header className="content-header">
+              <h1 className="content-title">
+                  {editingUserId ? "Editar Usuário" : "Editar Perfil"}
+              </h1>
+          </header>
 
-          <form onSubmit={handleSubmit} className="profile-form">
-            {error && <p className="profile-error">{error}</p>}
+          <form onSubmit={handleSubmit} className="profile-form-grid" id="profile-form-id">
+            {error && <p className="profile-error full-width">{error}</p>}
 
-            {editingUserId ? ( 
+            {/* Renderização condicional do formulário: próprio perfil OU edição de outro */}
+            {/* O formulário do próprio perfil aparece se:
+                1. A seção de gerenciar usuários está oculta (`!showManageUsers`).
+                2. O usuário NÃO é admin (`!isCurrentUserAdmin`).
+                3. O usuário é admin, a seção de gerenciar está visível, MAS não há um usuário específico sendo editado (`isCurrentUserAdmin && !editingUserId`). */}
+            {!showManageUsers || !isCurrentUserAdmin || (isCurrentUserAdmin && !editingUserId) ? (
                 <>
-                    <div className="input-group">
-                        <label htmlFor="editingUserName" className="profile-label">Nome do Usuário</label>
-                        <input
-                            id="editingUserName"
-                            type="text"
-                            value={editingUserName}
-                            onChange={(e) => setEditingUserName(e.target.value)}
-                            className="profile-input"
-                            placeholder="Digite o nome do usuário"
-                            disabled={loading}
-                        />
-                    </div>
-
-                    <div className="input-group">
-                        <label htmlFor="editingUserSetor" className="profile-label">Setor do Usuário</label>
-                        <select
-                            id="editingUserSetor"
-                            value={editingUserSetor}
-                            onChange={(e) => setEditingUserSetor(e.target.value)}
-                            className="profile-select"
-                            disabled={loading}
-                        >
-                            <option value="">Selecione o setor</option>
-                            {setores.map((s) => (
-                                <option key={s.value} value={s.value}>
-                                    {s.label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="input-group">
-                        <label htmlFor="editingUserStatus" className="profile-label">Status da Conta</label>
-                        <select
-                            id="editingUserStatus"
-                            value={editingUserStatus ? "true" : "false"}
-                            onChange={(e) => setEditingUserStatus(e.target.value === "true")}
-                            className="profile-select"
-                            disabled={loading}
-                        >
-                            <option value="true">Ativa</option>
-                            <option value="false">Inativa</option>
-                        </select>
-                    </div>
-
-                    <div className="form-actions">
-                        <button type="submit" className="profile-button" disabled={loading}>
-                            {loading ? "Salvando..." : "Salvar Alterações"}
-                        </button>
-                        <button type="button" onClick={handleCancelEdit} className="profile-button cancel-button" disabled={loading}>
-                            Cancelar
-                        </button>
-                    </div>
-                </>
-            ) : ( 
-                <>
-                    <div className="input-group">
-                        <label htmlFor="profileName" className="profile-label">Nome completo</label>
+                    <div className="form-group full-width">
+                        <label htmlFor="profileName">Nome completo</label>
                         <input
                             id="profileName"
                             type="text"
                             value={profileName}
                             onChange={(e) => setProfileName(e.target.value)}
-                            className="profile-input"
                             placeholder="Digite seu nome"
                             disabled={loading}
                         />
                     </div>
 
-                    <div className="input-group">
-                        <label htmlFor="setor" className="profile-label">Setor</label>
+                    <div className="form-group full-width">
+                        <label htmlFor="setor">Setor</label>
                         <select
                             id="setor"
                             value={setor}
-                            onChange={(e) => setSetor(e.target.value)}
-                            className="profile-select"
+                            onChange={(e) => setSetor(e.target.value as SetorValue)}
                             disabled={loading}
                         >
                             <option value="">Selecione seu setor</option>
-                            {usuarioLogado && setores.map((s) => (
-                                podeSelecionarSetor(s.value) && (
+                            {setores.map((s) => {
+                                // Se o usuário é admin OU o setor não é um dos setores admin, mostra a opção
+                                if (isCurrentUserAdmin || !setoresAdminLabels.includes(s.label)) {
+                                    return (
+                                        <option key={s.value} value={s.value}>
+                                            {s.label}
+                                        </option>
+                                    );
+                                }
+                                return null; // Oculta opções de setor admin para não-admins
+                            })}
+                        </select>
+                    </div>
+                </>
+            ) : (
+                // Modo de edição de outro usuário (APENAS admins, e APENAS quando showManageUsers é true E está editando um ID específico)
+                isCurrentUserAdmin && editingUserId && (
+                    <>
+                        <div className="form-group">
+                            <label htmlFor="editingUserName">Nome do Usuário</label>
+                            <input
+                                id="editingUserName"
+                                type="text"
+                                value={editingUserName}
+                                onChange={(e) => setEditingUserName(e.target.value)}
+                                placeholder="Digite o nome do usuário"
+                                disabled={loading}
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label htmlFor="editingUserSetor">Setor do Usuário</label>
+                            <select
+                                id="editingUserSetor"
+                                value={editingUserSetor}
+                                onChange={(e) => setEditingUserSetor(e.target.value as SetorValue)}
+                                disabled={loading}
+                            >
+                                <option value="">Selecione o setor</option>
+                                {setores.map((s) => (
                                     <option key={s.value} value={s.value}>
                                         {s.label}
                                     </option>
-                                )
-                            ))}
-                        </select>
-                    </div>
+                                ))}
+                            </select>
+                        </div>
 
-                    <button type="submit" className="profile-button" disabled={loading}>
-                        {loading ? "Salvando..." : "Salvar Alterações"}
-                    </button>
-                </>
+                        <div className="form-group full-width">
+                            <label htmlFor="editingUserStatus">Status da Conta</label>
+                            <select
+                                id="editingUserStatus"
+                                value={editingUserStatus ? "true" : "false"}
+                                onChange={(e) => setEditingUserStatus(e.target.value === "true")}
+                                disabled={loading}
+                            >
+                                <option value="true">Ativa</option>
+                                <option value="false">Inativa</option>
+                            </select>
+                        </div>
+
+                        {/* Estes botões ficam DENTRO do formulário de edição de outro usuário */}
+                        <div className="form-actions full-width">
+                            <button type="button" onClick={handleCancelEdit} className="btn cancel-btn" disabled={loading}>
+                                Cancelar
+                            </button>
+                            {/* Botão de Salvar Alterações para edição de OUTRO usuário, dentro do form */}
+                            <button type="submit" className="btn save-btn" disabled={loading} form="profile-form-id">
+                                {loading ? "Salvando..." : "Salvar Alterações"}
+                            </button>
+                        </div>
+                    </>
+                )
+            )}
+            {/* O container de botões abaixo do formulário */}
+            {/* Ele só aparece se não estiver no modo de edição de OUTRO usuário */}
+            {!editingUserId && (
+                <div className="profile-buttons-container">
+                    {isCurrentUserAdmin && (
+                        <button
+                            type="button" // ESTA É A MUDANÇA CRUCIAL: GARANTIR type="button" para NÃO SUBMETER O FORM
+                            onClick={handleToggleManageUsers}
+                            className="manage-users-btn"
+                            disabled={loading}
+                        >
+                            {showManageUsers ? "Esconder Gerenciamento de Usuários" : "Gerenciar Outros Usuários"}
+                        </button>
+                    )}
+                    {/* Botão de Salvar Alterações para o próprio perfil, fora do form principal, mas linkado via 'form' prop */}
+                    {(!showManageUsers || !isCurrentUserAdmin) && (
+                        <div className="form-action">
+                            <button type="submit" className="btn save-btn" disabled={loading} form="profile-form-id">
+                                {loading ? "Salvando..." : "Salvar Alterações"}
+                            </button>
+                        </div>
+                    )}
+                </div>
             )}
           </form>
-        </div>
 
-        {isCurrentUserAdmin && !editingUserId && ( 
-            <div className="users-list-card">
-                <h2>Todos os Usuários</h2>
-                {allUsers.length === 0 ? (
-                    <p>Nenhum usuário encontrado.</p>
-                ) : (
-                    <ul className="users-list">
-                        {allUsers.map((user) => (
-                            <li key={user.usuarioID} className="user-item">
-                                <span>{user.displayName} ({user.setorNome}) - {user.email} - {user.statusConta ? "Ativo" : "Inativo"}</span>
-                                <button
-                                    onClick={() => handleEditOtherUser(user)}
-                                    className="edit-user-button"
-                                    disabled={loading}
-                                >
-                                    Editar
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-        )}
-      </div>
+          {/* A lista de usuários aparece ABAIXO do formulário principal de edição
+              Renderiza a lista de usuários APENAS se o usuário logado for admin E showManageUsers é true E não estiver no modo de edição de UM usuário específico */}
+          {isCurrentUserAdmin && showManageUsers && !editingUserId && (
+              <div className="users-list-card">
+                  <h2>Todos os Usuários</h2>
+                  {allUsers.length === 0 ? (
+                      <p>Nenhum usuário encontrado.</p>
+                  ) : (
+                      <ul className="users-list">
+                          {allUsers.map((user) => (
+                              <li key={user.usuarioID} className="user-item">
+                                  <span>
+                                      {user.displayName} ({user.setorNome}) - {user.email} - {user.statusConta ? "Ativo" : "Inativo"}
+                                  </span>
+                                  <button
+                                      onClick={() => handleEditOtherUser(user)}
+                                      className="edit-user-button"
+                                      disabled={loading || user.usuarioID === usuarioLogado?.usuarioID}
+                                  >
+                                      Editar
+                                  </button>
+                              </li>
+                          ))}
+                      </ul>
+                  )}
+              </div>
+          )}
+      </main>
     </div>
   );
 }

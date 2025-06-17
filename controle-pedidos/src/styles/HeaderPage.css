@@ -24,9 +24,9 @@
 }
 
 .logo-imagem {
-  width: 30px;
-  height: auto;
-  border-radius: 8px;
+    width: 30px;
+    height: auto;
+    border-radius: 8px;
 }
 
 .app-title {
@@ -101,17 +101,23 @@
 }
 
 .dropdown-option:hover {
-  box-shadow: #2c3e50;
+    background-color: #f0f0f0; /* Adicionado hover background para dropdown options */
 }
 
 .dropdown-option:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  pointer-events: none;
-  box-shadow: none;
-  transition: none;
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+    box-shadow: none;
+    transition: none;
 }
 
+/* NOVO: Container para os botões de perfil e logout */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Espaço entre o botão de perfil e o botão de logout */
+}
 
 .user-profile-button {
     background: var(--user-profile-bg-color, #d68383);
@@ -123,6 +129,7 @@
     padding: 8px 12px;
     border-radius: 20px;
     transition: all 0.3s ease;
+    font-family: 'Comfortaa', sans-serif; /* Mover para cá para ser mais específico */
 }
 
 .user-profile-button:hover {
@@ -131,23 +138,7 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.user-profile {
-    background: var(--user-profile-bg-color, #642121);
-    border: 1px solid var(--user-profile-border-color, #e0e3e7);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: 20px;
-    transition: all 0.3s ease;
-    font-family: 'Comfortaa', sans-serif;
-}
-
-.user-profile:hover {
-    background-color: #f5f7fa;
-    border-color: #e0e3e7;
-}
+/* Removido .user-profile duplicado, usando .user-profile-button */
 
 .user-name {
     font-size: 0.9375rem;
@@ -157,11 +148,35 @@
 }
 
 .user-role {
-    margin-left: 8px;
+    margin-left: 8px; /* Mantenha o espaçamento entre nome e função */
     font-size: 0.8125rem;
     color: #d2d6d6;
     text-transform: capitalize;
     font-family: 'Comfortaa', sans-serif;
+}
+
+/* NOVO: Estilo para o botão de logout */
+.logout-button {
+    background: none; /* Fundo transparente */
+    border: none; /* Sem borda */
+    cursor: pointer;
+    padding: 8px; /* Espaçamento interno para o SVG */
+    border-radius: 50%; /* Faz o botão circular */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.logout-button:hover {
+    background-color: #f0f0f0; /* Fundo cinza claro ao passar o mouse */
+    transform: scale(1.1); /* Um pequeno zoom no hover */
+}
+
+.logout-button svg {
+    color: #343a40; /* Cor do ícone */
+    width: 20px; /* Tamanho do ícone */
+    height: 20px;
 }
 
 .header-page.loading {
@@ -219,9 +234,13 @@
         font-size: 0.75rem;
     }
 
-    .relatorio, button {
-        font-size: 1rem;
-        padding: 6px 10px;
+    /* Ajuste para o botão de logout em telas menores */
+    .logout-button {
+        padding: 6px;
+    }
+    .logout-button svg {
+        width: 18px;
+        height: 18px;
     }
 }
 
@@ -236,13 +255,28 @@
     }
 
     .user-name {
-        display: none;
+        display: none; /* Oculta o nome em telas muito pequenas */
     }
 
     .user-role {
+        margin-left: 0; /* Remove a margem quando o nome é oculto */
         font-size: 0.6875rem;
         padding: 4px 8px;
         background-color: #f5f7fa;
         border-radius: 12px;
+        color: #2c3e50; /* Garante que a cor seja visível no novo fundo */
+    }
+
+    /* Ajuste para o botão de logout em telas menores */
+    .logout-button {
+        padding: 4px;
+    }
+    .logout-button svg {
+        width: 16px;
+        height: 16px;
+    }
+    /* Ajuste para o espaçamento dos botões em telas muito pequenas */
+    .header-actions {
+        gap: 5px;
     }
 }

@@ -3,19 +3,22 @@ import { Timestamp } from "firebase/firestore";
 
 export function formatDate(timestamp?: Timestamp): string {
   if (!timestamp) return "-";
-  return timestamp.toDate().toLocaleDateString("pt-BR");
+  return timestamp.toDate().toLocaleDateString("pt-BR", {
+    year: '2-digit',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 }
 
 export function isPedidoAtrasado(entrega?: Timestamp): boolean {
   if (!entrega) return false;
+
   const entregaDate = entrega.toDate();
-  const hoje = new Date();
-
- 
-  hoje.setHours(0, 0, 0, 0);
-  entregaDate.setHours(0, 0, 0, 0);
-
-  return entregaDate < hoje;
+   const now = new Date();
+   
+  return entregaDate.getTime() < now.getTime();
 }
 
 export function filtrarPedidos(

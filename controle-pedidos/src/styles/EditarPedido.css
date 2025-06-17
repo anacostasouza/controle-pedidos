@@ -44,7 +44,7 @@
 }
 
 .container-editar-pedido {
-  margin-top: 5rem;
+  margin-top: 3rem;
   width: 100%;
   border-radius: var(--card-border-radius);
   background-color: #f3f4f6;
@@ -68,7 +68,7 @@
 }
 
 .pedido-info {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   font-size: 16px;
   color: #495057;
 }
@@ -77,8 +77,25 @@
   margin: 0.5rem 0;
 }
 
+.info-row {
+  display: flex; 
+  justify-content: space-between; 
+  align-items: baseline;
+  margin-bottom: 0.5rem;
+}
+
+.info-row p {
+  flex: 1; 
+  margin: 0; 
+  padding-right: 15px; 
+}
+
+.info-row p:last-child {
+  padding-right: 0;
+}
+
 .status-form {
-  margin-bottom: 2rem;
+  margin-bottom: 1.3rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -98,6 +115,46 @@
   font-size: 15px;
   font-family: 'Comfortaa', sans-serif;
   color: #343a40;
+}
+
+#arte-galpao {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  width: 100%;
+}
+
+#arte-galpao select {
+  flex-grow: 1;
+  width: auto;
+}
+
+.status-group-item {
+  flex-grow: 1; 
+  width: auto; 
+  min-width: 0;
+}
+
+.status-group-item label {
+  display: block; 
+  margin-bottom: 5px; 
+  font-weight: bold;
+  font-size: 15px;
+  color: #343a40;
+}
+
+.status-group-item select {
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  background-color: #fff;
+  font-size: 15px;
+  font-family: 'Comfortaa', sans-serif;
+  color: #343a40;
+  width: 100%; 
+  box-sizing: border-box; 
+  min-width: 0;
+  margin-bottom: 1rem;
 }
 
 .update-button {

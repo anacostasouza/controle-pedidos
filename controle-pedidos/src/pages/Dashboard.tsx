@@ -157,6 +157,7 @@ export default function Dashboard() {
                 <tr>
                   <th>Nº Pedido</th>
                   <th>Cliente</th>
+                  <th>Responsável</th>
                   <th>Serviço</th>
                   <th>Prazo</th>
                   <th>Etapas</th>
@@ -199,6 +200,7 @@ export default function Dashboard() {
                     <tr key={pedido.id} className="pedidos-row">
                       <td>{pedido.numeroPedido}</td>
                       <td>{pedido.nomeCliente}</td>
+                      <td>{pedido.responsavel}</td>
                       <td>
                         {TipoServicoLabels[pedido.servico.tipo] ?? pedido.servico.tipo}
                         {(() => {

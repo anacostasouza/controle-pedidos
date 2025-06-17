@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import HeaderPage from "../components/layout/headerPage";
-import type { Pedido, StatusPedido } from "../types/Pedidos";
+import HeaderPage from "../components/layout/headerPage.tsx";
+import type { Pedido, StatusPedido } from "../types/Pedidos.ts";
 import "../styles/EditarPedido.css";
 import {
   fetchPedidoById,
@@ -12,6 +12,9 @@ import {
   getStatusGalpaoDisponiveis,
 } from "../utils/utilsEditarPedido";
 import type { StatusArte, StatusGalpao } from "../utils/statusUtils";
+import { TipoServicoLabels, TipoServico } from "../types/Servicos";
+import type { SetorValue } from "../types/Setores.ts";
+
 import { getAuth } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
@@ -26,6 +29,7 @@ export default function EditarPedido() {
   const [novoStatusGalpao, setNovoStatusGalpao] = useState<StatusGalpao>();
   const [loading, setLoading] = useState(true);
   const [userSetor, setUserSetor] = useState<string | null>(null);
+  const [userDisplayName, setUserDisplayName] = useState<string | null>(null);
 
   const setoresPermitidosArte = ["ARTE", "SUPORTE", "GESTAO"];
   const setoresPermitidosGalpao = ["GALPAO", "SUPORTE", "GESTAO"];
@@ -34,7 +38,7 @@ export default function EditarPedido() {
   const podeEditarStatusGalpao = setoresPermitidosGalpao.includes(userSetor ?? "");
 
   useEffect(() => {
-    const fetchUserSetor = async () => {
+    const fetchUserSetorAndDisplayName = async () => { 
       const auth = getAuth();
       const currentUser = auth.currentUser;
 
@@ -50,7 +54,9 @@ export default function EditarPedido() {
 
         if (docSnap.exists()) {
           const usuarioData = docSnap.data();
-          setUserSetor(usuarioData.setor);
+
+          setUserDisplayName(usuarioData.displayName); 
+          setUserSetor(usuarioData.setor);            
         } else {
           alert("Usuário não encontrado. Redirecionando.");
           navigate("/");
@@ -62,7 +68,7 @@ export default function EditarPedido() {
       }
     };
 
-    fetchUserSetor();
+    fetchUserSetorAndDisplayName(); 
   }, [navigate]);
 
   useEffect(() => {
@@ -90,14 +96,20 @@ export default function EditarPedido() {
   }, [id]);
 
   const handleStatusChange = async () => {
-    if (!id || !pedido || !novoStatus || !userSetor) return;
+
+    if (!id) { alert("ID do pedido não encontrado."); return; }
+    if (!pedido) { alert("Dados do pedido não carregados."); return; }
+    if (!novoStatus) { alert("Novo status não selecionado."); return; }
+    if (userSetor === null) { alert("Setor do usuário não carregado."); return; }
+    if (userDisplayName === null) { alert("Nome do usuário não carregado."); return; }
 
     try {
       await atualizarStatusPedido(
         id,
         pedido,
         novoStatus,
-        userSetor,
+        userSetor as SetorValue,     
+        userDisplayName,             
         pedido.requerArte ? (novoStatusArte as StatusArte) : undefined,
         pedido.requerGalpao ? (novoStatusGalpao as StatusGalpao) : undefined
       );
@@ -139,9 +151,16 @@ export default function EditarPedido() {
           <h1>Editar Pedido {pedido.numeroPedido}</h1>
 
           <div className="pedido-info">
-            <p><strong>Cliente:</strong> {pedido.nomeCliente}</p>
-            <p><strong>Serviço:</strong> {pedido.servico.tipo} {pedido.servico.subTipo && `(${pedido.servico.subTipo})`}</p>
-            <p><strong>Status Atual:</strong> {pedido.statusAtual}</p>
+            <div className="info-row">
+              <p><strong>Cliente:</strong> {pedido.nomeCliente}</p>
+              <p><strong>Serviço: </strong>
+                { TipoServicoLabels[pedido.servico.tipo as TipoServico]}
+                {pedido.servico.subTipo && ` (${pedido.servico.subTipo})`}</p>
+            </div>
+            <div className="info-row">
+              <p><strong>Status Atual:</strong> {pedido.statusAtual}</p>
+              <p><strong>Responsável do Pedido:</strong> {pedido.responsavel}</p>
+            </div>
           </div>
 
           <div className="status-form">
@@ -156,46 +175,47 @@ export default function EditarPedido() {
               ))}
             </select>
           </div>
+          <div id="arte-galpao">
+            {pedido.requerArte && (
+              <div className="status-group-item">
+                <label htmlFor="status-arte-select">Status da Arte:</label>
+                <select
+                  id="status-arte-select"
+                  value={novoStatusArte}
+                  onChange={(e) => setNovoStatusArte(e.target.value as StatusArte)}
+                  disabled={!podeEditarStatusArte}
+                >
+                  {statusDisponiveisArte.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+                {!podeEditarStatusArte && (
+                  <p className="status-warning">Você não tem permissão para alterar o status da arte.</p>
+                )}
+              </div>
+            )}
 
-          {pedido.requerArte && (
-            <div className="status-form">
-              <label htmlFor="status-arte-select">Status da Arte:</label>
-              <select
-                id="status-arte-select"
-                value={novoStatusArte}
-                onChange={(e) => setNovoStatusArte(e.target.value as StatusArte)}
-                disabled={!podeEditarStatusArte}
-              >
-                {statusDisponiveisArte.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-              {!podeEditarStatusArte && (
-                <p className="status-warning">Você não tem permissão para alterar o status da arte.</p>
-              )}
-            </div>
-          )}
-
-          {pedido.requerGalpao && (
-            <div className="status-form">
-              <label htmlFor="status-galpao-select">Status Galpão:</label>
-              <select
-                id="status-galpao-select"
-                value={novoStatusGalpao}
-                onChange={(e) => setNovoStatusGalpao(e.target.value as StatusGalpao)}
-                disabled={!podeEditarStatusGalpao}
-              >
-                {statusDisponiveisGalpao.map((status) => (
-                  <option key={status} value={status}>{status}</option>
-                ))}
-              </select>
-              {!podeEditarStatusGalpao && (
-                <p className="status-warning">Você não tem permissão para alterar o status do galpão.</p>
-              )}
-            </div>
-          )}
+            {pedido.requerGalpao && (
+              <div className="status-group-item">
+                <label htmlFor="status-galpao-select">Status Galpão:</label>
+                <select
+                  id="status-galpao-select"
+                  value={novoStatusGalpao}
+                  onChange={(e) => setNovoStatusGalpao(e.target.value as StatusGalpao)}
+                  disabled={!podeEditarStatusGalpao}
+                >
+                  {statusDisponiveisGalpao.map((status) => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+                {!podeEditarStatusGalpao && (
+                  <p className="status-warning">Você não tem permissão para alterar o status do galpão.</p>
+                )}
+              </div>
+            )}
+          </div>
 
           <button
             onClick={handleStatusChange}
@@ -212,7 +232,7 @@ export default function EditarPedido() {
             <ul>
               {pedido.historicoStatus.map((item) => (
                 <li key={`${item.status}-${item.data?.seconds ?? ''}-${item.responsavel}`}>
-                  <strong>{item.status}</strong> - {item.data.toDate().toLocaleString()} por {item.responsavel}
+                  <strong>{item.status}</strong> - {item.data.toDate().toLocaleString()} por {item.responsavel} ({item.setor})
                 </li>
               ))}
             </ul>

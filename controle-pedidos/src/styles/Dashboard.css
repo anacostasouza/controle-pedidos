@@ -164,23 +164,29 @@
 }
 
 .pedidos-table td:nth-child(1) {
-  min-width: 100px; /* Nº Pedido */
+  min-width: 70px; /* Nº Pedido */
 }
 
 .pedidos-table td:nth-child(2) {
-  min-width: 200px; /* Cliente */
+  min-width: 150px; /* Cliente */
 }
 
 .pedidos-table td:nth-child(3) {
-  min-width: 220px; /* Serviço */
+  min-width: 150px; /* Responsável */
 }
 
-.pedidos-table td:nth-child(4),
-.pedidos-table td:nth-child(5) {
-  min-width: 100px; /* Prazo, Status */
+.pedidos-table td:nth-child(4) {
+  min-width: 200px; /* Serviço */
 }
 
-.pedidos-table td:nth-child(6) {
+.pedidos-table td:nth-child(5),
+.pedidos-table td:nth-child(6),
+.pedidos-table td:nth-child(7) {
+  min-width: 100px; /* Prazo, Etapas, Status */
+}
+
+
+.pedidos-table td:nth-child(8) {
   min-width: 80px; /* Ações */
   text-align: center;
 }

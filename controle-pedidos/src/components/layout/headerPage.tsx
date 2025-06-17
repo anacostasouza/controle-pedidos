@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { auth } from "../../services/firebase";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { signOut } from "firebase/auth"; // Importe signOut
 import "../../styles/HeaderPage.css";
 import type { Usuario } from "../../types/Usuario";
 import logo from "../../assets/LogoColorida.png";
@@ -91,6 +92,16 @@ const HeaderPage: React.FC = () => {
     }, 200);
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate("/login");
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+      // Opcional: exibir uma mensagem de erro para o usuário
+    }
+  };
+
   if (loading) {
     return <div className="header-page loading">Carregando...</div>;
   }
@@ -99,7 +110,7 @@ const HeaderPage: React.FC = () => {
     <header className="header-page">
       <div className="header-content">
         <Link to={"/dashboard"}>
-        <img src={logo} alt="Logo" className="logo-imagem" />
+          <img src={logo} alt="Logo" className="logo-imagem" />
         </Link>
         <div
           className={`app-title-dropdown ${isDropdownOpen ? "open" : ""}`}
@@ -135,6 +146,24 @@ const HeaderPage: React.FC = () => {
             <button onClick={handleProfileClick} className="user-profile-button">
               <span className="user-name">{userProfile.nome}</span>
               <span className="user-role">{userProfile.setorNome}</span>
+            </button>
+            <button onClick={handleLogout} className="logout-button">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="feather feather-log-out"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
             </button>
           </div>
         )}

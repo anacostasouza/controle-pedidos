@@ -12,7 +12,7 @@ import type { Pedido, StatusArteHist, StatusGalpaoHist, StatusPedido } from "../
 import { TipoServicoLabels, type SubTipoServicoValue, type TipoServicoValue } from "../types/Servicos";
 import { statusPorServico } from '../types/StatusPedidos';
 import type { StatusArte, StatusArteHist, StatusGalpao } from "../utils/statusUtils"
-import type { SetorValue } from "../types/Setores";
+import  { setores , type SetorValue } from "../types/Setores";
 
 export async function fetchPedidoById(id: string): Promise<Pedido | null> {
   const docRef = doc(db, "pedidos", id);
@@ -33,11 +33,19 @@ export async function atualizarStatusPedido(
   id: string,
   pedido: Pedido,
   novoStatus: StatusPedido,
-  userSetor: string,
+  userSetValue: SetorValue,
+  userDisplayName: string,
   novoStatusArte?: StatusArte,
   novoStatusGalpao?: StatusGalpao
 ) {
+
   const pedidoRef = doc(db, "pedidos", id);
+
+  const standardizedUserSetValue = userSetValue.trim().toUpperCase();
+  const setorEncontrado = setores.find(setor =>
+    setor.value.trim().toUpperCase() === standardizedUserSetValue
+  );
+  const userSetorLabel = setorEncontrado?.label || userSetValue; 
 
   const updates: Partial<Pedido> = {
     statusAtual: novoStatus,
@@ -46,8 +54,8 @@ export async function atualizarStatusPedido(
       {
         status: novoStatus,
         data: Timestamp.now(),
-        responsavel: userSetor,
-        setor: ""
+        responsavel: userDisplayName, 
+        setor: userSetorLabel,       
       }
     ]
   };
@@ -62,7 +70,7 @@ export async function atualizarStatusPedido(
       {
         status: novoStatusArte as StatusArte,
         data: Timestamp.now(),
-        responsavel: userSetor
+        responsavel: userDisplayName 
       }
     ];
   }
@@ -77,7 +85,7 @@ export async function atualizarStatusPedido(
       {
         status: novoStatusGalpao as StatusGalpao,
         data: Timestamp.now(),
-        responsavel: userSetor
+        responsavel: userDisplayName
       }
     ];
   }
