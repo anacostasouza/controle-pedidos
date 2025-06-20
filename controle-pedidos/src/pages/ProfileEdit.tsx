@@ -4,6 +4,7 @@ import { doc, getDoc, updateDoc, collection, getDocs, query, Timestamp } from "f
 import { getAuth } from "firebase/auth";
 import { db } from "../services/firebase";
 
+import logoColorida from "../assets/LogoColorida.png";
 import "../styles/ProfileEdit.css";
 
 import { setores, type SetorValue, type Setor } from "../types/Setores";
@@ -431,6 +432,9 @@ export default function EditProfilePage(): JSX.Element {
                   )}
               </div>
           )}
+          <div id="logo-colorida">
+            <img src={logoColorida} alt="logoColorida" className="logo-colorida" />
+          </div>
       </main>
     </div>
   );
