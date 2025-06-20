@@ -1,5 +1,5 @@
 import { Timestamp } from "firebase/firestore";
-import { TipoServico, SubTipoServico, type TipoServicoValue, type SubTipoServicoValue, SubTipoServicoValue } from './Servicos';
+import { TipoServico, SubTipoServico, type TipoServicoValue, type SubTipoServicoValue } from './Servicos';
 import type { SetorValue } from './Setores';
 
 export type StatusArte = "Iniciado" | "Em Aprovação" | "Concluído";
@@ -9,7 +9,7 @@ export interface StatusArteHist {
   responsavel: string;
 }
 
-export type StatusGalpao = 
+export type StatusGalpao =
   | "Corte e Preparação do Material"
   | "Montagem/Acabamento"
   | "Concluído"
@@ -32,14 +32,16 @@ export type StatusPedido =
   | "Impressão"
   | "Acabamento"
   | "Montagem"
-  | "Montagem/Acabamento"
   | "Pedido Feito"
   | "Liberado"
   | "Corte"
   | "Estrutura"
   | "Pintura"
   | "Elétrica"
-  | "Corte e Preparação";
+  | "Corte e Preparação"
+  | "Montagem/Acabamento" // Mantenha, pois parece ser um status válido repetido
+  | "Entregue"; // Adicionado o novo status
+
 export interface Pedido {
   id?: string;
   pedidoID: number;
@@ -72,4 +74,5 @@ export interface Pedido {
   tipoDeEntrega: 'Entrega' | 'Retirada' | 'Instalação';
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
+  entregueEm?: Timestamp; 
 }

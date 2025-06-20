@@ -1,5 +1,5 @@
 import type { Pedido, StatusPedido } from "../types/Pedidos";
-import { TipoServico } from "../types/Servicos";
+import { TipoServico, TipoServicoValues } from "../types/Servicos";
 import { Timestamp } from "firebase/firestore";
 
 export function formatDate(timestamp?: Timestamp): string {
@@ -29,9 +29,15 @@ export function filtrarPedidos(
   filtroStatus: string,
   filtroAtrasados: boolean,
   filtroRequerArte: string,
-  filtroRequerGalpao: string
+  filtroRequerGalpao: string,
+  userSetor: string 
 ): Pedido[] {
   return pedidos.filter((p) => {
+
+    if (p.statusAtual === "Entregue" && (userSetor !== "CAIXA" || filtroStatus !== "Entregue")) {
+      return false;
+    }
+    
     const termoBuscaLower = buscaClienteOuNumero.toLowerCase();
 
     const numeroPedidoAsString = String(p.numeroPedido).toLowerCase();
@@ -40,9 +46,9 @@ export function filtrarPedidos(
       p.nomeCliente.toLowerCase().includes(termoBuscaLower) ||
       numeroPedidoAsString.includes(termoBuscaLower);
 
-    const servicoMatch = filtroServico ? p.servico.tipo === filtroServico : true;
-    const statusMatch = filtroStatus ? p.statusAtual === filtroStatus : true;
-    const atrasoMatch = filtroAtrasados ? isPedidoAtrasado(p.prazos?.entrega) : true;
+    const servicoMatch = filtroServico ? p.servico.tipo === (filtroServico as TipoServico) : true;
+    const statusMatch = filtroStatus ? p.statusAtual === (filtroStatus as StatusPedido) : true;
+    const atrasoMatch = filtroAtrasados ? isPedidoAtrasado(p.prazos?.entrega) : true; 
 
     let requerArteMatch = true;
     if (filtroRequerArte === "true") {
@@ -51,7 +57,7 @@ export function filtrarPedidos(
       requerArteMatch = p.requerArte !== true && p.servico.tipo !== TipoServico.ARTE;
     }
 
-    let requerGalpaoMatch = true; 
+    let requerGalpaoMatch = true;
     if (filtroRequerGalpao === "true") {
       requerGalpaoMatch = p.requerGalpao === true || p.servico.tipo === TipoServico.COMUNICACAO_VISUAL;
     } else if (filtroRequerGalpao === "false") {
@@ -66,6 +72,6 @@ export function isStatusPedido(value: unknown): value is StatusPedido {
   return [
     "Iniciado", "Em Aprovação", "Concluído", "Impressão", "Acabamento",
     "Montagem", "Montagem/Acabamento", "Pedido Feito", "Liberado",
-    "Corte", "Estrutura", "Pintura", "Elétrica", "Corte e Preparação"
+    "Corte", "Estrutura", "Pintura", "Elétrica", "Corte e Preparação", "Entregue"
   ].includes(value as string);
 }

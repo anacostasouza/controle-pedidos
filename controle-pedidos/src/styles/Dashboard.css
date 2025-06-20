@@ -99,7 +99,7 @@
 
 .primary-button,
 .edit-button,
-.new-order-button {
+.new-order-button, .entregar-button{
     font-family: 'Comfortaa', sans-serif;
     border: none;
     border-radius: 26px;

@@ -8,7 +8,8 @@ export type SetorValue =
   | "COMERCIAL"
   | "SUPORTE"
   | "BALCAO"
-  | "GESTAO";
+  | "GESTAO"
+  | "CAIXA";
 
 export interface Setor {
   value: SetorValue;
@@ -24,5 +25,6 @@ export const setores: Setor[] = [
   { value: "COMERCIAL", label: "Comercial" },
   { value: "SUPORTE", label: "Suporte" },
   { value: "BALCAO", label: "Balcão" },
-  { value: "GESTAO", label: "Gestão" }
+  { value: "GESTAO", label: "Gestão" }, 
+  { value: "CAIXA", label: "Caixa" }
 ];

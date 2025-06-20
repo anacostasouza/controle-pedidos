@@ -8,32 +8,42 @@ export type StatusPedido =
   | "Impressão"
   | "Acabamento"
   | "Montagem"
-  | "Montagem/Acabamento"
   | "Pedido Feito"
   | "Liberado"
   | "Corte"
   | "Estrutura"
   | "Pintura"
   | "Elétrica"
-  | "Montagem"
   | "Corte e Preparação"
   | "Montagem/Acabamento"
-  | "Montagem"
-  | "Montagem/Acabamento";
-  
+  | "Entregue"; 
+
 export const statusPorServico: Record<string, StatusPedido[] | Record<string, StatusPedido[]>> = {
-  "Arte": ["Iniciado", "Em Aprovação", "Concluído"],
-  "Gráfica Rápida": {
-    "Impressão Rápida": ["Impressão", "Concluído"],
-    "Impressão com Acabamento": ["Impressão", "Acabamento", "Concluído"],
-    "Carimbo": ["Impressão", "Montagem", "Concluído"],
-    "Acabamento": ["Acabamento", "Concluído"]
+  "ARTE": ["Iniciado", "Em Aprovação", "Concluído"],
+  "GRAFICA_RAPIDA": {
+    "IMPRESSAO_RAPIDA": ["Impressão", "Concluído"],
+    "IMPRESSAO_COM_ACABAMENTO": ["Impressão", "Acabamento", "Concluído"],
+    "CARIMBO": ["Impressão", "Montagem", "Concluído"],
+    "ACABAMENTO": ["Acabamento", "Concluído"]
   },
-  "Impressão Digital": ["Impressão", "Acabamento", "Concluído"],
-  "Comunicação Visual": {
-    "Placa Simples": ["Corte e Preparação", "Montagem/Acabamento", "Concluído"],
-    "Placa Complexa": ["Corte", "Estrutura", "Pintura", "Elétrica", "Montagem", "Concluído"]
+  "IMPRESSAO_DIGITAL": ["Impressão", "Acabamento", "Concluído"],
+  "COMUNICACAO_VISUAL": {
+    "PLACA_SIMPLES": ["Corte e Preparação", "Montagem/Acabamento", "Concluído"],
+    "PLACA_COMPLEXA": ["Corte", "Estrutura", "Pintura", "Elétrica", "Montagem", "Concluído"]
   },
-  "Terceirizado": ["Pedido Feito", "Acabamento", "Liberado"]
-  
+  "TERCEIRIZADO": ["Pedido Feito", "Acabamento", "Liberado"]
 };
+
+export function getStatusSequenceForPedido(tipo: TipoServicoValue, subTipo?: SubTipoServicoValue): StatusPedido[] {
+    const serviceStatuses = statusPorServico[tipo];
+
+    if (typeof serviceStatuses === 'object' && !Array.isArray(serviceStatuses)) {
+        if (subTipo && serviceStatuses[subTipo]) {
+            return serviceStatuses[subTipo];
+        }
+        return Object.values(serviceStatuses)[0] || [];
+    } else if (Array.isArray(serviceStatuses)) {
+        return serviceStatuses;
+    }
+    return [];
+}

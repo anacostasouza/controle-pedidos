@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getFirestore, collection, query, orderBy, doc, getDoc, onSnapshot } from "firebase/firestore";
+import { getFirestore, collection, query, orderBy, doc, getDoc, onSnapshot, updateDoc, Timestamp } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import "../styles/Dashboard.css";
 import HeaderPage from '../components/layout/headerPage';
-import type { Pedido } from '../types/Pedidos';
-import { TipoServicoLabels, SubTipoServicoLabels, SubTipoServico, TipoServico } from '../types/Servicos';
+import type { Pedido, StatusPedido } from '../types/Pedidos';
+import { TipoServicoLabels, SubTipoServicoLabels, TipoServico, SubTipoServico } from '../types/Servicos';
 import { formatDate, filtrarPedidos, isPedidoAtrasado, isStatusPedido } from "../utils/dashboardUtils";
 import { getEtapaAtual } from "../utils/statusUtils";
 import { getStatusDisponiveis, getStatusArteDisponiveis, getStatusGalpaoDisponiveis } from "../utils/utilsEditarPedido";
-// Importe a nova função de formatação
-import { capitalizeWords } from "../utils/formatUtils"; // Ajuste o caminho se você colocou em outro lugar
+import { capitalizeWords } from "../utils/formatUtils";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -24,6 +23,7 @@ export default function Dashboard() {
   const [filtroRequerGalpao, setFiltroRequerGalpao] = useState("");
   const [pedidosFiltrados, setPedidosFiltrados] = useState<Pedido[]>([]);
   const [userSetor, setUserSetor] = useState("");
+  const [userDisplayName, setUserDisplayName] = useState("");
 
   useEffect(() => {
     const auth = getAuth();
@@ -37,6 +37,7 @@ export default function Dashboard() {
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
           setUserSetor((userData.setor ?? "").toUpperCase());
+          setUserDisplayName(userData.displayName ?? "");
         } else {
           console.warn("Usuário não encontrado no Firestore.");
         }
@@ -53,11 +54,23 @@ export default function Dashboard() {
   useEffect(() => {
     const db = getFirestore();
     const pedidosCollectionRef = collection(db, "pedidos");
-    const q = query(pedidosCollectionRef, orderBy("prazos.entrega"));
+    const q = query(pedidosCollectionRef, orderBy("prazos.entrega", "asc"));
 
     const unsubscribeFirestore = onSnapshot(q, (querySnapshot) => {
       const pedidosData = querySnapshot.docs.map((doc) => ({
         id: doc.id,
+        criadoEm: doc.data().criadoEm instanceof Timestamp ? doc.data().criadoEm : new Timestamp(doc.data().criadoEm?.seconds || 0, doc.data().criadoEm?.nanoseconds || 0),
+        atualizadoEm: doc.data().atualizadoEm instanceof Timestamp ? doc.data().atualizadoEm : new Timestamp(doc.data().atualizadoEm?.seconds || 0, doc.data().atualizadoEm?.nanoseconds || 0),
+        prazos: {
+          ...doc.data().prazos,
+          entrega: doc.data().prazos?.entrega instanceof Timestamp ? doc.data().prazos.entrega : new Timestamp(doc.data().prazos?.entrega?.seconds || 0, doc.data().prazos?.entrega?.nanoseconds || 0),
+          producao: doc.data().prazos?.producao instanceof Timestamp ? doc.data().prazos.producao : (doc.data().prazos?.producao ? new Timestamp(doc.data().prazos?.producao?.seconds || 0, doc.data().prazos?.producao?.nanoseconds || 0) : undefined),
+          arte: doc.data().prazos?.arte instanceof Timestamp ? doc.data().prazos.arte : (doc.data().prazos?.arte ? new Timestamp(doc.data().prazos?.arte?.seconds || 0, doc.data().prazos?.arte?.nanoseconds || 0) : undefined),
+        },
+        entregueEm: doc.data().entregueEm instanceof Timestamp ? doc.data().entregueEm : (doc.data().entregueEm ? new Timestamp(doc.data().entregueEm?.seconds || 0, doc.data().entregueEm?.nanoseconds || 0) : undefined),
+        historicoStatus: doc.data().historicoStatus || [],
+        StatusArte: doc.data().StatusArte || [],
+        StatusGalpao: doc.data().StatusGalpao || [],
         ...doc.data()
       })) as Pedido[];
 
@@ -79,13 +92,16 @@ export default function Dashboard() {
       filtroStatus,
       filtroAtrasados,
       userSetor === "ARTE" ? filtroRequerArte : "",
-      userSetor === "GALPAO" ? filtroRequerGalpao : ""
+      userSetor === "GALPAO" ? filtroRequerGalpao : "",
+      userSetor
     );
     setPedidosFiltrados(pedidosFiltrados);
   }, [pedidos, buscaCliente, filtroServico, filtroStatus, filtroAtrasados, filtroRequerArte, filtroRequerGalpao, userSetor]);
 
   const podeEditarPedido = (pedido: Pedido): boolean => {
     if (!userSetor) return false;
+
+    if (pedido.statusAtual === "Entregue") return false;
 
     if (pedido.servico.tipo === TipoServico.COMUNICACAO_VISUAL && userSetor === "GALPAO") return true;
     if (pedido.servico.tipo === TipoServico.ARTE && userSetor === "ARTE") return true;
@@ -95,6 +111,50 @@ export default function Dashboard() {
 
     return false;
   };
+
+  const handleMarcarComoEntregue = async (pedidoId: string, currentStatus: StatusPedido) => {
+    if (userSetor !== "CAIXA" && userSetor !== "BALCAO") {
+      alert("Você não tem permissão para marcar pedidos como entregues.");
+      return;
+    }
+
+    if (currentStatus !== "Concluído") {
+      alert("Apenas pedidos com status 'Concluído' podem ser marcados como entregues.");
+      return;
+    }
+
+    if (window.confirm("Tem certeza que deseja marcar este pedido como ENTREGUE?")) {
+      const db = getFirestore();
+      const pedidoRef = doc(db, "pedidos", pedidoId);
+      const now = Timestamp.now();
+
+      try {
+        await updateDoc(pedidoRef, {
+          statusAtual: "Entregue",
+          entregueEm: now,
+          atualizadoEm: now,
+          historicoStatus: [
+            ...(pedidos.find(p => p.id === pedidoId)?.historicoStatus || []),
+            {
+              status: "Entregue",
+              data: now,
+              responsavel: userDisplayName,
+              setor: userSetor,
+            },
+          ],
+        });
+        alert("Pedido marcado como Entregue com sucesso!");
+      } catch (error) {
+        console.error("Erro ao marcar pedido como entregue:", error);
+        alert("Erro ao marcar pedido como entregue. Tente novamente.");
+      }
+    }
+  };
+
+  // Verifica se há pelo menos um pedido que o usuário pode editar ou marcar como entregue
+  const shouldShowActionsColumn = pedidosFiltrados.some(pedido =>
+    (pedido.statusAtual === "Concluído" && (userSetor === "CAIXA" || userSetor === "BALCAO")) || podeEditarPedido(pedido)
+  );
 
   return (
     <div className="dashboard-page">
@@ -150,6 +210,8 @@ export default function Dashboard() {
               <option value="Pintura">Pintura</option>
               <option value="Elétrica">Elétrica</option>
               <option value="Corte e Preparação">Corte e Preparação</option>
+              <option value="Montagem/Acabamento">Montagem/Acabamento</option>
+              {(userSetor === "CAIXA" || userSetor === "BALCAO") && <option value="Entregue">Entregue</option>}
             </select>
 
             {userSetor === "ARTE" && (
@@ -200,7 +262,9 @@ export default function Dashboard() {
                   <th>Prazo</th>
                   <th>Etapas</th>
                   <th>Status</th>
-                  <th>Ações</th>
+                  {shouldShowActionsColumn && (
+                    <th>Ações</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -212,7 +276,7 @@ export default function Dashboard() {
                   const statusAtualArte = statusArteHist?.status;
 
                   const statusDisponiveisArte = pedido.requerArte && isStatusPedido(statusAtualArte)
-                    ? getStatusArteDisponiveis({ ...pedido, statusAtual: statusAtualArte })
+                    ? getStatusArteDisponiveis(pedido)
                     : [];
 
                   const etapaAtualArte = pedido.requerArte && isStatusPedido(statusAtualArte)
@@ -223,7 +287,7 @@ export default function Dashboard() {
                   const statusAtualGalpao = statusGalpaoHist?.status;
 
                   const statusDisponiveisGalpao = pedido.requerGalpao && isStatusPedido(statusAtualGalpao)
-                    ? getStatusGalpaoDisponiveis({ ...pedido, statusAtual: statusAtualGalpao })
+                    ? getStatusGalpaoDisponiveis(pedido)
                     : [];
 
                   const etapaAtualGalpao = pedido.requerGalpao && isStatusPedido(statusAtualGalpao)
@@ -233,8 +297,7 @@ export default function Dashboard() {
                   return (
                     <tr key={pedido.id} className="pedidos-row">
                       <td>{pedido.numeroPedido}</td>
-                      {/* APLICAÇÃO DA FUNÇÃO AQUI */}
-                      <td>{capitalizeWords(pedido.nomeCliente)}</td> 
+                      <td>{capitalizeWords(pedido.nomeCliente)}</td>
                       <td>{pedido.responsavel}</td>
                       <td>
                         {TipoServicoLabels[pedido.servico.tipo] ?? pedido.servico.tipo}
@@ -266,18 +329,27 @@ export default function Dashboard() {
                         </div>
                       </td>
                       <td>{pedido.statusAtual}</td>
-                      <td>
-                        {podeEditarPedido(pedido) ? (
-                          <button
-                            className="edit-button"
-                            onClick={() => navigate(`/editar-pedido/${pedido.id}`)}
-                          >
-                            Editar
-                          </button>
-                        ) : (
-                          <span className="no-edit-permission">Sem permissão</span>
-                        )}
-                      </td>
+                      {shouldShowActionsColumn && (
+                        <td>
+                          {pedido.statusAtual === "Concluído" && (userSetor === "CAIXA" || userSetor === "BALCAO") ? (
+                            <button
+                              className="entregar-button"
+                              onClick={() => pedido.id && handleMarcarComoEntregue(pedido.id, pedido.statusAtual)}
+                            >
+                              Entregue
+                            </button>
+                          ) : podeEditarPedido(pedido) ? (
+                            <button
+                              className="edit-button"
+                              onClick={() => navigate(`/editar-pedido/${pedido.id}`)}
+                            >
+                              Editar
+                            </button>
+                          ) : (
+                            <span className="no-edit-permission">Sem permissão</span>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
