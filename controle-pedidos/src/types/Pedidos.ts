@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Timestamp } from "firebase/firestore";
 import { TipoServico, SubTipoServico, type TipoServicoValue, type SubTipoServicoValue } from './Servicos';
 import type { SetorValue } from './Setores';
@@ -10,14 +11,14 @@ export interface StatusArteHist {
 }
 
 export type StatusGalpao =
+  | "Iniciado"
   | "Corte e Preparação do Material"
   | "Montagem/Acabamento"
-  | "Concluído"
-  | "Corte"
   | "Estrutura"
   | "Pintura"
   | "Elétrica"
-  | "Montagem";
+  | "Montagem"
+  | "Concluído";
 
 export interface StatusGalpaoHist {
   status: StatusGalpao
@@ -38,9 +39,16 @@ export type StatusPedido =
   | "Estrutura"
   | "Pintura"
   | "Elétrica"
-  | "Corte e Preparação"
-  | "Montagem/Acabamento" // Mantenha, pois parece ser um status válido repetido
-  | "Entregue"; // Adicionado o novo status
+  | "Corte e Preparação do Material"
+  | "Montagem/Acabamento" 
+  | "Entregue"; 
+
+export interface HistoricoStatusItem {
+  status: StatusPedido;
+  data: Timestamp;
+  responsavel: string;
+  setor: string;
+}
 
 export interface Pedido {
   id?: string;

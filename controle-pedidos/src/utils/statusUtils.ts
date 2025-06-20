@@ -1,97 +1,77 @@
-import { Timestamp } from "firebase/firestore"
-import { type StatusPedido } from "../types/Pedidos"
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import type { Pedido, StatusArte, StatusGalpao } from "../types/Pedidos";
+import { TipoServico, SubTipoServico } from "../types/Servicos";
+import {
+  getStatusSequenceForPedido as getStatusSequencePrincipal,
+  STATUS_SEQUENCE_ARTE,       
+  STATUS_SEQUENCE_GALPAO,     
+  STATUS_SEQUENCE_DEFAULT     
+} from "../types/StatusPedidos";
 
-export type StatusArte = "Iniciado" | "Em Aprovação" | "Concluído";
+export const getStatusSequenceForPedido = (
+  tipo: TipoServico,
+  subTipo?: SubTipoServico | null
+) => {
+  const sequence = getStatusSequencePrincipal(tipo, subTipo);
 
-export interface StatusArteHist {
-  status: StatusArte;
-  data: Timestamp;
-  responsavel: string;
-}
-
-export interface StatusGalpaoHist {
-  status: StatusGalpao
-  data: Timestamp;
-  responsavel: string;
-}
-
-export type StatusGraficaRapida =
-  | "Impressão"
-  | "Acabamento"
-  | "Montagem"
-  | "Concluído";
-
-export type StatusImpressaoDigital = "Impressão" | "Acabamento" | "Concluído";
-
-export type StatusComunicacaoVisualPlacaSimples =
-  | "Corte e Preparação do Material"
-  | "Montagem / Acabamento"
-  | "Concluído";
-
-export type StatusComunicacaoVisualPlacaComplexa =
-  | "Corte"
-  | "Estrutura"
-  | "Pintura"
-  | "Elétrica"
-  | "Montagem"
-  | "Concluído";
-
-export type StatusGalpao = 
-  | "Corte e Preparação do Material"
-  | "Montagem/Acabamento"
-  | "Concluído"
-  | "Corte"
-  | "Estrutura"
-  | "Pintura"
-  | "Elétrica"
-  | "Montagem";
-
-
-export const StatusArteOptions: StatusPedido[] = [
-  "Iniciado",
-  "Em Aprovação",
-  "Concluído",
-
-];
-
-export const StatusGalpaoOptions: StatusPedido[] = [
-  "Impressão",
-  "Acabamento",
-  "Montagem",
-];
-
-
-export type StatusTerceirizado = "Pedido Feito" | "Acabamento" | "Liberado";
-
-export const statusPorServico = {
-  Arte: ["Iniciado", "Em Aprovação", "Concluído"] as const,
-  "Impressão Rápida": ["Impressão", "Concluído"] as const,
-  "Impressão com Acabamento": ["Impressão", "Acabamento", "Concluído"] as const,
-  Carimbo: ["Impressão", "Montagem", "Concluído"] as const,
-  Acabamento: ["Acabamento", "Concluído"] as const,
-  "Impressão Digital": ["Impressão", "Acabamento", "Concluído"] as const,
-  "Placa Simples": [
-    "Corte e Preparação do Material",
-    "Montagem / Acabamento",
-    "Concluído",
-  ] as const,
-  "Placa Complexa": [
-    "Corte",
-    "Estrutura",
-    "Pintura",
-    "Elétrica",
-    "Montagem",
-    "Concluído",
-  ] as const,
-  Terceirizado: ["Pedido Feito", "Acabamento", "Liberado"] as const,
+  if (sequence.length === 0) {
+    console.warn(`[getStatusUtils] Nenhuma sequência específica retornada por getStatusSequencePrincipal para Tipo: ${tipo}, SubTipo: ${subTipo}. Usando sequência padrão.`);
+    return STATUS_SEQUENCE_DEFAULT;
+  }
+  return sequence;
 };
 
-export function obterStatusValidos(servico: string): readonly string[] {
-  return statusPorServico[servico as keyof typeof statusPorServico] ?? [];
-}
+const getCurrentStatusIndex = (
+  currentStatus: string,
+  sequence: string[]
+): number => {
+  const index = sequence.indexOf(currentStatus);
+  return index === -1 ? 1 : index + 1; 
+};
 
-export function getEtapaAtual(statusAtual: string, statusDisponiveis: string[]): number {
-  const index = statusDisponiveis.indexOf(statusAtual);
-  return index === -1 ? 0 : index + 1;
-}
+export const getTodasEtapasDoPedido = (pedido: Pedido) => {
 
+  const etapasGeralSequence = getStatusSequenceForPedido(
+    pedido.servico.tipo,
+    pedido.servico.subTipo
+  );
+  const atualGeral = getCurrentStatusIndex(
+    pedido.statusAtual,
+    etapasGeralSequence
+  );
+
+  let etapasArteInfo = undefined;
+
+  if (pedido.requerArte && pedido.servico.tipo !== TipoServico.ARTE) {
+    const atualArte = getCurrentStatusIndex(
+      pedido.StatusArte?.at(-1)?.status || "Iniciado",
+      STATUS_SEQUENCE_ARTE
+    );
+    etapasArteInfo = {
+      atual: atualArte,
+      total: STATUS_SEQUENCE_ARTE.length,
+    };
+  }
+
+  let etapasGalpaoInfo = undefined;
+
+  if (pedido.requerGalpao && pedido.servico.tipo !== TipoServico.COMUNICACAO_VISUAL) {
+    const atualGalpao = getCurrentStatusIndex(
+      pedido.StatusGalpao?.at(-1)?.status || "Iniciado",
+      STATUS_SEQUENCE_GALPAO
+    );
+    etapasGalpaoInfo = {
+      atual: atualGalpao,
+      total: STATUS_SEQUENCE_GALPAO.length,
+    };
+  }
+
+  return {
+    geral: {
+      atual: atualGeral,
+      total: etapasGeralSequence.length,
+    },
+    arte: etapasArteInfo,
+    galpao: etapasGalpaoInfo,
+  };
+};

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import HeaderPage from "../components/layout/headerPage.tsx";
-import type { Pedido, StatusPedido } from "../types/Pedidos.ts";
+import type { Pedido, StatusPedido, StatusArte, StatusGalpao } from "../types/Pedidos.ts";
 import "../styles/EditarPedido.css";
 import {
   fetchPedidoById,
@@ -11,7 +11,6 @@ import {
   getStatusArteDisponiveis,
   getStatusGalpaoDisponiveis,
 } from "../utils/utilsEditarPedido";
-import type { StatusArte, StatusGalpao } from "../utils/statusUtils";
 import { TipoServicoLabels, TipoServico } from "../types/Servicos";
 import type { SetorValue } from "../types/Setores.ts";
 

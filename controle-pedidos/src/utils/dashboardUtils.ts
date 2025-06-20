@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { Pedido, StatusPedido } from "../types/Pedidos";
 import { TipoServico, TipoServicoValues } from "../types/Servicos";
 import { Timestamp } from "firebase/firestore";
@@ -27,17 +28,25 @@ export function filtrarPedidos(
   buscaClienteOuNumero: string,
   filtroServico: string,
   filtroStatus: string,
-  filtroAtrasados: boolean,
+  filtroAtrasados: boolean, 
   filtroRequerArte: string,
   filtroRequerGalpao: string,
-  userSetor: string 
+  userSetor: string
 ): Pedido[] {
   return pedidos.filter((p) => {
-
     if (p.statusAtual === "Entregue" && (userSetor !== "CAIXA" || filtroStatus !== "Entregue")) {
       return false;
     }
-    
+
+    if (filtroAtrasados && p.statusAtual === "Concluído") {
+      return false; 
+    }
+
+    if (filtroAtrasados && p.statusAtual === "Entregue") {
+        return false;
+    }
+
+
     const termoBuscaLower = buscaClienteOuNumero.toLowerCase();
 
     const numeroPedidoAsString = String(p.numeroPedido).toLowerCase();
@@ -48,7 +57,11 @@ export function filtrarPedidos(
 
     const servicoMatch = filtroServico ? p.servico.tipo === (filtroServico as TipoServico) : true;
     const statusMatch = filtroStatus ? p.statusAtual === (filtroStatus as StatusPedido) : true;
-    const atrasoMatch = filtroAtrasados ? isPedidoAtrasado(p.prazos?.entrega) : true; 
+
+    const atrasoMatch = filtroAtrasados
+      ? (isPedidoAtrasado(p.prazos?.entrega) && p.statusAtual !== "Concluído" && p.statusAtual !== "Entregue")
+      : true;
+
 
     let requerArteMatch = true;
     if (filtroRequerArte === "true") {

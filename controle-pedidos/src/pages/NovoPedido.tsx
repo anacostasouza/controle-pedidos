@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getFirestore, collection, addDoc, Timestamp, doc, getDoc, getDocs } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { TipoServico, SubTipoServico } from "../types/Servicos";
+// Importe os valores dos enums e as labels
+import { TipoServico, SubTipoServico, TipoServicoLabels, SubTipoServicoLabels } from "../types/Servicos";
 import HeaderPage from '../components/layout/headerPage';
 import type { Pedido } from "../types/Pedidos";
 import { setores, type SetorValue } from "../types/Setores";
@@ -27,20 +28,29 @@ const generateTimeOptions = (interval: number = 30) => {
   return options;
 };
 
+// **CORREÇÃO AQUI:** Mapear subTipos para seus valores de ENUM diretamente
 const tiposServico = [
-  { value: TipoServico.ARTE, label: "Arte" },
+  { value: TipoServico.ARTE, label: TipoServicoLabels[TipoServico.ARTE] },
   {
     value: TipoServico.GRAFICA_RAPIDA,
-    label: "Gráfica Rápida",
-    subTipos: ["Impressão Rápida", "Impressão com Acabamento", "Carimbo", "Acabamento"]
+    label: TipoServicoLabels[TipoServico.GRAFICA_RAPIDA],
+    subTipos: [
+      { value: SubTipoServico.IMPRESSAO_RAPIDA, label: SubTipoServicoLabels[SubTipoServico.IMPRESSAO_RAPIDA] },
+      { value: SubTipoServico.IMPRESSAO_COM_ACABAMENTO, label: SubTipoServicoLabels[SubTipoServico.IMPRESSAO_COM_ACABAMENTO] },
+      { value: SubTipoServico.CARIMBO, label: SubTipoServicoLabels[SubTipoServico.CARIMBO] },
+      { value: SubTipoServico.ACABAMENTO, label: SubTipoServicoLabels[SubTipoServico.ACABAMENTO] }
+    ]
   },
-  { value: TipoServico.IMPRESSAO_DIGITAL, label: "Impressão Digital" },
+  { value: TipoServico.IMPRESSAO_DIGITAL, label: TipoServicoLabels[TipoServico.IMPRESSAO_DIGITAL] },
   {
     value: TipoServico.COMUNICACAO_VISUAL,
-    label: "Comunicação Visual",
-    subTipos: ["Placa Simples", "Placa Complexa"]
+    label: TipoServicoLabels[TipoServico.COMUNICACAO_VISUAL],
+    subTipos: [
+      { value: SubTipoServico.PLACA_SIMPLES, label: SubTipoServicoLabels[SubTipoServico.PLACA_SIMPLES] },
+      { value: SubTipoServico.PLACA_COMPLEXA, label: SubTipoServicoLabels[SubTipoServico.PLACA_COMPLEXA] }
+    ]
   },
-  { value: TipoServico.TERCEIRIZADO, label: "Terceirizado" }
+  { value: TipoServico.TERCEIRIZADO, label: TipoServicoLabels[TipoServico.TERCEIRIZADO] }
 ];
 
 export default function NovoPedido() {
@@ -179,10 +189,11 @@ export default function NovoPedido() {
         servicoID: formData.servico.servicoID,
       };
 
+      // **CORREÇÃO AQUI:** Garantir que o subTipo é o valor do ENUM
       if (formData.servico.subTipo) {
-        servicoToSave.subTipo = formData.servico.subTipo;
+        servicoToSave.subTipo = formData.servico.subTipo; // Já será o valor do ENUM pelo select
       } else {
-        servicoToSave.subTipo = null;
+        servicoToSave.subTipo = null; // Mantém null se não houver subtipo
       }
 
       await addDoc(collection(db, "pedidos"), {
@@ -232,6 +243,7 @@ export default function NovoPedido() {
     }
 
     const tipoServicoSelecionado = tiposServico.find(s => s.value === formData.servico.tipo);
+    // Valida se o subtipo é obrigatório e se foi selecionado
     if (tipoServicoSelecionado?.subTipos && !formData.servico.subTipo) {
       setError("Por favor, selecione um subtipo para o serviço escolhido.");
       return false;
@@ -302,7 +314,7 @@ export default function NovoPedido() {
                     ...formData,
                     servico: {
                       tipo,
-                      subTipo: undefined,
+                      subTipo: undefined, // Reset subTipo when type changes
                       servicoID: tiposServico.findIndex(s => s.value === tipo) + 1
                     }
                   });
@@ -328,6 +340,7 @@ export default function NovoPedido() {
                       ...formData,
                       servico: {
                         ...formData.servico,
+                        // **CORREÇÃO AQUI:** Certifique-se de que o valor é o ENUM
                         subTipo: (e.target.value as SubTipoServico) || null
                       }
                     })}
@@ -335,9 +348,9 @@ export default function NovoPedido() {
                     <option value="">Selecione um subtipo</option>
                     {tiposServico
                       .find(s => s.value === formData.servico.tipo)
-                      ?.subTipos?.map((subTipo) => (
-                        <option key={subTipo} value={subTipo}>
-                          {subTipo}
+                      ?.subTipos?.map((subTipoOption) => ( // Renomeado para evitar conflito
+                        <option key={subTipoOption.value} value={subTipoOption.value}>
+                          {subTipoOption.label}
                         </option>
                       ))}
                   </select>
@@ -359,7 +372,7 @@ export default function NovoPedido() {
                 <option value="">Selecione um responsável</option>
                 {users.map((user) => (
                   <option key={user.uid} value={user.uid}>
-                    {user.displayName} 
+                    {user.displayName}
                   </option>
                 ))}
               </select>
