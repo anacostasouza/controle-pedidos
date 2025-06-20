@@ -1,12 +1,18 @@
-import { useState, useEffect } from "react"; // Adicionado useEffect
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getFirestore, collection, addDoc, Timestamp, doc, getDoc } from "firebase/firestore"; // Adicionado doc, getDoc
+import { getFirestore, collection, addDoc, Timestamp, doc, getDoc, getDocs } from "firebase/firestore"; // Adicionado getDocs
 import { getAuth } from "firebase/auth";
-import { TipoServico } from "../types/Servicos";
+import { TipoServico, SubTipoServico } from "../types/Servicos";
 import HeaderPage from '../components/layout/headerPage';
 import type { Pedido } from "../types/Pedidos";
-import { setores, type SetorValue } from "../types/Setores"; 
+import { setores, type SetorValue } from "../types/Setores";
 import "../styles/NovoPedido.css";
+
+interface UserOption {
+  uid: string;
+  displayName: string;
+  setor: string;
+}
 
 const generateTimeOptions = (interval: number = 30) => {
   const options = [];
@@ -31,7 +37,7 @@ const tiposServico = [
   { value: TipoServico.IMPRESSAO_DIGITAL, label: "Impressão Digital" },
   {
     value: TipoServico.COMUNICACAO_VISUAL,
-    label: "Comunicação Visual", 
+    label: "Comunicação Visual",
     subTipos: ["Placa Simples", "Placa Complexa"]
   },
   { value: TipoServico.TERCEIRIZADO, label: "Terceirizado" }
@@ -40,12 +46,13 @@ const tiposServico = [
 export default function NovoPedido() {
   const navigate = useNavigate();
   const auth = getAuth();
-  const db = getFirestore(); 
+  const db = getFirestore();
 
   const [userDisplayName, setUserDisplayName] = useState<string | null>(null);
-  const [userSetorLabel, setUserSetorLabel] = useState<string | null>(null); 
-  const [loadingUser, setLoadingUser] = useState(true); 
-
+  const [userSetorLabel, setUserSetorLabel] = useState<string | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const [users, setUsers] = useState<UserOption[]>([]); 
+  const [selectedResponsavel, setSelectedResponsavel] = useState<string>(""); 
 
   const [formData, setFormData] = useState<Omit<Pedido, 'id' | 'criadoEm' | 'atualizadoEm' | 'historicoStatus'>>({
     pedidoID: Math.floor(Math.random() * 9000) + 1000,
@@ -64,9 +71,8 @@ export default function NovoPedido() {
 
   const [error, setError] = useState("");
 
-  
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchInitialData = async () => {
       setLoadingUser(true);
       const currentUser = auth.currentUser;
 
@@ -77,46 +83,65 @@ export default function NovoPedido() {
       }
 
       try {
+
         const userDocRef = doc(db, "usuarios", currentUser.uid);
         const userDocSnap = await getDoc(userDocRef);
 
+        let currentUserName: string | null = null;
+        let currentUserSetor: string | null = null;
+
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
-          setUserDisplayName(userData.displayName);
-          setUserDisplayName(userData.displayName);
+          currentUserName = userData.displayName;
+          setUserDisplayName(currentUserName);
 
           const setorEncontrado = setores.find(setor =>
             setor.value.trim().toUpperCase() === userData.setor.trim().toUpperCase()
           );
-          setUserSetorLabel(setorEncontrado?.label ?? userData.setor); 
+          currentUserSetor = setorEncontrado?.label ?? userData.setor;
+          setUserSetorLabel(currentUserSetor);
 
-         
           setFormData(prev => ({
             ...prev,
-            responsavel: userData.displayName, 
+            responsavel: currentUserName ?? "", 
           }));
+          setSelectedResponsavel(currentUser.uid); 
 
         } else {
           alert("Dados do usuário não encontrados. Redirecionando.");
           navigate("/");
+          return; 
         }
+
+        const usersCollectionRef = collection(db, "usuarios");
+        const usersSnapshot = await getDocs(usersCollectionRef);
+        const fetchedUsers: UserOption[] = [];
+        usersSnapshot.forEach(docSnap => {
+          const userData = docSnap.data();
+          fetchedUsers.push({
+            uid: docSnap.id,
+            displayName: userData.displayName,
+            setor: userData.setor
+          });
+        });
+        setUsers(fetchedUsers);
+
       } catch (err) {
-        console.error("Erro ao buscar dados do usuário:", err);
-        alert("Erro ao carregar dados do usuário.");
+        console.error("Erro ao buscar dados do usuário ou lista de usuários:", err);
+        alert("Erro ao carregar dados. Tente novamente.");
         navigate("/");
       } finally {
-        setLoadingUser(false); 
+        setLoadingUser(false);
       }
     };
 
-    fetchUserData();
-  }, [auth, db, navigate]); 
+    fetchInitialData();
+  }, [auth, db, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-  
     if (loadingUser) {
       setError("Aguarde, carregando dados do usuário...");
       return;
@@ -128,10 +153,16 @@ export default function NovoPedido() {
 
     if (!validateForm()) return;
 
+    const selectedResponsibleUser = users.find(user => user.uid === selectedResponsavel);
+    if (!selectedResponsibleUser) {
+      setError("Responsável selecionado inválido.");
+      return;
+    }
+
     try {
       const now = Timestamp.now();
 
-      const setoresResponsaveis: SetorValue[] = ["PRODUCAO_LOJA"]; 
+      const setoresResponsaveis: SetorValue[] = ["PRODUCAO_LOJA"];
 
       if (formData.requerArte) setoresResponsaveis.push("ARTE");
       if (formData.requerGalpao) setoresResponsaveis.push("GALPAO");
@@ -140,17 +171,30 @@ export default function NovoPedido() {
       const entregaDate = formData.prazos.entrega.toDate();
       entregaDate.setHours(parseInt(hours), parseInt(minutes));
 
+      const servicoToSave: { tipo: TipoServico; servicoID: number; subTipo?: SubTipoServico | null } = {
+        tipo: formData.servico.tipo,
+        servicoID: formData.servico.servicoID,
+      };
+
+      if (formData.servico.subTipo) {
+        servicoToSave.subTipo = formData.servico.subTipo;
+      } else {
+        servicoToSave.subTipo = null;
+      }
+
       await addDoc(collection(db, "pedidos"), {
         ...formData,
+        responsavel: selectedResponsibleUser.displayName, 
         setoresResponsaveis,
         prazos: {
           entrega: Timestamp.fromDate(entregaDate)
         },
+        servico: servicoToSave,
         historicoStatus: [{
           status: formData.statusAtual,
           data: now,
           responsavel: userDisplayName, 
-          setor: userSetorLabel 
+          setor: userSetorLabel
         }],
         criadoEm: now,
         atualizadoEm: now
@@ -179,10 +223,20 @@ export default function NovoPedido() {
       return false;
     }
 
+    if (!selectedResponsavel) {       setError("Por favor, selecione um responsável para o pedido.");
+      return false;
+    }
+
+    const tipoServicoSelecionado = tiposServico.find(s => s.value === formData.servico.tipo);
+    if (tipoServicoSelecionado?.subTipos && !formData.servico.subTipo) {
+      setError("Por favor, selecione um subtipo para o serviço escolhido.");
+      return false;
+    }
+
     return true;
   };
 
-  if (loadingUser) { 
+  if (loadingUser) {
     return <div>Carregando dados do usuário...</div>;
   }
 
@@ -260,31 +314,52 @@ export default function NovoPedido() {
             </div>
 
             {(formData.servico.tipo === TipoServico.GRAFICA_RAPIDA ||
-              formData.servico.tipo === TipoServico.COMUNICACAO_VISUAL) && ( // Usar && em vez de ? : null para renderização condicional
-              <div className="form-group">
-                <label htmlFor="subtipo-servico-select">Subtipo do Serviço</label>
-                <select
-                  id="subtipo-servico-select"
-                  value={formData.servico.subTipo ?? ""}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    servico: {
-                      ...formData.servico,
-                      subTipo: (e.target.value as import("../types/Servicos").SubTipoServico) || undefined
-                    }
-                  })}
-                >
-                  <option value="">Selecione um subtipo</option>
-                  {tiposServico
-                    .find(s => s.value === formData.servico.tipo)
-                    ?.subTipos?.map((subTipo) => (
-                      <option key={subTipo} value={subTipo}>
-                        {subTipo}
-                      </option>
-                    ))}
-                </select>
-              </div>
-            )}
+              formData.servico.tipo === TipoServico.COMUNICACAO_VISUAL) && (
+                <div className="form-group">
+                  <label htmlFor="subtipo-servico-select">Subtipo do Serviço</label>
+                  <select
+                    id="subtipo-servico-select"
+                    value={formData.servico.subTipo ?? ""}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      servico: {
+                        ...formData.servico,
+                        subTipo: (e.target.value as SubTipoServico) || null
+                      }
+                    })}
+                  >
+                    <option value="">Selecione um subtipo</option>
+                    {tiposServico
+                      .find(s => s.value === formData.servico.tipo)
+                      ?.subTipos?.map((subTipo) => (
+                        <option key={subTipo} value={subTipo}>
+                          {subTipo}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="responsavel-select">Responsável pelo Pedido *</label>
+              <select
+                id="responsavel-select"
+                value={selectedResponsavel} 
+                onChange={(e) => {
+                  setSelectedResponsavel(e.target.value);
+                }}
+                required
+              >
+                <option value="">Selecione um responsável</option>
+                {users.map((user) => (
+                  <option key={user.uid} value={user.uid}>
+                    {user.displayName} ({user.setor})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="form-row">
@@ -312,10 +387,10 @@ export default function NovoPedido() {
                 type="date"
                 min={new Date().toISOString().split('T')[0]}
                 onChange={(e) => {
-                  const dateString = e.target.value; 
+                  const dateString = e.target.value;
                   if (dateString) {
                     const [year, month, day] = dateString.split('-').map(Number);
-                    const localDate = new Date(year, month - 1, day); 
+                    const localDate = new Date(year, month - 1, day);
                     setFormData({
                       ...formData,
                       prazos: {

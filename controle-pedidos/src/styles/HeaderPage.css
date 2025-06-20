@@ -101,7 +101,7 @@
 }
 
 .dropdown-option:hover {
-    background-color: #f0f0f0; /* Adicionado hover background para dropdown options */
+    background-color: #f0f0f0; 
 }
 
 .dropdown-option:disabled {
@@ -112,11 +112,10 @@
     transition: none;
 }
 
-/* NOVO: Container para os botões de perfil e logout */
 .header-actions {
     display: flex;
     align-items: center;
-    gap: 10px; /* Espaço entre o botão de perfil e o botão de logout */
+    gap: 10px; 
 }
 
 .user-profile-button {
@@ -129,7 +128,7 @@
     padding: 8px 12px;
     border-radius: 20px;
     transition: all 0.3s ease;
-    font-family: 'Comfortaa', sans-serif; /* Mover para cá para ser mais específico */
+    font-family: 'Comfortaa', sans-serif; 
 }
 
 .user-profile-button:hover {
@@ -137,8 +136,6 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
-
-/* Removido .user-profile duplicado, usando .user-profile-button */
 
 .user-name {
     font-size: 0.9375rem;
@@ -148,20 +145,19 @@
 }
 
 .user-role {
-    margin-left: 8px; /* Mantenha o espaçamento entre nome e função */
+    margin-left: 8px; 
     font-size: 0.8125rem;
     color: #d2d6d6;
     text-transform: capitalize;
     font-family: 'Comfortaa', sans-serif;
 }
 
-/* NOVO: Estilo para o botão de logout */
 .logout-button {
-    background: none; /* Fundo transparente */
-    border: none; /* Sem borda */
+    background: none;
+    border: none;
     cursor: pointer;
-    padding: 8px; /* Espaçamento interno para o SVG */
-    border-radius: 50%; /* Faz o botão circular */
+    padding: 8px;
+    border-radius: 50%; 
     display: flex;
     align-items: center;
     justify-content: center;
@@ -169,13 +165,13 @@
 }
 
 .logout-button:hover {
-    background-color: #f0f0f0; /* Fundo cinza claro ao passar o mouse */
-    transform: scale(1.1); /* Um pequeno zoom no hover */
+    background-color: #f0f0f0; 
+    transform: scale(1.1); 
 }
 
 .logout-button svg {
-    color: #343a40; /* Cor do ícone */
-    width: 20px; /* Tamanho do ícone */
+    color: #343a40; 
+    width: 20px; 
     height: 20px;
 }
 
@@ -234,7 +230,6 @@
         font-size: 0.75rem;
     }
 
-    /* Ajuste para o botão de logout em telas menores */
     .logout-button {
         padding: 6px;
     }
@@ -255,19 +250,18 @@
     }
 
     .user-name {
-        display: none; /* Oculta o nome em telas muito pequenas */
+        display: none; 
     }
 
     .user-role {
-        margin-left: 0; /* Remove a margem quando o nome é oculto */
+        margin-left: 0; 
         font-size: 0.6875rem;
         padding: 4px 8px;
         background-color: #f5f7fa;
         border-radius: 12px;
-        color: #2c3e50; /* Garante que a cor seja visível no novo fundo */
+        color: #2c3e50; 
     }
 
-    /* Ajuste para o botão de logout em telas menores */
     .logout-button {
         padding: 4px;
     }
@@ -275,7 +269,7 @@
         width: 16px;
         height: 16px;
     }
-    /* Ajuste para o espaçamento dos botões em telas muito pequenas */
+
     .header-actions {
         gap: 5px;
     }

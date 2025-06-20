@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getFirestore, collection, getDocs, query, orderBy, doc, getDoc } from "firebase/firestore";
+import { getFirestore, collection, query, orderBy, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import "../styles/Dashboard.css";
 import HeaderPage from '../components/layout/headerPage';
@@ -18,6 +18,8 @@ export default function Dashboard() {
   const [filtroServico, setFiltroServico] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
   const [filtroAtrasados, setFiltroAtrasados] = useState(false);
+  const [filtroRequerArte, setFiltroRequerArte] = useState("");
+  const [filtroRequerGalpao, setFiltroRequerGalpao] = useState("");
   const [pedidosFiltrados, setPedidosFiltrados] = useState<Pedido[]>([]);
   const [userSetor, setUserSetor] = useState("");
 
@@ -25,7 +27,7 @@ export default function Dashboard() {
     const auth = getAuth();
     const db = getFirestore();
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userDocRef = doc(db, "usuarios", user.uid);
         const userDocSnap = await getDoc(userDocRef);
@@ -38,11 +40,47 @@ export default function Dashboard() {
         }
       } else {
         console.warn("Usuário não autenticado.");
+        navigate('/login');
       }
+      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
+  }, [navigate]);
+
+  useEffect(() => {
+    const db = getFirestore();
+    const pedidosCollectionRef = collection(db, "pedidos");
+    const q = query(pedidosCollectionRef, orderBy("prazos.entrega"));
+
+    const unsubscribeFirestore = onSnapshot(q, (querySnapshot) => {
+      const pedidosData = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Pedido[];
+
+      setPedidos(pedidosData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Erro ao buscar pedidos em tempo real:", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribeFirestore();
   }, []);
+
+  useEffect(() => {
+    const pedidosFiltrados = filtrarPedidos(
+      pedidos,
+      buscaCliente,
+      filtroServico,
+      filtroStatus,
+      filtroAtrasados,
+      userSetor === "ARTE" ? filtroRequerArte : "",
+      userSetor === "GALPAO" ? filtroRequerGalpao : ""
+    );
+    setPedidosFiltrados(pedidosFiltrados);
+  }, [pedidos, buscaCliente, filtroServico, filtroStatus, filtroAtrasados, filtroRequerArte, filtroRequerGalpao, userSetor]);
 
   const podeEditarPedido = (pedido: Pedido): boolean => {
     if (!userSetor) return false;
@@ -56,47 +94,26 @@ export default function Dashboard() {
     return false;
   };
 
-  useEffect(() => {
-    const fetchPedidos = async () => {
-      const db = getFirestore();
-      const q = query(collection(db, "pedidos"), orderBy("prazos.entrega"));
-      const pedidosSnapshot = await getDocs(q);
-      
-      const pedidosData = pedidosSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Pedido[];
-      
-      setPedidos(pedidosData);
-      setPedidosFiltrados(pedidosData);
-      setLoading(false);
-    };
-
-    fetchPedidos();
-  }, []);
-
-  useEffect(() => {
-    const pedidosFiltrados = filtrarPedidos(
-      pedidos,
-      buscaCliente,
-      filtroServico,
-      filtroStatus,
-      filtroAtrasados
-    );
-    setPedidosFiltrados(pedidosFiltrados);
-  }, [pedidos, buscaCliente, filtroServico, filtroStatus, filtroAtrasados]);
-
   return (
     <div className="dashboard-page">
       <HeaderPage />
 
       <div className="table-container">
         <div className="header-dashboard">
-          <h2>Pedidos ({pedidos.length}) </h2>
+          <div className="dashboard-header-content">
+            <h2>Pedidos ({pedidosFiltrados.length}) </h2>
+            <button
+              className="new-order-button"
+              onClick={() => navigate("/novo-pedido")}
+            >
+              Novo Pedido
+            </button>
+          </div>
+
           <div className="filters">
             <input
               type="text"
-              placeholder="Buscar cliente..."
+              placeholder="Buscar cliente ou nº do pedido..."
               value={buscaCliente}
               onChange={(e) => setBuscaCliente(e.target.value)}
             />
@@ -132,6 +149,31 @@ export default function Dashboard() {
               <option value="Elétrica">Elétrica</option>
               <option value="Corte e Preparação">Corte e Preparação</option>
             </select>
+
+            {userSetor === "ARTE" && (
+              <select
+                aria-label="Filtro de Requer Arte"
+                value={filtroRequerArte}
+                onChange={(e) => setFiltroRequerArte(e.target.value)}
+              >
+                <option value="">Requer Arte (Todos)</option>
+                <option value="true">Requer Arte (Sim)</option>
+                <option value="false">Requer Arte (Não)</option>
+              </select>
+            )}
+
+            {userSetor === "GALPAO" && (
+              <select
+                aria-label="Filtro de Requer Galpão"
+                value={filtroRequerGalpao}
+                onChange={(e) => setFiltroRequerGalpao(e.target.value)}
+              >
+                <option value="">Requer Galpão (Todos)</option>
+                <option value="true">Requer Galpão (Sim)</option>
+                <option value="false">Requer Galpão (Não)</option>
+              </select>
+            )}
+
             <label>
               <input
                 type="checkbox"
@@ -140,12 +182,6 @@ export default function Dashboard() {
               />{" "}
               Mostrar apenas pedidos atrasados
             </label>
-            <button 
-              className="new-order-button" 
-              onClick={() => navigate("/novo-pedido")}
-            >
-              Novo Pedido
-            </button>
           </div>
         </div>
         {loading ? (
@@ -167,34 +203,30 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {pedidosFiltrados.map((pedido) => {
+                  const statusDisponiveis = getStatusDisponiveis(pedido);
+                  const etapaAtual = getEtapaAtual(pedido.statusAtual, statusDisponiveis);
 
-                      const statusDisponiveis = getStatusDisponiveis(pedido);
-                      const etapaAtual = getEtapaAtual(pedido.statusAtual, statusDisponiveis);
+                  const statusArteHist = pedido.StatusArte?.at(-1);
+                  const statusAtualArte = statusArteHist?.status;
 
-                     
-                      const statusArteHist = pedido.StatusArte?.at(-1);
-                      const statusAtualArte = statusArteHist?.status;
+                  const statusDisponiveisArte = pedido.requerArte && isStatusPedido(statusAtualArte)
+                    ? getStatusArteDisponiveis({ ...pedido, statusAtual: statusAtualArte })
+                    : [];
 
-                      const statusDisponiveisArte = pedido.requerArte && isStatusPedido(statusAtualArte)
-                        ? getStatusArteDisponiveis({ ...pedido, statusAtual: statusAtualArte })
-                        : [];
+                  const etapaAtualArte = pedido.requerArte && isStatusPedido(statusAtualArte)
+                    ? getEtapaAtual(statusAtualArte, statusDisponiveisArte)
+                    : null;
 
-                      const etapaAtualArte = pedido.requerArte && isStatusPedido(statusAtualArte)
-                        ? getEtapaAtual(statusAtualArte, statusDisponiveisArte)
-                        : null;
+                  const statusGalpaoHist = pedido.StatusGalpao?.at(-1);
+                  const statusAtualGalpao = statusGalpaoHist?.status;
 
-                      
-                      const statusGalpaoHist = pedido.StatusGalpao?.at(-1);
-                      const statusAtualGalpao = statusGalpaoHist?.status;
+                  const statusDisponiveisGalpao = pedido.requerGalpao && isStatusPedido(statusAtualGalpao)
+                    ? getStatusGalpaoDisponiveis({ ...pedido, statusAtual: statusAtualGalpao })
+                    : [];
 
-                      const statusDisponiveisGalpao = pedido.requerGalpao && isStatusPedido(statusAtualGalpao)
-                        ? getStatusGalpaoDisponiveis({ ...pedido, statusAtual: statusAtualGalpao })
-                        : [];
-
-                      const etapaAtualGalpao = pedido.requerGalpao && isStatusPedido(statusAtualGalpao)
-                        ? getEtapaAtual(statusAtualGalpao, statusDisponiveisGalpao)
-                        : null;
-
+                  const etapaAtualGalpao = pedido.requerGalpao && isStatusPedido(statusAtualGalpao)
+                    ? getEtapaAtual(statusAtualGalpao, statusDisponiveisGalpao)
+                    : null;
 
                   return (
                     <tr key={pedido.id} className="pedidos-row">
@@ -220,15 +252,15 @@ export default function Dashboard() {
                         )}
                       </td>
                       <td>
-                          <div>
-                            <span><strong>Geral:</strong> {etapaAtual}/{statusDisponiveis.length}</span><br />
-                            {pedido.requerArte && (
-                              <span><strong>Arte:</strong> {etapaAtualArte}/{statusDisponiveisArte.length}</span>
-                            )}<br />
-                            {pedido.requerGalpao && (
-                              <span><strong>Galpão:</strong> {etapaAtualGalpao}/{statusDisponiveisGalpao.length}</span>
-                            )}
-                          </div>
+                        <div>
+                          <span><strong>Geral:</strong> {etapaAtual}/{statusDisponiveis.length}</span><br />
+                          {pedido.requerArte && (
+                            <span><strong>Arte:</strong> {etapaAtualArte}/{statusDisponiveisArte.length}</span>
+                          )}<br />
+                          {pedido.requerGalpao && (
+                            <span><strong>Galpão:</strong> {etapaAtualGalpao}/{statusDisponiveisGalpao.length}</span>
+                          )}
+                        </div>
                       </td>
                       <td>{pedido.statusAtual}</td>
                       <td>

@@ -1,4 +1,3 @@
-/* Variáveis para cores, tamanhos, etc. para facilitar a manutenção */
 :root {
     --gray-light: #f5f5f5;
     --gray-medium: #e0e0e0;
@@ -6,13 +5,13 @@
     --text-color: #444;
     --border-color: #ddd;
     --input-bg: #fff;
-    --content-bg: #f9f9f9; /* Mantido para o fundo geral */
+    --content-bg: #f9f9f9; 
     --shadow-light: 0 2px 5px rgba(0,0,0,0.05);
     --shadow-medium: 0 5px 15px rgba(0,0,0,0.08);
     --border-radius-small: 5px;
     --border-radius-medium: 8px;
     --border-radius-large: 12px;
-    --font-family-comfortaa: 'Comfortaa', cursive; /* Certifique-se de ter essa fonte importada */
+    --font-family-comfortaa: 'Comfortaa', cursive;
 }
 
 body {
@@ -24,25 +23,21 @@ body {
 
 .settings-page {
     display: flex;
-    /* justify-content: center; /* REMOVA ou COMENTE: Não centraliza mais horizontalmente */
-    /* align-items: center; /* REMOVA ou COMENTE: Não centraliza mais verticalmente (a menos que queira o conteúdo no meio da tela vazia) */
     min-height: 100vh;
     background-color: var(--content-bg);
-    padding: 20px; /* Mantém o padding das bordas da tela */
+    padding: 20px; 
     box-sizing: border-box;
-    width: 100%; /* Garante que a página ocupe 100% da largura */
+    width: 100%; 
 }
 
-/* Conteúdo Principal do Perfil */
 .profile-content {
     flex-grow: 1;
-    /* max-width: 900px; /* REMOVA ou COMENTE: Permite que ocupe a largura total */
-    width: 100%; /* Garante que ocupe a largura disponível */
+    width: 100%; 
     background-color: #fff;
     padding: 30px;
     border-radius: var(--border-radius-large);
     box-shadow: none;
-    margin: 0 auto; /* Se você ainda quiser centralizá-lo, mas sem limitar a largura, pode deixar */
+    margin: 0 auto; 
 }
 
 .content-header {
@@ -60,13 +55,6 @@ body {
     margin: 0;
     font-weight: 700;
     text-align: center;
-}
-
-/* Formulário de Perfil */
-.profile-form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
 }
 
 .form-group {
@@ -130,19 +118,17 @@ body {
     pointer-events: none;
 }
 
-/* Container para alinhar os botões de ação e gerenciar */
 .profile-buttons-container {
     display: flex;
-    justify-content: space-between; /* Alinha os itens nas extremidades */
-    align-items: center; /* Alinha verticalmente ao centro */
-    margin-top: 20px; /* Espaçamento do formulário */
-    width: 100%; /* Garante que ocupe a largura total do container pai */
+    justify-content: space-between; 
+    align-items: center; 
+    margin-top: 20px; 
+    width: 100%; 
 }
 
-/* Botões de Ação (dentro de form-actions ou diretamente) */
 .form-action {
     display: flex;
-    gap: 15px; /* Espaçamento entre os botões */
+    gap: 15px; 
 }
 
 .btn {
@@ -150,7 +136,7 @@ body {
     border: none;
     border-radius: var(--border-radius-medium);
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 400;
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.1s ease;
 }
@@ -175,7 +161,6 @@ body {
     transform: translateY(-1px);
 }
 
-/* Novo botão para gerenciar usuários */
 .manage-users-btn {
     background-color: #8a2a2c;
     color: white;
@@ -183,7 +168,7 @@ body {
     border: none;
     border-radius: var(--border-radius-medium);
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 400;
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.1s ease;
 }
@@ -198,17 +183,14 @@ body {
     cursor: not-allowed;
 }
 
-
-/* Estilos para a lista de usuários (apenas para admins) */
 .users-list-card {
     background-color: #fff;
     padding: 25px;
     border-radius: var(--border-radius-large);
     box-shadow: var(--shadow-medium);
     margin-top: 30px;
-    /* max-width: 800px; /* REMOVA ou COMENTE: Permite que ocupe a largura total */
-    margin-left: auto; /* Mantém centralizado se o width for menor que 100% */
-    margin-right: auto; /* Mantém centralizado se o width for menor que 100% */
+    margin-left: auto; 
+    margin-right: auto; 
 }
 
 .users-list-card h2 {
@@ -262,7 +244,6 @@ body {
     cursor: not-allowed;
 }
 
-/* Mensagens de erro */
 .profile-error {
     color: red;
     background-color: #ffe0e0;
@@ -273,7 +254,6 @@ body {
     text-align: center;
 }
 
-/* Loading state */
 .profile-page.loading {
     display: flex;
     justify-content: center;
@@ -282,7 +262,6 @@ body {
     color: var(--gray-dark);
 }
 
-/* Estado de erro geral da página */
 .profile-page.error-state {
     display: flex;
     flex-direction: column;
@@ -295,8 +274,6 @@ body {
     font-size: 1.2rem;
 }
 
-
-/* Responsividade */
 @media (max-width: 768px) {
     .settings-page {
         padding: 15px;
@@ -304,9 +281,6 @@ body {
 
     .profile-content {
         padding: 20px;
-        /* Remover max-width e margens em mobile se o objetivo é preencher 100% */
-        /* max-width: none; */
-        /* margin: 0; */
     }
 
     .content-header {
@@ -319,12 +293,8 @@ body {
         font-size: 1.8rem;
     }
 
-    .profile-form-grid {
-        grid-template-columns: 1fr;
-    }
-
     .profile-buttons-container {
-        flex-direction: column; /* Manter os botões empilhados em telas menores */
+        flex-direction: column; 
         gap: 15px;
     }
     .profile-buttons-container .manage-users-btn,

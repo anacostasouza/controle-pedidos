@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { auth } from "../../services/firebase";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
-import { signOut } from "firebase/auth"; // Importe signOut
+import { signOut } from "firebase/auth";
 import "../../styles/HeaderPage.css";
 import type { Usuario } from "../../types/Usuario";
 import logo from "../../assets/LogoColorida.png";
@@ -98,7 +98,6 @@ const HeaderPage: React.FC = () => {
       navigate("/login");
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
-      // Opcional: exibir uma mensagem de erro para o usuário
     }
   };
 

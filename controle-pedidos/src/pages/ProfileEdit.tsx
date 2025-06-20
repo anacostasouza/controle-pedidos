@@ -56,13 +56,13 @@ export default function EditProfilePage(): JSX.Element {
         if (userDocSnap.exists()) {
           const data = userDocSnap.data();
           const currentSetorObj = setores.find(s => s.value === data.setor);
-          const currentSetorLabel = currentSetorObj?.label || "";
+          const currentSetorLabel = currentSetorObj?.label ?? "";
 
           const loadedLoggedUser: Usuario = {
             usuarioID: currentUser.uid,
-            displayName: data.displayName || "",
-            email: data.email || currentUser.email || "",
-            setor: (data.setor as SetorValue) || "",
+            displayName: data.displayName ?? "",
+            email: (data.email ?? currentUser.email) ?? "",
+            setor: (data.setor as SetorValue) ?? "",
             setorNome: currentSetorLabel,
             createdAt: (data.createdAt instanceof Timestamp) ? data.createdAt.toDate() : new Date(),
             updatedAt: (data.updatedAt instanceof Timestamp) ? data.updatedAt.toDate() : new Date(),
@@ -80,12 +80,12 @@ export default function EditProfilePage(): JSX.Element {
             querySnapshot.forEach((docSnap) => {
               const userData = docSnap.data();
               const userSetorObj = setores.find(s => s.value === userData.setor);
-              const userSetorLabel = userSetorObj?.label || "";
+              const userSetorLabel = userSetorObj?.label ?? "";
               loadedUsers.push({
                 usuarioID: docSnap.id,
-                displayName: userData.displayName || "",
-                email: userData.email || "",
-                setor: (userData.setor as SetorValue) || "",
+                displayName: userData.displayName ?? "",
+                email: userData.email ?? "",
+                setor: (userData.setor as SetorValue) ?? "",
                 setorNome: userSetorLabel,
                 createdAt: (userData.createdAt instanceof Timestamp) ? userData.createdAt.toDate() : new Date(),
                 updatedAt: (userData.updatedAt instanceof Timestamp) ? userData.updatedAt.toDate() : new Date(),
@@ -154,7 +154,7 @@ export default function EditProfilePage(): JSX.Element {
     }
 
     try {
-      const targetUserId = editingUserId ?? (usuarioLogado?.usuarioID || "");
+      const targetUserId = editingUserId ?? (usuarioLogado?.usuarioID ?? "");
       if (!targetUserId) {
         setError("ID do usuário não encontrado para atualização.");
         setLoading(false);
@@ -166,9 +166,9 @@ export default function EditProfilePage(): JSX.Element {
       let updatedSetorLabel: string;
       let updatedSetorValue: SetorValue | "";
 
-      if (editingUserId) { // Admin editando outro usuário
+      if (editingUserId) {
         updatedSetorValue = editingUserSetor;
-        updatedSetorLabel = setores.find(s => s.value === editingUserSetor)?.label || "";
+        updatedSetorLabel = setores.find(s => s.value === editingUserSetor)?.label ?? "";
         dataToUpdate = {
           displayName: editingUserName,
           setor: updatedSetorValue,
@@ -184,12 +184,12 @@ export default function EditProfilePage(): JSX.Element {
         querySnapshot.forEach((docSnap) => {
           const userData = docSnap.data();
           const userSetorObj = setores.find(s => s.value === userData.setor);
-          const userSetorLabel = userSetorObj?.label || "";
+          const userSetorLabel = userSetorObj?.label ?? "";
           reloadedUsers.push({
             usuarioID: docSnap.id,
-            displayName: userData.displayName || "",
-            email: userData.email || "",
-            setor: (userData.setor as SetorValue) || "",
+            displayName: userData.displayName ?? "",
+            email: userData.email ?? "",
+            setor: (userData.setor as SetorValue) ?? "",
             setorNome: userSetorLabel,
             createdAt: (userData.createdAt instanceof Timestamp) ? userData.createdAt.toDate() : new Date(),
             updatedAt: (userData.updatedAt instanceof Timestamp) ? userData.updatedAt.toDate() : new Date(),
@@ -197,15 +197,15 @@ export default function EditProfilePage(): JSX.Element {
           });
         });
         setAllUsers(reloadedUsers);
-        setEditingUserId(null); // Sai do modo de edição
+        setEditingUserId(null); 
         setEditingUserName("");
         setEditingUserSetor("");
         setEditingUserStatus(true);
-        setError(""); // Limpa qualquer erro após sucesso
+        setError(""); 
 
-      } else { // Usuário editando o próprio perfil
+      } else { 
         updatedSetorValue = setor;
-        updatedSetorLabel = setores.find(s => s.value === setor)?.label || "";
+        updatedSetorLabel = setores.find(s => s.value === setor)?.label ?? "";
         dataToUpdate = {
           displayName: profileName,
           setor: updatedSetorValue,
@@ -288,11 +288,6 @@ export default function EditProfilePage(): JSX.Element {
           <form onSubmit={handleSubmit} className="profile-form-grid" id="profile-form-id">
             {error && <p className="profile-error full-width">{error}</p>}
 
-            {/* Renderização condicional do formulário: próprio perfil OU edição de outro */}
-            {/* O formulário do próprio perfil aparece se:
-                1. A seção de gerenciar usuários está oculta (`!showManageUsers`).
-                2. O usuário NÃO é admin (`!isCurrentUserAdmin`).
-                3. O usuário é admin, a seção de gerenciar está visível, MAS não há um usuário específico sendo editado (`isCurrentUserAdmin && !editingUserId`). */}
             {!showManageUsers || !isCurrentUserAdmin || (isCurrentUserAdmin && !editingUserId) ? (
                 <>
                     <div className="form-group full-width">
@@ -317,7 +312,7 @@ export default function EditProfilePage(): JSX.Element {
                         >
                             <option value="">Selecione seu setor</option>
                             {setores.map((s) => {
-                                // Se o usuário é admin OU o setor não é um dos setores admin, mostra a opção
+                               
                                 if (isCurrentUserAdmin || !setoresAdminLabels.includes(s.label)) {
                                     return (
                                         <option key={s.value} value={s.value}>
@@ -325,13 +320,13 @@ export default function EditProfilePage(): JSX.Element {
                                         </option>
                                     );
                                 }
-                                return null; // Oculta opções de setor admin para não-admins
+                                return null; 
                             })}
                         </select>
                     </div>
                 </>
             ) : (
-                // Modo de edição de outro usuário (APENAS admins, e APENAS quando showManageUsers é true E está editando um ID específico)
+              
                 isCurrentUserAdmin && editingUserId && (
                     <>
                         <div className="form-group">
@@ -376,12 +371,10 @@ export default function EditProfilePage(): JSX.Element {
                             </select>
                         </div>
 
-                        {/* Estes botões ficam DENTRO do formulário de edição de outro usuário */}
                         <div className="form-actions full-width">
                             <button type="button" onClick={handleCancelEdit} className="btn cancel-btn" disabled={loading}>
                                 Cancelar
                             </button>
-                            {/* Botão de Salvar Alterações para edição de OUTRO usuário, dentro do form */}
                             <button type="submit" className="btn save-btn" disabled={loading} form="profile-form-id">
                                 {loading ? "Salvando..." : "Salvar Alterações"}
                             </button>
@@ -389,21 +382,18 @@ export default function EditProfilePage(): JSX.Element {
                     </>
                 )
             )}
-            {/* O container de botões abaixo do formulário */}
-            {/* Ele só aparece se não estiver no modo de edição de OUTRO usuário */}
             {!editingUserId && (
                 <div className="profile-buttons-container">
                     {isCurrentUserAdmin && (
                         <button
-                            type="button" // ESTA É A MUDANÇA CRUCIAL: GARANTIR type="button" para NÃO SUBMETER O FORM
+                            type="button" 
                             onClick={handleToggleManageUsers}
                             className="manage-users-btn"
                             disabled={loading}
                         >
-                            {showManageUsers ? "Esconder Gerenciamento de Usuários" : "Gerenciar Outros Usuários"}
+                            {showManageUsers ? "Voltar" : "Gerenciar Outros Usuários"}
                         </button>
                     )}
-                    {/* Botão de Salvar Alterações para o próprio perfil, fora do form principal, mas linkado via 'form' prop */}
                     {(!showManageUsers || !isCurrentUserAdmin) && (
                         <div className="form-action">
                             <button type="submit" className="btn save-btn" disabled={loading} form="profile-form-id">
@@ -415,8 +405,7 @@ export default function EditProfilePage(): JSX.Element {
             )}
           </form>
 
-          {/* A lista de usuários aparece ABAIXO do formulário principal de edição
-              Renderiza a lista de usuários APENAS se o usuário logado for admin E showManageUsers é true E não estiver no modo de edição de UM usuário específico */}
+          
           {isCurrentUserAdmin && showManageUsers && !editingUserId && (
               <div className="users-list-card">
                   <h2>Todos os Usuários</h2>

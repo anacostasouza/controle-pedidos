@@ -1,4 +1,5 @@
 import type { Pedido, StatusPedido } from "../types/Pedidos";
+import { TipoServico } from "../types/Servicos";
 import { Timestamp } from "firebase/firestore";
 
 export function formatDate(timestamp?: Timestamp): string {
@@ -16,25 +17,48 @@ export function isPedidoAtrasado(entrega?: Timestamp): boolean {
   if (!entrega) return false;
 
   const entregaDate = entrega.toDate();
-   const now = new Date();
-   
+  const now = new Date();
+
   return entregaDate.getTime() < now.getTime();
 }
 
 export function filtrarPedidos(
   pedidos: Pedido[],
-  buscaCliente: string,
+  buscaClienteOuNumero: string,
   filtroServico: string,
   filtroStatus: string,
-  filtroAtrasados: boolean
+  filtroAtrasados: boolean,
+  filtroRequerArte: string,
+  filtroRequerGalpao: string
 ): Pedido[] {
   return pedidos.filter((p) => {
-    const clienteMatch = p.nomeCliente.toLowerCase().includes(buscaCliente.toLowerCase());
+    const termoBuscaLower = buscaClienteOuNumero.toLowerCase();
+
+    const numeroPedidoAsString = String(p.numeroPedido).toLowerCase();
+
+    const clienteOuNumeroMatch =
+      p.nomeCliente.toLowerCase().includes(termoBuscaLower) ||
+      numeroPedidoAsString.includes(termoBuscaLower);
+
     const servicoMatch = filtroServico ? p.servico.tipo === filtroServico : true;
     const statusMatch = filtroStatus ? p.statusAtual === filtroStatus : true;
     const atrasoMatch = filtroAtrasados ? isPedidoAtrasado(p.prazos?.entrega) : true;
 
-    return clienteMatch && servicoMatch && statusMatch && atrasoMatch;
+    let requerArteMatch = true;
+    if (filtroRequerArte === "true") {
+      requerArteMatch = p.requerArte === true || p.servico.tipo === TipoServico.ARTE;
+    } else if (filtroRequerArte === "false") {
+      requerArteMatch = p.requerArte !== true && p.servico.tipo !== TipoServico.ARTE;
+    }
+
+    let requerGalpaoMatch = true; 
+    if (filtroRequerGalpao === "true") {
+      requerGalpaoMatch = p.requerGalpao === true || p.servico.tipo === TipoServico.COMUNICACAO_VISUAL;
+    } else if (filtroRequerGalpao === "false") {
+      requerGalpaoMatch = p.requerGalpao !== true && p.servico.tipo !== TipoServico.COMUNICACAO_VISUAL;
+    }
+
+    return clienteOuNumeroMatch && servicoMatch && statusMatch && atrasoMatch && requerArteMatch && requerGalpaoMatch;
   });
 }
 
@@ -45,4 +69,3 @@ export function isStatusPedido(value: unknown): value is StatusPedido {
     "Corte", "Estrutura", "Pintura", "Elétrica", "Corte e Preparação"
   ].includes(value as string);
 }
-
