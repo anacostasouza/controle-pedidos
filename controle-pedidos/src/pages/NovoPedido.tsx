@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getFirestore, collection, addDoc, Timestamp, doc, getDoc, getDocs } from "firebase/firestore"; // Adicionado getDocs
+import { getFirestore, collection, addDoc, Timestamp, doc, getDoc, getDocs } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { TipoServico, SubTipoServico } from "../types/Servicos";
 import HeaderPage from '../components/layout/headerPage';
@@ -51,15 +51,15 @@ export default function NovoPedido() {
   const [userDisplayName, setUserDisplayName] = useState<string | null>(null);
   const [userSetorLabel, setUserSetorLabel] = useState<string | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
-  const [users, setUsers] = useState<UserOption[]>([]); 
-  const [selectedResponsavel, setSelectedResponsavel] = useState<string>(""); 
+  const [users, setUsers] = useState<UserOption[]>([]);
+  const [selectedResponsavel, setSelectedResponsavel] = useState<string>("");
 
   const [formData, setFormData] = useState<Omit<Pedido, 'id' | 'criadoEm' | 'atualizadoEm' | 'historicoStatus'>>({
     pedidoID: Math.floor(Math.random() * 9000) + 1000,
     numeroPedido: 0,
     nomeCliente: "",
     servico: { tipo: TipoServico.ARTE, servicoID: 1 },
-    responsavel: "", 
+    responsavel: "",
     statusAtual: "Iniciado",
     prazos: { entrega: Timestamp.now() },
     tipoDeEntrega: "Entrega",
@@ -83,7 +83,6 @@ export default function NovoPedido() {
       }
 
       try {
-
         const userDocRef = doc(db, "usuarios", currentUser.uid);
         const userDocSnap = await getDoc(userDocRef);
 
@@ -103,14 +102,14 @@ export default function NovoPedido() {
 
           setFormData(prev => ({
             ...prev,
-            responsavel: currentUserName ?? "", 
+            responsavel: currentUserName ?? "",
           }));
-          setSelectedResponsavel(currentUser.uid); 
+          setSelectedResponsavel(currentUser.uid);
 
         } else {
           alert("Dados do usuário não encontrados. Redirecionando.");
           navigate("/");
-          return; 
+          return;
         }
 
         const usersCollectionRef = collection(db, "usuarios");
@@ -124,7 +123,11 @@ export default function NovoPedido() {
             setor: userData.setor
           });
         });
-        setUsers(fetchedUsers);
+
+        const sortedUsers = fetchedUsers.sort((a, b) =>
+          a.displayName.localeCompare(b.displayName)
+        );
+        setUsers(sortedUsers);
 
       } catch (err) {
         console.error("Erro ao buscar dados do usuário ou lista de usuários:", err);
@@ -184,7 +187,7 @@ export default function NovoPedido() {
 
       await addDoc(collection(db, "pedidos"), {
         ...formData,
-        responsavel: selectedResponsibleUser.displayName, 
+        responsavel: selectedResponsibleUser.displayName,
         setoresResponsaveis,
         prazos: {
           entrega: Timestamp.fromDate(entregaDate)
@@ -193,7 +196,7 @@ export default function NovoPedido() {
         historicoStatus: [{
           status: formData.statusAtual,
           data: now,
-          responsavel: userDisplayName, 
+          responsavel: userDisplayName,
           setor: userSetorLabel
         }],
         criadoEm: now,
@@ -223,7 +226,8 @@ export default function NovoPedido() {
       return false;
     }
 
-    if (!selectedResponsavel) {       setError("Por favor, selecione um responsável para o pedido.");
+    if (!selectedResponsavel) {
+      setError("Por favor, selecione um responsável para o pedido.");
       return false;
     }
 
@@ -346,7 +350,7 @@ export default function NovoPedido() {
               <label htmlFor="responsavel-select">Responsável pelo Pedido *</label>
               <select
                 id="responsavel-select"
-                value={selectedResponsavel} 
+                value={selectedResponsavel}
                 onChange={(e) => {
                   setSelectedResponsavel(e.target.value);
                 }}
@@ -355,7 +359,7 @@ export default function NovoPedido() {
                 <option value="">Selecione um responsável</option>
                 {users.map((user) => (
                   <option key={user.uid} value={user.uid}>
-                    {user.displayName} ({user.setor})
+                    {user.displayName} 
                   </option>
                 ))}
               </select>

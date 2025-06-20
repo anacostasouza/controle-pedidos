@@ -9,6 +9,8 @@ import { TipoServicoLabels, SubTipoServicoLabels, SubTipoServico, TipoServico } 
 import { formatDate, filtrarPedidos, isPedidoAtrasado, isStatusPedido } from "../utils/dashboardUtils";
 import { getEtapaAtual } from "../utils/statusUtils";
 import { getStatusDisponiveis, getStatusArteDisponiveis, getStatusGalpaoDisponiveis } from "../utils/utilsEditarPedido";
+// Importe a nova função de formatação
+import { capitalizeWords } from "../utils/formatUtils"; // Ajuste o caminho se você colocou em outro lugar
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -231,7 +233,8 @@ export default function Dashboard() {
                   return (
                     <tr key={pedido.id} className="pedidos-row">
                       <td>{pedido.numeroPedido}</td>
-                      <td>{pedido.nomeCliente}</td>
+                      {/* APLICAÇÃO DA FUNÇÃO AQUI */}
+                      <td>{capitalizeWords(pedido.nomeCliente)}</td> 
                       <td>{pedido.responsavel}</td>
                       <td>
                         {TipoServicoLabels[pedido.servico.tipo] ?? pedido.servico.tipo}
