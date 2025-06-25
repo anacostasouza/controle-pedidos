@@ -18,23 +18,17 @@ import {
   getStatusArteDisponiveis,
   getStatusGalpaoDisponiveis,
 } from "../utils/utilsEditarPedido";
+
 import { db } from "../services/firebase";
 import { capitalizeWords } from "../utils/formatUtils";
-
 import "../styles/EditarPedido.css";
 
 const generateTimeOptions = (interval: number = 30) => {
   const options = [];
   for (let hour = 8; hour < 18; hour++) {
     for (let minute = 0; minute < 60; minute += interval) {
-      options.push({
-        value: `${hour.toString().padStart(2, "0")}:${minute
-          .toString()
-          .padStart(2, "0")}`,
-        label: `${hour.toString().padStart(2, "0")}:${minute
-          .toString()
-          .padStart(2, "0")}`,
-      });
+      const value = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+      options.push({ value, label: value });
     }
   }
   return options;
@@ -51,17 +45,14 @@ export default function EditarPedido() {
   const [loading, setLoading] = useState(true);
   const [userSetor, setUserSetor] = useState<string | null>(null);
   const [userDisplayName, setUserDisplayName] = useState<string | null>(null);
-
   const [dataEntrega, setDataEntrega] = useState<string>("");
   const [horarioEntrega, setHorarioEntrega] = useState<string>("");
 
-  // State to hold original values for comparison to enable/disable button
   const [originalStatus, setOriginalStatus] = useState<StatusPedido | undefined>();
   const [originalStatusArte, setOriginalStatusArte] = useState<StatusArte | undefined>();
   const [originalStatusGalpao, setOriginalStatusGalpao] = useState<StatusGalpao | undefined>();
   const [originalDataEntrega, setOriginalDataEntrega] = useState<string>("");
   const [originalHorarioEntrega, setOriginalHorarioEntrega] = useState<string>("");
-
 
   const setoresPermitidosArte = ["ARTE", "SUPORTE", "GESTAO"];
   const setoresPermitidosGalpao = ["GALPAO", "SUPORTE", "GESTAO"];
@@ -71,10 +62,8 @@ export default function EditarPedido() {
   const podeEditarStatusArte = setoresPermitidosArte.includes(userSetor ?? "");
   const podeEditarStatusGalpao = setoresPermitidosGalpao.includes(userSetor ?? "");
   const podeEditarStatusGeral = setoresPermitidosStatusGeral.includes(userSetor ?? "");
-
   const podeEditarPrazoEntregaCalculado =
-    (userDisplayName === pedido?.responsavel) ||
-    setoresPermitidosPrazoEntrega.includes(userSetor ?? "");
+    userDisplayName === pedido?.responsavel || setoresPermitidosPrazoEntrega.includes(userSetor ?? "");
 
   useEffect(() => {
     const fetchUserSetorAndDisplayName = async () => {
@@ -117,7 +106,7 @@ export default function EditarPedido() {
       if (pedidoCarregado) {
         setPedido(pedidoCarregado);
         setNovoStatus(pedidoCarregado.statusAtual);
-        setOriginalStatus(pedidoCarregado.statusAtual); // Set original status
+        setOriginalStatus(pedidoCarregado.statusAtual);
 
         if (pedidoCarregado.prazos?.entrega) {
           const entregaDate = pedidoCarregado.prazos.entrega.toDate();
@@ -141,7 +130,7 @@ export default function EditarPedido() {
         if (pedidoCarregado.requerArte) {
           const ultimoStatusArte = pedidoCarregado.StatusArte?.at(-1)?.status;
           setNovoStatusArte(ultimoStatusArte);
-          setOriginalStatusArte(ultimoStatusArte); // Set original arte status
+          setOriginalStatusArte(ultimoStatusArte);
         } else {
           setNovoStatusArte(undefined);
           setOriginalStatusArte(undefined);
@@ -150,7 +139,7 @@ export default function EditarPedido() {
         if (pedidoCarregado.requerGalpao) {
           const ultimoStatusGalpao = pedidoCarregado.StatusGalpao?.at(-1)?.status;
           setNovoStatusGalpao(ultimoStatusGalpao);
-          setOriginalStatusGalpao(ultimoStatusGalpao); // Set original galpao status
+          setOriginalStatusGalpao(ultimoStatusGalpao);
         } else {
           setNovoStatusGalpao(undefined);
           setOriginalStatusGalpao(undefined);
@@ -170,19 +159,19 @@ export default function EditarPedido() {
 
     if (novoStatus !== undefined && novoStatus !== originalStatus && !podeEditarStatusGeral) {
       alert("Você não tem permissão para alterar o status geral do pedido.");
-      setNovoStatus(originalStatus); // Revert to original
+      setNovoStatus(originalStatus);
       return;
     }
 
     if (pedido.requerArte && novoStatusArte !== undefined && novoStatusArte !== originalStatusArte && !podeEditarStatusArte) {
       alert("Você não tem permissão para alterar o status da arte.");
-      setNovoStatusArte(originalStatusArte); // Revert to original
+      setNovoStatusArte(originalStatusArte);
       return;
     }
 
     if (pedido.requerGalpao && novoStatusGalpao !== undefined && novoStatusGalpao !== originalStatusGalpao && !podeEditarStatusGalpao) {
       alert("Você não tem permissão para alterar o status do galpão.");
-      setNovoStatusGalpao(originalStatusGalpao); // Revert to original
+      setNovoStatusGalpao(originalStatusGalpao);
       return;
     }
 
@@ -190,30 +179,25 @@ export default function EditarPedido() {
     const isTimeChanged = horarioEntrega !== originalHorarioEntrega;
 
     if (isDateChanged || isTimeChanged) {
-        if (!podeEditarPrazoEntregaCalculado) {
-            alert("Você não tem permissão para alterar o prazo de entrega.");
-            setDataEntrega(originalDataEntrega);
-            setHorarioEntrega(originalHorarioEntrega);
-            return;
-        }
-        // Basic validation for date/time combination
-        if (dataEntrega && !horarioEntrega) {
-            alert("O horário de entrega é obrigatório se a data for preenchida.");
-            return;
-        }
-        // This check needs to be more careful. If dataEntrega is empty, horarioEntrega should ideally be empty too or '08:00'.
-        // If the user clears date but leaves a specific time, that might be an issue.
-        // The backend `atualizarPedidoCompleto` handles nulls, so we primarily need to ensure consistency for the user.
-        if (!dataEntrega && horarioEntrega && horarioEntrega !== "08:00") {
-             alert("A data de entrega é obrigatória se o horário for preenchido (e não for o padrão '08:00'). Para remover o prazo, limpe ambos os campos.");
-             return;
-        }
+      if (!podeEditarPrazoEntregaCalculado) {
+        alert("Você não tem permissão para alterar o prazo de entrega.");
+        setDataEntrega(originalDataEntrega);
+        setHorarioEntrega(originalHorarioEntrega);
+        return;
+      }
+      if (dataEntrega && !horarioEntrega) {
+        alert("O horário de entrega é obrigatório se a data for preenchida.");
+        return;
+      }
+      if (!dataEntrega && horarioEntrega && horarioEntrega !== "08:00") {
+        alert("A data de entrega é obrigatória se o horário for preenchido (e não for o padrão '08:00'). Para remover o prazo, limpe ambos os campos.");
+        return;
+      }
     }
-
 
     const userInfo: UserInfo = {
       userSetor: userSetor as SetorValue,
-      userDisplayName: userDisplayName,
+      userDisplayName,
     };
 
     const updateData: PedidoUpdateData = {
@@ -248,18 +232,13 @@ export default function EditarPedido() {
     }
   };
 
-  if (loading) {
-    return <div>Carregando...</div>;
-  }
-  if (!pedido) {
-    return <div>Pedido não encontrado</div>;
-  }
+  if (loading) return <div>Carregando...</div>;
+  if (!pedido) return <div>Pedido não encontrado</div>;
 
-  const statusDisponiveis: StatusPedido[] = getStatusDisponiveis(pedido);
-  const statusDisponiveisArte: StatusArte[] = getStatusArteDisponiveis();
-  const statusDisponiveisGalpao: StatusGalpao[] = getStatusGalpaoDisponiveis();
+  const statusDisponiveis = getStatusDisponiveis(pedido);
+  const statusDisponiveisArte = getStatusArteDisponiveis();
+  const statusDisponiveisGalpao = getStatusGalpaoDisponiveis();
 
-  // Determine if any changes have been made for button disability
   const hasChanges =
     novoStatus !== originalStatus ||
     (pedido.requerArte && novoStatusArte !== originalStatusArte) ||
@@ -275,25 +254,14 @@ export default function EditarPedido() {
       <div className="editar-pedido-container">
         <div className="container-editar-pedido">
           <h1>Editar Pedido {pedido.numeroPedido}</h1>
-
           <div className="pedido-info">
             <div className="info-row">
-              <p>
-                <strong>Cliente:</strong> {capitalizeWords(pedido.nomeCliente)}
-              </p>
-              <p>
-                <strong>Serviço: </strong>
-                {TipoServicoLabels[pedido.servico.tipo as TipoServico]}
-                {pedido.servico.subTipo && ` (${getSubTipoServicoLabel(pedido.servico.subTipo)})`}
-              </p>
+              <p><strong>Cliente:</strong> {capitalizeWords(pedido.nomeCliente)}</p>
+              <p><strong>Serviço: </strong>{TipoServicoLabels[pedido.servico.tipo as TipoServico]}{pedido.servico.subTipo && ` (${getSubTipoServicoLabel(pedido.servico.subTipo)})`}</p>
             </div>
             <div className="info-row">
-              <p>
-                <strong>Status Atual:</strong> {pedido.statusAtual}
-              </p>
-              <p>
-                <strong>Responsável do Pedido:</strong> {pedido.responsavel}
-              </p>
+              <p><strong>Status Atual:</strong> {pedido.statusAtual}</p>
+              <p><strong>Responsável do Pedido:</strong> {pedido.responsavel}</p>
             </div>
 
             {podeEditarPrazoEntregaCalculado && (
@@ -320,9 +288,7 @@ export default function EditarPedido() {
                       onChange={(e) => setHorarioEntrega(e.target.value)}
                     >
                       {generateTimeOptions().map((time) => (
-                        <option key={time.value} value={time.value}>
-                          {time.label}
-                        </option>
+                        <option key={time.value} value={time.value}>{time.label}</option>
                       ))}
                     </select>
                   </div>
@@ -339,56 +305,50 @@ export default function EditarPedido() {
                   onChange={(e) => setNovoStatus(e.target.value as StatusPedido)}
                 >
                   {statusDisponiveis.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
+                    <option key={status} value={status}>{status}</option>
                   ))}
                 </select>
               </div>
             )}
 
             {(pedido.requerArte && podeEditarStatusArte) || (pedido.requerGalpao && podeEditarStatusGalpao) ? (
-                <div id="arte-galpao">
-                    {pedido.requerArte && podeEditarStatusArte && (
-                        <div className="status-group-item">
-                            <label htmlFor="status-arte-select">Status da Arte:</label>
-                            <select
-                                id="status-arte-select"
-                                value={novoStatusArte}
-                                onChange={(e) => setNovoStatusArte(e.target.value as StatusArte)}
-                            >
-                                {statusDisponiveisArte.map((status) => (
-                                    <option key={status} value={status}>
-                                        {status}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
+              <div id="arte-galpao">
+                {pedido.requerArte && podeEditarStatusArte && (
+                  <div className="status-group-item">
+                    <label htmlFor="status-arte-select">Status da Arte:</label>
+                    <select
+                      id="status-arte-select"
+                      value={novoStatusArte}
+                      onChange={(e) => setNovoStatusArte(e.target.value as StatusArte)}
+                    >
+                      {statusDisponiveisArte.map((status) => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-                    {pedido.requerGalpao && podeEditarStatusGalpao && (
-                        <div className="status-group-item">
-                            <label htmlFor="status-galpao-select">Status Galpão:</label>
-                            <select
-                                id="status-galpao-select"
-                                value={novoStatusGalpao}
-                                onChange={(e) => setNovoStatusGalpao(e.target.value as StatusGalpao)}
-                            >
-                                {statusDisponiveisGalpao.map((status) => (
-                                    <option key={status} value={status}>
-                                        {status}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
-                </div>
+                {pedido.requerGalpao && podeEditarStatusGalpao && (
+                  <div className="status-group-item">
+                    <label htmlFor="status-galpao-select">Status Galpão:</label>
+                    <select
+                      id="status-galpao-select"
+                      value={novoStatusGalpao}
+                      onChange={(e) => setNovoStatusGalpao(e.target.value as StatusGalpao)}
+                    >
+                      {statusDisponiveisGalpao.map((status) => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
             ) : null}
           </div>
 
           <button
             onClick={handleUpdatePedido}
-            disabled={!hasChanges} // Simplified disabled logic
+            disabled={!hasChanges}
             className="update-button"
           >
             Atualizar Pedido
@@ -399,20 +359,15 @@ export default function EditarPedido() {
             <ul>
               {pedido.historicoStatus?.map((item, index) => (
                 <li key={`${item.status}-${item.data?.seconds ?? index}-${item.responsavel}`}>
-                  <strong>{item.status}</strong> -{" "}
-                  {item.data.toDate().toLocaleString()} por {item.responsavel}
+                  <strong>{item.status}</strong> - {item.data.toDate().toLocaleString()} por {item.responsavel}
                 </li>
               ))}
             </ul>
           </div>
 
           <div className="actions">
-            <button className="back-button" onClick={() => navigate("/dashboard")}>
-              Voltar para Dashboard
-            </button>
-            <button className="delete-button" onClick={handleDelete}>
-              Excluir Pedido
-            </button>
+            <button className="back-button" onClick={() => navigate("/dashboard")}>Voltar para Dashboard</button>
+            <button className="delete-button" onClick={handleDelete}>Excluir Pedido</button>
           </div>
         </div>
       </div>

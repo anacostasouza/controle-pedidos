@@ -44,7 +44,7 @@ export const getTodasEtapasDoPedido = (pedido: Pedido) => {
 
   if (pedido.requerArte && pedido.servico.tipo !== TipoServico.ARTE) {
     const atualArte = getCurrentStatusIndex(
-      pedido.StatusArte?.at(-1)?.status || "Iniciado",
+      pedido.StatusArte?.at(-1)?.status ?? "Iniciado",
       STATUS_SEQUENCE_ARTE
     );
     etapasArteInfo = {
@@ -57,7 +57,7 @@ export const getTodasEtapasDoPedido = (pedido: Pedido) => {
 
   if (pedido.requerGalpao && pedido.servico.tipo !== TipoServico.COMUNICACAO_VISUAL) {
     const atualGalpao = getCurrentStatusIndex(
-      pedido.StatusGalpao?.at(-1)?.status || "Iniciado",
+      pedido.StatusGalpao?.at(-1)?.status ?? "Iniciado",
       STATUS_SEQUENCE_GALPAO
     );
     etapasGalpaoInfo = {

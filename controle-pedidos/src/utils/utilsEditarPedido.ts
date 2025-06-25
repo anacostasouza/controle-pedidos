@@ -1,16 +1,11 @@
-// utils/utilsEditarPedido.ts
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { doc, getDoc, updateDoc, deleteDoc, Timestamp } from "firebase/firestore";
 import { db } from "../services/firebase";
 import type { Pedido, StatusPedido, StatusArte, StatusGalpao, HistoricoStatusItem } from "../types/Pedidos";
-
 import { TipoServico, SubTipoServico, TipoServicoLabels, SubTipoServicoLabels, type TipoServicoValue, type SubTipoServicoValue } from "../types/Servicos";
 import { getStatusSequenceForPedido, STATUS_SEQUENCE_ARTE, STATUS_SEQUENCE_GALPAO } from "../types/StatusPedidos";
 import type { SetorValue } from "../types/Setores";
-
-// IMPORTAR OS NOVOS TIPOS
-import type { PedidoUpdateData, UserInfo } from "../types/PedidoUpdates"; // Ajuste o caminho conforme onde você salvou
+import type { PedidoUpdateData, UserInfo } from "../types/PedidoUpdates";
 
 const getTipoServicoValueFromLabel = (label: string): TipoServicoValue | undefined => {
   for (const key in TipoServicoLabels) {
@@ -43,9 +38,7 @@ export const fetchPedidoById = async (id: string): Promise<Pedido | null> => {
       const data = docSnap.data();
 
       const convertTimestamp = (ts: any) => {
-        if (ts instanceof Timestamp) {
-          return ts;
-        }
+        if (ts instanceof Timestamp) return ts;
         if (ts && typeof ts.seconds === 'number' && typeof ts.nanoseconds === 'number') {
           return new Timestamp(ts.seconds, ts.nanoseconds);
         }
@@ -62,12 +55,12 @@ export const fetchPedidoById = async (id: string): Promise<Pedido | null> => {
         criadoEm: convertTimestamp(data.criadoEm)!,
         atualizadoEm: convertTimestamp(data.atualizadoEm)!,
         prazos: {
-          entrega: convertTimestamp(data.prazos?.entrega), // Pode ser undefined
+          entrega: convertTimestamp(data.prazos?.entrega),
           producao: convertTimestamp(data.prazos?.producao),
           arte: convertTimestamp(data.prazos?.arte),
         },
         entregueEm: convertTimestamp(data.entregueEm),
-        horarioRetirada: data.horarioRetirada ?? undefined, // Adicionado para carregar o horário
+        horarioRetirada: data.horarioRetirada ?? undefined,
         historicoStatus: data.historicoStatus ?? [],
         StatusArte: data.StatusArte ?? [],
         StatusGalpao: data.StatusGalpao ?? [],
@@ -79,7 +72,6 @@ export const fetchPedidoById = async (id: string): Promise<Pedido | null> => {
         ...data
       } as Pedido;
     } else {
-      console.log("Nenhum pedido encontrado com o ID:", id);
       return null;
     }
   } catch (error) {
@@ -88,11 +80,9 @@ export const fetchPedidoById = async (id: string): Promise<Pedido | null> => {
   }
 };
 
-
 export const deletarPedidoPorId = async (id: string): Promise<void> => {
   try {
     await deleteDoc(doc(db, "pedidos", id));
-    console.log("Pedido deletado com sucesso:", id);
   } catch (error) {
     console.error("Erro ao deletar pedido:", error);
     throw error;
@@ -126,8 +116,6 @@ export const atualizarPedidoCompleto = async (
   const { userSetor, userDisplayName } = userInfo;
   const { novoStatusGeral, novoStatusArte, novoStatusGalpao, novaDataEntrega, novoHorarioEntrega } = updateData;
 
-
-  // --- Lógica para atualizar o status principal ---
   if (novoStatusGeral !== undefined && novoStatusGeral !== pedidoAtual.statusAtual) {
     const historicoStatus = [...(pedidoAtual.historicoStatus || [])];
     historicoStatus.push({
@@ -145,7 +133,6 @@ export const atualizarPedidoCompleto = async (
     }
   }
 
-  // --- Lógica para atualizar o status da arte ---
   if ((pedidoAtual.requerArte || pedidoAtual.servico.tipo === TipoServico.ARTE) && novoStatusArte !== undefined) {
     const ultimoStatusArte = pedidoAtual.StatusArte?.at(-1)?.status;
     if (novoStatusArte !== ultimoStatusArte) {
@@ -153,59 +140,42 @@ export const atualizarPedidoCompleto = async (
       statusArteHistory.push({ status: novoStatusArte, data: now, responsavel: userDisplayName });
       updates.StatusArte = statusArteHistory;
     }
-  } else if (!pedidoAtual.requerArte && pedidoAtual.servico.tipo !== TipoServico.ARTE && updates.StatusArte === undefined) {
-    // Garante que StatusArte não seja adicionado se não for necessário
   }
 
-  // --- Lógica para atualizar o status do galpão ---
   if ((pedidoAtual.requerGalpao || pedidoAtual.servico.tipo === TipoServico.COMUNICACAO_VISUAL) && novoStatusGalpao !== undefined) {
     const ultimoStatusGalpao = pedidoAtual.StatusGalpao?.at(-1)?.status;
     if (novoStatusGalpao !== ultimoStatusGalpao) {
       const statusGalpaoHistory = [...(pedidoAtual.StatusGalpao || [])];
-      statusGalpaoHistory.push({ status: novoStatusGalpao, data: now, responsavel: userDisplayName});
+      statusGalpaoHistory.push({ status: novoStatusGalpao, data: now, responsavel: userDisplayName });
       updates.StatusGalpao = statusGalpaoHistory;
     }
-  } else if (!pedidoAtual.requerGalpao && pedidoAtual.servico.tipo !== TipoServico.COMUNICACAO_VISUAL && updates.StatusGalpao === undefined) {
-    // Garante que StatusGalpao não seja adicionado se não for necessário
   }
 
-  // --- Lógica para atualizar o prazo de entrega e horário ---
-  // Normaliza os valores antigos para comparação
-  const oldEntregaDateStr = pedidoAtual.prazos?.entrega?.toDate().toISOString().split("T")[0] || ""; // "" se não houver data
-  const oldHorarioEntregaStr = pedidoAtual.horarioRetirada || ""; // "" se não houver horário
+  const oldEntregaDateStr = pedidoAtual.prazos?.entrega?.toDate().toISOString().split("T")[0] || "";
+  const oldHorarioEntregaStr = pedidoAtual.horarioRetirada ?? "";
 
-  // Verifica se houve qualquer alteração na data OU no horário
   if (novaDataEntrega !== oldEntregaDateStr || novoHorarioEntrega !== oldHorarioEntregaStr) {
     if (novaDataEntrega && novoHorarioEntrega) {
       const [year, month, day] = novaDataEntrega.split('-').map(Number);
       const [hours, minutes] = novoHorarioEntrega.split(":").map(Number);
-
-      // CRÍTICO: Criar a data no fuso horário LOCAL para evitar deslocamento ao salvar/ler.
-      // O mês no construtor de Date é 0-indexed (janeiro = 0, dezembro = 11).
       const combinedDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
-
       updates['prazos.entrega'] = Timestamp.fromDate(combinedDate);
       updates.horarioRetirada = novoHorarioEntrega;
-
     } else if (!novaDataEntrega && !novoHorarioEntrega) {
-      // Se ambos novaDataEntrega e novoHorarioEntrega estão vazios, define como null para remover (ou apagar) no Firestore
       updates['prazos.entrega'] = null;
       updates.horarioRetirada = null;
     } else {
-      // Se um está vazio e o outro não (e já passou pela validação no front-end)
-      // Isso pode significar que o usuário limpou apenas um campo.
       if (!novaDataEntrega) {
-          updates['prazos.entrega'] = null;
+        updates['prazos.entrega'] = null;
       }
       if (!novoHorarioEntrega) {
-          updates.horarioRetirada = null;
+        updates.horarioRetirada = null;
       }
     }
   }
 
   try {
     await updateDoc(pedidoRef, updates);
-    console.log("Pedido atualizado com sucesso!", updates);
   } catch (error) {
     console.error("Erro ao atualizar pedido:", error);
     throw error;

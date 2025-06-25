@@ -1,4 +1,3 @@
-
 export enum TipoServico {
   ARTE = "ARTE",
   GRAFICA_RAPIDA = "GRAFICA_RAPIDA",
@@ -6,7 +5,6 @@ export enum TipoServico {
   COMUNICACAO_VISUAL = "COMUNICACAO_VISUAL",
   TERCEIRIZADO = "TERCEIRIZADO"
 }
-
 
 export enum SubTipoServico {
   IMPRESSAO_RAPIDA = "IMPRESSAO_RAPIDA",
@@ -17,13 +15,11 @@ export enum SubTipoServico {
   PLACA_COMPLEXA = "PLACA_COMPLEXA"
 }
 
-
 export const TipoServicoValues = Object.values(TipoServico);
 export type TipoServicoValue = (typeof TipoServicoValues)[number];
 
 export const SubTipoServicoValues = Object.values(SubTipoServico);
 export type SubTipoServicoValue = (typeof SubTipoServicoValues)[number];
-
 
 export const TipoServicoLabels: Record<TipoServico, string> = {
   [TipoServico.ARTE]: "Arte",
@@ -48,10 +44,8 @@ export const isTipoServico = (value: string): value is TipoServicoValue =>
 export const isSubTipoServico = (value: string): value is SubTipoServicoValue =>
   SubTipoServicoValues.includes(value as SubTipoServicoValue);
 
-export const getTipoServicoLabel = (tipo: TipoServicoValue): string => {
-  return TipoServicoLabels[tipo] || tipo;
-};
+export const getTipoServicoLabel = (tipo: TipoServicoValue): string =>
+  TipoServicoLabels[tipo] || tipo;
 
-export const getSubTipoServicoLabel = (subTipo?: SubTipoServicoValue): string => {
-  return subTipo ? SubTipoServicoLabels[subTipo] || subTipo : "-";
-};
+export const getSubTipoServicoLabel = (subTipo?: SubTipoServicoValue): string =>
+  subTipo ? SubTipoServicoLabels[subTipo] || subTipo : "-";

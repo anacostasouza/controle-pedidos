@@ -4,6 +4,7 @@ import { TipoServico, SubTipoServico, type TipoServicoValue, type SubTipoServico
 import type { SetorValue } from './Setores';
 
 export type StatusArte = "Iniciado" | "Em Aprovação" | "Concluído";
+
 export interface StatusArteHist {
   status: StatusArte;
   data: Timestamp;
@@ -21,7 +22,7 @@ export type StatusGalpao =
   | "Concluído";
 
 export interface StatusGalpaoHist {
-  status: StatusGalpao
+  status: StatusGalpao;
   data: Timestamp;
   responsavel: string;
 }
@@ -40,8 +41,8 @@ export type StatusPedido =
   | "Pintura"
   | "Elétrica"
   | "Corte e Preparação do Material"
-  | "Montagem/Acabamento" 
-  | "Entregue"; 
+  | "Montagem/Acabamento"
+  | "Entregue";
 
 export interface HistoricoStatusItem {
   status: StatusPedido;
@@ -82,5 +83,5 @@ export interface Pedido {
   tipoDeEntrega: 'Entrega' | 'Retirada' | 'Instalação';
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
-  entregueEm?: Timestamp; 
+  entregueEm?: Timestamp;
 }

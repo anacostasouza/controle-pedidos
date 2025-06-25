@@ -30,40 +30,35 @@ const HeaderPage: React.FC = () => {
 
   useEffect(() => {
     const fetchUserProfile = async () => {
-      try {
-        const unsubscribe = auth.onAuthStateChanged(async (user) => {
-          if (!user) {
-            navigate("/login");
-            setLoading(false);
-            return;
-          }
-
-          const db = getFirestore();
-          const userDocRef = doc(db, "usuarios", user.uid);
-          const userDocSnap = await getDoc(userDocRef);
-
-          if (userDocSnap.exists()) {
-            const data = userDocSnap.data();
-            setUserProfile({
-              nome: data.displayName ?? "Usuário",
-              setorNome: data.setorNome ?? "Sem setor",
-              setor: data.setor ?? "",
-            });
-          } else {
-            setUserProfile({
-              nome: "Usuário",
-              setorNome: "Sem setor",
-              setor: "",
-            });
-          }
+      const unsubscribe = auth.onAuthStateChanged(async (user) => {
+        if (!user) {
+          navigate("/login");
           setLoading(false);
-        });
+          return;
+        }
 
-        return () => unsubscribe();
-      } catch (error) {
-        console.error("Erro ao buscar perfil:", error);
+        const db = getFirestore();
+        const userDocRef = doc(db, "usuarios", user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (userDocSnap.exists()) {
+          const data = userDocSnap.data();
+          setUserProfile({
+            nome: data.displayName ?? "Usuário",
+            setorNome: data.setorNome ?? "Sem setor",
+            setor: data.setor ?? "",
+          });
+        } else {
+          setUserProfile({
+            nome: "Usuário",
+            setorNome: "Sem setor",
+            setor: "",
+          });
+        }
         setLoading(false);
-      }
+      });
+
+      return () => unsubscribe();
     };
 
     fetchUserProfile();
@@ -108,9 +103,10 @@ const HeaderPage: React.FC = () => {
   return (
     <header className="header-page">
       <div className="header-content">
-        <Link to={"/dashboard"}>
+        <Link to="/dashboard">
           <img src={logo} alt="Logo" className="logo-imagem" />
         </Link>
+
         <div
           className={`app-title-dropdown ${isDropdownOpen ? "open" : ""}`}
           onMouseEnter={handleMouseEnterDropdown}
@@ -159,9 +155,9 @@ const HeaderPage: React.FC = () => {
                 strokeLinejoin="round"
                 className="feather feather-log-out"
               >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                <polyline points="16 17 21 12 16 7"></polyline>
-                <line x1="21" y1="12" x2="9" y2="12"></line>
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
             </button>
           </div>
