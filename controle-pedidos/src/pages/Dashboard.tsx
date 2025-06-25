@@ -24,7 +24,6 @@ const normalizeSubTipoServicoValue = (value: string | null | undefined): SubTipo
 
     const trimmedValue = value.trim();
 
-    // Try to match directly with enum values (case-insensitive)
     for (const enumKey in SubTipoServico) {
         const enumValue = SubTipoServico[enumKey as keyof typeof SubTipoServico];
         if (typeof enumValue === 'string' && enumValue.toLowerCase() === trimmedValue.toLowerCase()) {
@@ -32,8 +31,7 @@ const normalizeSubTipoServicoValue = (value: string | null | undefined): SubTipo
         }
     }
 
-    // Try to match with labels (case-insensitive, normalizing spaces)
-    const normalizedTrimmedValue = trimmedValue.toLowerCase().replace(/\s/g, ''); // Remove all spaces
+    const normalizedTrimmedValue = trimmedValue.toLowerCase().replace(/\s/g, '');
     for (const enumKey in SubTipoServicoLabels) {
         const label = SubTipoServicoLabels[enumKey as SubTipoServicoValue];
         if (label.toLowerCase().replace(/\s/g, '') === normalizedTrimmedValue) {
@@ -41,7 +39,6 @@ const normalizeSubTipoServicoValue = (value: string | null | undefined): SubTipo
         }
     }
 
-    // Fallback for known variations (less ideal, but for robustness)
     switch (trimmedValue.toLowerCase()) {
         case "placa simples": return SubTipoServico.PLACA_SIMPLES;
         case "placa complexa": return SubTipoServico.PLACA_COMPLEXA;

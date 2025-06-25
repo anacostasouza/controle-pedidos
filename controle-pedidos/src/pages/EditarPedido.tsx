@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getAuth } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore"; 
 
 import HeaderPage from "../components/layout/headerPage.tsx";
 
 import type { Pedido, StatusPedido, StatusArte, StatusGalpao } from "../types/Pedidos.ts";
-import { TipoServicoLabels, TipoServico, getSubTipoServicoLabel } from "../types/Servicos";
+import { TipoServicoLabels, TipoServico, getSubTipoServicoLabel } from "../types/Servicos"; 
 import type { SetorValue } from "../types/Setores.ts";
 import type { PedidoUpdateData, UserInfo } from "../types/PedidoUpdates";
 
@@ -61,7 +61,10 @@ export default function EditarPedido() {
 
   const podeEditarStatusArte = setoresPermitidosArte.includes(userSetor ?? "");
   const podeEditarStatusGalpao = setoresPermitidosGalpao.includes(userSetor ?? "");
-  const podeEditarStatusGeral = setoresPermitidosStatusGeral.includes(userSetor ?? "");
+  // Agora a verificação de serviço terceirizado é feita diretamente no tipo do serviço do pedido
+  const podeEditarStatusGeral =
+    setoresPermitidosStatusGeral.includes(userSetor ?? "") ||
+    (pedido?.servico.tipo === TipoServico.TERCEIRIZADO && userDisplayName === pedido?.responsavel);
   const podeEditarPrazoEntregaCalculado =
     userDisplayName === pedido?.responsavel || setoresPermitidosPrazoEntrega.includes(userSetor ?? "");
 
@@ -103,6 +106,7 @@ export default function EditarPedido() {
       if (!id) return;
       setLoading(true);
       const pedidoCarregado = await fetchPedidoById(id);
+
       if (pedidoCarregado) {
         setPedido(pedidoCarregado);
         setNovoStatus(pedidoCarregado.statusAtual);
@@ -157,10 +161,15 @@ export default function EditarPedido() {
       return;
     }
 
-    if (novoStatus !== undefined && novoStatus !== originalStatus && !podeEditarStatusGeral) {
-      alert("Você não tem permissão para alterar o status geral do pedido.");
-      setNovoStatus(originalStatus);
-      return;
+    if (novoStatus !== undefined && novoStatus !== originalStatus) {
+      const canEditGeneralStatusNow =
+        setoresPermitidosStatusGeral.includes(userSetor) ||
+        (pedido.servico.tipo === TipoServico.TERCEIRIZADO && userDisplayName === pedido.responsavel);
+      if (!canEditGeneralStatusNow) {
+        alert("Você não tem permissão para alterar o status geral do pedido.");
+        setNovoStatus(originalStatus);
+        return;
+      }
     }
 
     if (pedido.requerArte && novoStatusArte !== undefined && novoStatusArte !== originalStatusArte && !podeEditarStatusArte) {
@@ -263,6 +272,12 @@ export default function EditarPedido() {
               <p><strong>Status Atual:</strong> {pedido.statusAtual}</p>
               <p><strong>Responsável do Pedido:</strong> {pedido.responsavel}</p>
             </div>
+            {/* Exibe se o serviço é terceirizado com base no tipo do serviço */}
+            {pedido.servico.tipo === TipoServico.TERCEIRIZADO && (
+              <div className="info-row">
+                <p><strong>Serviço Terceirizado:</strong> Sim</p>
+              </div>
+            )}
 
             {podeEditarPrazoEntregaCalculado && (
               <div className="prazo-edicao-section">
