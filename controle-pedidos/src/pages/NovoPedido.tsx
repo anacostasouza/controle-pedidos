@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getFirestore, collection, addDoc, Timestamp, doc, getDoc, getDocs } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-// Importe os valores dos enums e as labels
 import { TipoServico, SubTipoServico, TipoServicoLabels, SubTipoServicoLabels } from "../types/Servicos";
 import HeaderPage from '../components/layout/headerPage';
 import type { Pedido } from "../types/Pedidos";
@@ -28,7 +27,6 @@ const generateTimeOptions = (interval: number = 30) => {
   return options;
 };
 
-// **CORREÇÃO AQUI:** Mapear subTipos para seus valores de ENUM diretamente
 const tiposServico = [
   { value: TipoServico.ARTE, label: TipoServicoLabels[TipoServico.ARTE] },
   {
@@ -189,11 +187,10 @@ export default function NovoPedido() {
         servicoID: formData.servico.servicoID,
       };
 
-      // **CORREÇÃO AQUI:** Garantir que o subTipo é o valor do ENUM
       if (formData.servico.subTipo) {
-        servicoToSave.subTipo = formData.servico.subTipo; // Já será o valor do ENUM pelo select
+        servicoToSave.subTipo = formData.servico.subTipo;
       } else {
-        servicoToSave.subTipo = null; // Mantém null se não houver subtipo
+        servicoToSave.subTipo = null;
       }
 
       await addDoc(collection(db, "pedidos"), {
@@ -243,7 +240,6 @@ export default function NovoPedido() {
     }
 
     const tipoServicoSelecionado = tiposServico.find(s => s.value === formData.servico.tipo);
-    // Valida se o subtipo é obrigatório e se foi selecionado
     if (tipoServicoSelecionado?.subTipos && !formData.servico.subTipo) {
       setError("Por favor, selecione um subtipo para o serviço escolhido.");
       return false;
@@ -314,7 +310,7 @@ export default function NovoPedido() {
                     ...formData,
                     servico: {
                       tipo,
-                      subTipo: undefined, // Reset subTipo when type changes
+                      subTipo: undefined,
                       servicoID: tiposServico.findIndex(s => s.value === tipo) + 1
                     }
                   });
@@ -340,7 +336,6 @@ export default function NovoPedido() {
                       ...formData,
                       servico: {
                         ...formData.servico,
-                        // **CORREÇÃO AQUI:** Certifique-se de que o valor é o ENUM
                         subTipo: (e.target.value as SubTipoServico) || null
                       }
                     })}
@@ -348,7 +343,7 @@ export default function NovoPedido() {
                     <option value="">Selecione um subtipo</option>
                     {tiposServico
                       .find(s => s.value === formData.servico.tipo)
-                      ?.subTipos?.map((subTipoOption) => ( // Renomeado para evitar conflito
+                      ?.subTipos?.map((subTipoOption) => (
                         <option key={subTipoOption.value} value={subTipoOption.value}>
                           {subTipoOption.label}
                         </option>

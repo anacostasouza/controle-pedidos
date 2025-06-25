@@ -1,6 +1,9 @@
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
@@ -12,7 +15,7 @@
   background: #fff;
   padding: 2rem;
   border-radius: 12px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   max-width: 400px;
   width: 90%;
   text-align: center;
@@ -56,7 +59,6 @@
 .editar-pedido-container {
   max-width: 800px;
   margin: auto;
-
 }
 
 .editar-pedido-container h1 {
@@ -78,20 +80,98 @@
 }
 
 .info-row {
-  display: flex; 
-  justify-content: space-between; 
-  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .info-row p {
-  flex: 1; 
-  margin: 0; 
-  padding-right: 15px; 
+  flex: 1;
+  margin: 0;
+  padding-right: 15px;
 }
 
 .info-row p:last-child {
   padding-right: 0;
+}
+
+.prazo-edicao-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+  margin-bottom: 1.5rem;
+}
+
+.prazo-edicao-section h3 {
+  width: 100%;
+  margin-bottom: 1rem;
+  color: #5f1919;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+.form-group-prazo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.form-group-item {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 0.5rem;
+}
+
+@media (min-width: 600px) {
+  .form-group-prazo {
+    flex-direction: row;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .form-group-item {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+  }
+
+  .form-group-item label {
+    min-width: 80px;
+    text-align: right;
+  }
+}
+
+.prazo-edicao-section label {
+  font-weight: bold;
+  font-size: 15px;
+  color: #343a40;
+}
+
+.prazo-edicao-section input[type="date"],
+.prazo-edicao-section select {
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  background-color: #fff;
+  font-size: 15px;
+  font-family: 'Comfortaa', sans-serif;
+  color: #343a40;
+  flex-grow: 1;
+  width: auto;
+}
+
+.prazo-edicao-section input[type="date"]:disabled,
+.prazo-edicao-section select:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
 }
 
 .status-form {
@@ -122,6 +202,8 @@
   gap: 20px;
   align-items: flex-start;
   width: 100%;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
 }
 
 #arte-galpao select {
@@ -130,14 +212,21 @@
 }
 
 .status-group-item {
-  flex-grow: 1; 
-  width: auto; 
+  flex-grow: 1;
+  width: auto;
   min-width: 0;
+  width: 100%;
+}
+
+@media (min-width: 600px) {
+  .status-group-item {
+    width: auto;
+  }
 }
 
 .status-group-item label {
-  display: block; 
-  margin-bottom: 5px; 
+  display: block;
+  margin-bottom: 5px;
   font-weight: bold;
   font-size: 15px;
   color: #343a40;
@@ -151,8 +240,8 @@
   font-size: 15px;
   font-family: 'Comfortaa', sans-serif;
   color: #343a40;
-  width: 100%; 
-  box-sizing: border-box; 
+  width: 100%;
+  box-sizing: border-box;
   min-width: 0;
   margin-bottom: 1rem;
 }
@@ -168,6 +257,7 @@
   cursor: pointer;
   transition: background-color 0.2s ease;
   width: fit-content;
+  margin-top: 1rem;
 }
 
 .update-button:hover {
@@ -197,7 +287,7 @@
 }
 
 .back-button:hover {
- background-color: #e9ecef;
+  background-color: #e9ecef;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -216,7 +306,7 @@
 }
 
 .delete-button:hover {
- background-color: #5f1919;
+  background-color: #5f1919;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -225,6 +315,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-top: 2rem;
   margin-bottom: 1rem;
 }
 
@@ -251,4 +342,13 @@
   font-size: 14px;
   color: #495057;
   border: 1px solid #dee2e6;
+}
+
+.status-warning {
+  color: #dc3545;
+  font-size: 0.85em;
+  margin-top: 0.25em;
+  margin-bottom: 0.5em;
+  text-align: center;
+  width: 100%;
 }

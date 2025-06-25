@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getFirestore, collection, query, orderBy, doc, getDoc, onSnapshot, updateDoc, Timestamp } from "firebase/firestore"; // Adicionado updateDoc
+import { getFirestore, collection, query, orderBy, doc, getDoc, onSnapshot, updateDoc, Timestamp } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import "../styles/Dashboard.css";
 import HeaderPage from '../components/layout/headerPage';
-import type { Pedido, StatusPedido } from '../types/Pedidos'; 
+import type { Pedido, StatusPedido } from '../types/Pedidos';
 import { TipoServicoLabels, SubTipoServicoLabels, TipoServico, SubTipoServico, type TipoServicoValue, type SubTipoServicoValue } from '../types/Servicos';
 import { formatDate, filtrarPedidos, isPedidoAtrasado } from "../utils/dashboardUtils";
 import { getTodasEtapasDoPedido } from "../utils/statusUtils";
@@ -24,28 +24,30 @@ const normalizeSubTipoServicoValue = (value: string | null | undefined): SubTipo
 
     const trimmedValue = value.trim();
 
-    if (Object.values(SubTipoServico).includes(trimmedValue as SubTipoServico)) {
-        return trimmedValue as SubTipoServicoValue;
-    }
-
-    const normalizedValueForLabelCheck = trimmedValue
-        .toLowerCase()
-        .split(' ')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-
-    for (const key in SubTipoServicoLabels) {
-        if (SubTipoServicoLabels[key as SubTipoServicoValue] === normalizedValueForLabelCheck) {
-            return key as SubTipoServicoValue;
+    // Try to match directly with enum values (case-insensitive)
+    for (const enumKey in SubTipoServico) {
+        const enumValue = SubTipoServico[enumKey as keyof typeof SubTipoServico];
+        if (typeof enumValue === 'string' && enumValue.toLowerCase() === trimmedValue.toLowerCase()) {
+            return enumValue as SubTipoServicoValue;
         }
     }
 
+    // Try to match with labels (case-insensitive, normalizing spaces)
+    const normalizedTrimmedValue = trimmedValue.toLowerCase().replace(/\s/g, ''); // Remove all spaces
+    for (const enumKey in SubTipoServicoLabels) {
+        const label = SubTipoServicoLabels[enumKey as SubTipoServicoValue];
+        if (label.toLowerCase().replace(/\s/g, '') === normalizedTrimmedValue) {
+            return enumKey as SubTipoServicoValue;
+        }
+    }
+
+    // Fallback for known variations (less ideal, but for robustness)
     switch (trimmedValue.toLowerCase()) {
         case "placa simples": return SubTipoServico.PLACA_SIMPLES;
         case "placa complexa": return SubTipoServico.PLACA_COMPLEXA;
-        case "impressao rapida": 
+        case "impressao rapida":
         case "impressão rápida": return SubTipoServico.IMPRESSAO_RAPIDA;
-        case "impressao com acabamento": 
+        case "impressao com acabamento":
         case "impressão com acabamento": return SubTipoServico.IMPRESSAO_COM_ACABAMENTO;
         case "carimbo": return SubTipoServico.CARIMBO;
         case "acabamento": return SubTipoServico.ACABAMENTO;
@@ -54,7 +56,6 @@ const normalizeSubTipoServicoValue = (value: string | null | undefined): SubTipo
             return undefined;
     }
 };
-
 
 export default function Dashboard() {
     const navigate = useNavigate();
@@ -115,7 +116,7 @@ export default function Dashboard() {
                     return undefined;
                 };
 
-                const normalizedTipo = getTipoServicoValueFromLabel(data.servico.tipo as string) || data.servico.tipo;
+                const normalizedTipo = getTipoServicoValueFromLabel(data.servico.tipo as string) ?? data.servico.tipo;
                 const normalizedSubTipo = data.servico.subTipo
                     ? normalizeSubTipoServicoValue(data.servico.subTipo as string)
                     : undefined;
@@ -139,17 +140,17 @@ export default function Dashboard() {
                     servico: {
                         tipo: normalizedTipo as TipoServicoValue,
                         subTipo: normalizedSubTipo as SubTipoServicoValue | undefined,
-                        servicoID: data.servico.servicoID || '', 
+                        servicoID: data.servico.servicoID ?? '',
                     },
-                    historicoStatus: data.historicoStatus || [],
-                    StatusArte: data.StatusArte || [],
-                    StatusGalpao: data.StatusGalpao || [],
+                    historicoStatus: data.historicoStatus ?? [],
+                    StatusArte: data.StatusArte ?? [],
+                    StatusGalpao: data.StatusGalpao ?? [],
                     requerArte: data.requerArte === true,
                     requerGalpao: data.requerGalpao === true,
-                    pedidoID: data.pedidoID || docSnap.id, 
-                    setoresResponsaveis: data.setoresResponsaveis || [],
-                    tipoDeEntrega: data.tipoDeEntrega || 'retirada_loja',
-                } as Pedido; 
+                    pedidoID: data.pedidoID ?? docSnap.id,
+                    setoresResponsaveis: data.setoresResponsaveis ?? [],
+                    tipoDeEntrega: data.tipoDeEntrega ?? 'retirada_loja',
+                } as Pedido;
             });
 
             setPedidos(pedidosData);
@@ -179,21 +180,16 @@ export default function Dashboard() {
     const podeEditarPedido = (pedido: Pedido): boolean => {
         if (!userSetor) return false;
 
-        if (pedido.statusAtual === "Entregue") return false; // Pedidos entregues não podem ser editados
+        if (pedido.statusAtual === "Entregue") return false;
 
-        // Gestão e Suporte podem editar qualquer pedido (exceto entregues)
-        if (userSetor === "GESTAO" || userSetor === "SUPORTE") return true;
+        if (userSetor === "GESTAO" || userSetor === "SUPORTE" || userSetor === "PRODUCAO_LOJA") return true;
 
-        // Produção Loja pode editar qualquer pedido (exceto entregues)
-        if (userSetor === "PRODUCAO_LOJA") return true;
+        if (userDisplayName && pedido.responsavel === userDisplayName) return true;
 
-        // Setor de Arte pode editar se o pedido requer arte ou se o serviço principal é ARTE
         if (userSetor === "ARTE" && (pedido.requerArte || pedido.servico.tipo === TipoServico.ARTE)) return true;
 
-        // Setor de Galpão pode editar se o pedido requer galpão ou se o serviço principal é COMUNICACAO_VISUAL
         if (userSetor === "GALPAO" && (pedido.requerGalpao || pedido.servico.tipo === TipoServico.COMUNICACAO_VISUAL)) return true;
 
-        // Outros setores não podem editar (exceto CAIXA/BALCAO que só marcam como entregue)
         return false;
     };
 
@@ -367,7 +363,7 @@ export default function Dashboard() {
                                                     if (pedido.servico.subTipo && SubTipoServicoLabels[pedido.servico.subTipo]) {
                                                         subTipoLabel = `(${SubTipoServicoLabels[pedido.servico.subTipo]})`;
                                                     } else if (pedido.servico.subTipo) {
-                                                        subTipoLabel = ` (${pedido.servico.subTipo})`; 
+                                                        subTipoLabel = ` (${pedido.servico.subTipo})`;
                                                     }
                                                     return subTipoLabel;
                                                 })()}
@@ -381,11 +377,11 @@ export default function Dashboard() {
                                             <td>
                                                 <div>
                                                     <span><strong>Geral:</strong> {etapasInfo.geral.atual}/{etapasInfo.geral.total}</span><br />
-                                                    {etapasInfo.arte && ( 
+                                                    {etapasInfo.arte && (
                                                         <span><strong>Arte:</strong> {etapasInfo.arte.atual}/{etapasInfo.arte.total}</span>
                                                     )}
-                                                    {etapasInfo.arte && etapasInfo.galpao && <br />} 
-                                                    {etapasInfo.galpao && ( 
+                                                    {etapasInfo.arte && etapasInfo.galpao && <br />}
+                                                    {etapasInfo.galpao && (
                                                         <span><strong>Galpão:</strong> {etapasInfo.galpao.atual}/{etapasInfo.galpao.total}</span>
                                                     )}
                                                 </div>
