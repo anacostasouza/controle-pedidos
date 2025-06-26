@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getAuth } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore"; 
+import { doc, getDoc } from "firebase/firestore";
 
 import HeaderPage from "../components/layout/headerPage.tsx";
 
 import type { Pedido, StatusPedido, StatusArte, StatusGalpao } from "../types/Pedidos.ts";
-import { TipoServicoLabels, TipoServico, getSubTipoServicoLabel } from "../types/Servicos"; 
+import { TipoServicoLabels, TipoServico, getSubTipoServicoLabel } from "../types/Servicos";
 import type { SetorValue } from "../types/Setores.ts";
 import type { PedidoUpdateData, UserInfo } from "../types/PedidoUpdates";
 
@@ -61,10 +61,12 @@ export default function EditarPedido() {
 
   const podeEditarStatusArte = setoresPermitidosArte.includes(userSetor ?? "");
   const podeEditarStatusGalpao = setoresPermitidosGalpao.includes(userSetor ?? "");
-  // Agora a verificação de serviço terceirizado é feita diretamente no tipo do serviço do pedido
+
   const podeEditarStatusGeral =
     setoresPermitidosStatusGeral.includes(userSetor ?? "") ||
-    (pedido?.servico.tipo === TipoServico.TERCEIRIZADO && userDisplayName === pedido?.responsavel);
+    (pedido?.servico.tipo === TipoServico.TERCEIRIZADO && userDisplayName === pedido?.responsavel) ||
+    (pedido?.servico.tipo === TipoServico.ARTE && userSetor === "ARTE");
+
   const podeEditarPrazoEntregaCalculado =
     userDisplayName === pedido?.responsavel || setoresPermitidosPrazoEntrega.includes(userSetor ?? "");
 
@@ -164,7 +166,8 @@ export default function EditarPedido() {
     if (novoStatus !== undefined && novoStatus !== originalStatus) {
       const canEditGeneralStatusNow =
         setoresPermitidosStatusGeral.includes(userSetor) ||
-        (pedido.servico.tipo === TipoServico.TERCEIRIZADO && userDisplayName === pedido.responsavel);
+        (pedido.servico.tipo === TipoServico.TERCEIRIZADO && userDisplayName === pedido.responsavel) ||
+        (pedido.servico.tipo === TipoServico.ARTE && userSetor === "ARTE");
       if (!canEditGeneralStatusNow) {
         alert("Você não tem permissão para alterar o status geral do pedido.");
         setNovoStatus(originalStatus);
@@ -172,7 +175,7 @@ export default function EditarPedido() {
       }
     }
 
-    if (pedido.requerArte && novoStatusArte !== undefined && novoStatusArte !== originalStatusArte && !podeEditarStatusArte) {
+    if (pedido.requerArte && pedido.servico.tipo !== TipoServico.ARTE && novoStatusArte !== undefined && novoStatusArte !== originalStatusArte && !podeEditarStatusArte) {
       alert("Você não tem permissão para alterar o status da arte.");
       setNovoStatusArte(originalStatusArte);
       return;
@@ -211,7 +214,7 @@ export default function EditarPedido() {
 
     const updateData: PedidoUpdateData = {
       novoStatusGeral: novoStatus,
-      novoStatusArte: pedido.requerArte ? novoStatusArte : undefined,
+      novoStatusArte: pedido.requerArte && pedido.servico.tipo !== TipoServico.ARTE ? novoStatusArte : undefined,
       novoStatusGalpao: pedido.requerGalpao ? novoStatusGalpao : undefined,
       novaDataEntrega: dataEntrega,
       novoHorarioEntrega: horarioEntrega,
@@ -250,7 +253,7 @@ export default function EditarPedido() {
 
   const hasChanges =
     novoStatus !== originalStatus ||
-    (pedido.requerArte && novoStatusArte !== originalStatusArte) ||
+    (pedido.requerArte && pedido.servico.tipo !== TipoServico.ARTE && novoStatusArte !== originalStatusArte) ||
     (pedido.requerGalpao && novoStatusGalpao !== originalStatusGalpao) ||
     dataEntrega !== originalDataEntrega ||
     horarioEntrega !== originalHorarioEntrega;
@@ -272,7 +275,6 @@ export default function EditarPedido() {
               <p><strong>Status Atual:</strong> {pedido.statusAtual}</p>
               <p><strong>Responsável do Pedido:</strong> {pedido.responsavel}</p>
             </div>
-            {/* Exibe se o serviço é terceirizado com base no tipo do serviço */}
             {pedido.servico.tipo === TipoServico.TERCEIRIZADO && (
               <div className="info-row">
                 <p><strong>Serviço Terceirizado:</strong> Sim</p>
@@ -326,9 +328,9 @@ export default function EditarPedido() {
               </div>
             )}
 
-            {(pedido.requerArte && podeEditarStatusArte) || (pedido.requerGalpao && podeEditarStatusGalpao) ? (
+            {(pedido.requerArte && pedido.servico.tipo !== TipoServico.ARTE) || (pedido.requerGalpao && podeEditarStatusGalpao) ? (
               <div id="arte-galpao">
-                {pedido.requerArte && podeEditarStatusArte && (
+                {pedido.requerArte && pedido.servico.tipo !== TipoServico.ARTE && podeEditarStatusArte && (
                   <div className="status-group-item">
                     <label htmlFor="status-arte-select">Status da Arte:</label>
                     <select

@@ -75,7 +75,7 @@ export interface Pedido {
     setor: string;
   }>;
   prazos: {
-    arte?: Timestamp;
+    arte?: Timestamp | null;  
     producao?: Timestamp;
     entrega: Timestamp;
   };

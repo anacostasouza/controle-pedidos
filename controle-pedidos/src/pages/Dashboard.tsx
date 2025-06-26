@@ -348,6 +348,19 @@ export default function Dashboard() {
                                 {pedidosFiltrados.map((pedido) => {
                                     const etapasInfo = getTodasEtapasDoPedido(pedido);
 
+                                    // Função auxiliar para formatar a data sem o horário
+                                    // Assumindo que formatDate já retorna apenas a data ou pode ser ajustado.
+                                    // Se formatDate incluir o horário, você precisará modificá-lo ou criar uma nova função.
+                                    const formatJustDate = (timestamp: Timestamp | undefined) => {
+                                        if (!timestamp) return '';
+                                        const date = timestamp.toDate();
+                                        return date.toLocaleDateString('pt-BR', {
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                            year: 'numeric',
+                                        });
+                                    };
+
                                     return (
                                         <tr key={pedido.id} className="pedidos-row">
                                             <td>{pedido.numeroPedido}</td>
@@ -365,12 +378,17 @@ export default function Dashboard() {
                                                     return subTipoLabel;
                                                 })()}
                                             </td>
+                                            {/* INÍCIO DA ALTERAÇÃO NA COLUNA PRAZO */}
                                             <td>
-                                                {formatDate(pedido.prazos.entrega)}
+                                                <div><strong>Geral:</strong> {formatDate(pedido.prazos.entrega)}</div>
+                                                {pedido.prazos.arte && (
+                                                    <div><strong>Arte:</strong> {formatJustDate(pedido.prazos.arte)}</div>
+                                                )}
                                                 {isPedidoAtrasado(pedido.prazos.entrega) && pedido.statusAtual !== "Concluído" && pedido.statusAtual !== "Entregue" && (
                                                     <span className="atrasado-alert">Atrasado!</span>
                                                 )}
                                             </td>
+                                            {/* FIM DA ALTERAÇÃO NA COLUNA PRAZO */}
                                             <td>
                                                 <div>
                                                     <span><strong>Geral:</strong> {etapasInfo.geral.atual}/{etapasInfo.geral.total}</span><br />

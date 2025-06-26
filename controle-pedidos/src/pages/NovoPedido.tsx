@@ -69,7 +69,7 @@ export default function NovoPedido() {
     servico: { tipo: TipoServico.ARTE, servicoID: 1 },
     responsavel: "",
     statusAtual: "Iniciado",
-    prazos: { entrega: Timestamp.now() },
+    prazos: { entrega: Timestamp.now(), arte: null },
     tipoDeEntrega: "Entrega",
     horarioRetirada: "08:00",
     requerArte: false,
@@ -193,13 +193,21 @@ export default function NovoPedido() {
         servicoToSave.subTipo = null;
       }
 
+      const prazosToSave: Pedido['prazos'] = {
+        entrega: Timestamp.fromDate(entregaDate)
+      };
+
+      if (formData.requerArte && formData.prazos.arte) {
+        prazosToSave.arte = formData.prazos.arte;
+      } else {
+        prazosToSave.arte = null;
+      }
+
       await addDoc(collection(db, "pedidos"), {
         ...formData,
         responsavel: selectedResponsibleUser.displayName,
         setoresResponsaveis,
-        prazos: {
-          entrega: Timestamp.fromDate(entregaDate)
-        },
+        prazos: prazosToSave,
         servico: servicoToSave,
         historicoStatus: [{
           status: formData.statusAtual,
@@ -231,6 +239,11 @@ export default function NovoPedido() {
 
     if (!formData.prazos.entrega) {
       setError("Data de entrega é obrigatória");
+      return false;
+    }
+
+    if (formData.requerArte && !formData.prazos.arte) {
+      setError("Data de entrega da arte é obrigatória quando 'Requer Criação de Arte' está selecionado.");
       return false;
     }
 
@@ -306,14 +319,15 @@ export default function NovoPedido() {
                 onChange={(e) => {
                   const tipo = e.target.value as TipoServico;
 
-                  setFormData({
-                    ...formData,
+                  setFormData(prev => ({
+                    ...prev,
                     servico: {
                       tipo,
                       subTipo: undefined,
                       servicoID: tiposServico.findIndex(s => s.value === tipo) + 1
-                    }
-                  });
+                    },
+                    requerArte: tipo === TipoServico.ARTE ? true : false
+                  }));
                 }}
                 required
               >
@@ -437,19 +451,61 @@ export default function NovoPedido() {
           </div>
 
           <div className="form-row-checkbox">
-            <div className="form-group checkbox-group">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={formData.requerArte}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    requerArte: e.target.checked
-                  })}
-                />Requer Criação de Arte
-              </label>
-              <p className="checkbox-help">Setor de Arte será responsável</p>
-            </div>
+            {formData.servico.tipo !== TipoServico.ARTE && (
+              <div className="form-group checkbox-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={formData.requerArte}
+                    onChange={(e) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        requerArte: e.target.checked,
+                        prazos: {
+                          ...prev.prazos,
+                          arte: e.target.checked ? prev.prazos.arte : null
+                        }
+                      }));
+                    }}
+                  />Requer Criação de Arte
+                </label>
+                <p className="checkbox-help">Setor de Arte será responsável</p>
+                {formData.requerArte && (
+                  <div className="form-group-arte-date">
+                    <label htmlFor="prazo-arte-input">Prazo de Entrega da Arte *</label>
+                    <input
+                      id="prazo-arte-input"
+                      type="date"
+                      min={new Date().toISOString().split('T')[0]}
+                      value={formData.prazos.arte ? formData.prazos.arte.toDate().toISOString().split('T')[0] : ''}
+                      onChange={(e) => {
+                        const dateString = e.target.value;
+                        if (dateString) {
+                          const [year, month, day] = dateString.split('-').map(Number);
+                          const localDate = new Date(year, month - 1, day);
+                          setFormData(prev => ({
+                            ...prev,
+                            prazos: {
+                              ...prev.prazos,
+                              arte: Timestamp.fromDate(localDate)
+                            }
+                          }));
+                        } else {
+                          setFormData(prev => ({
+                            ...prev,
+                            prazos: {
+                              ...prev.prazos,
+                              arte: null
+                            }
+                          }));
+                        }
+                      }}
+                      required={formData.requerArte}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="form-group checkbox-group">
               <label>
