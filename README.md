@@ -1,20 +1,27 @@
-🎯 Raio-x da Comunicação Visual — Identidade Visual Empresarial
+# 📦 Controle de Pedidos
 
-Este projeto é um **quiz interativo** com foco em **comunicação visual**, desenvolvido para avaliar a percepção e consistência da **identidade visual de empresas**. 
-A aplicação oferece uma análise rápida (raio-x) sobre logotipo, tipografia, paleta de cores, e outros elementos gráficos essenciais da marca.
+Sistema web para gerenciamento de pedidos internos e terceirizados, com funcionalidades para edição de status, reagendamento de entregas e controle por responsáveis.
 
-🔧 Tecnologias Utilizadas
+## 🚀 Funcionalidades
 
-- ⚡️ [Vite](https://vitejs.dev/) — Bundler ultrarrápido
-- ⚛️ [React](https://reactjs.org/) — Biblioteca para construção de interfaces
-- 🔷 [TypeScript](https://www.typescriptlang.org/) — Tipagem estática
-- 🔥 [Firebase](https://firebase.google.com/) — Backend: autenticação, Firestore e hospedagem
+- 📋 Cadastro de pedidos com dados do cliente, serviço e responsável.
+- ⏰ Reagendamento de datas de entrega e horário.
+- ✅ Alteração de status para pedidos do tipo *terceirizado*.
+- 👥 Atribuição de responsáveis para cada pedido.
+- 🔎 Filtro e visualização de pedidos por tipo e status.
+- 🛠️ Interface responsiva e simples de usar.
 
----
+## 🧰 Tecnologias Utilizadas
 
-## 📸 Funcionalidades
+- **React** – Interface de usuário.
+- **Firebase (Cloud Firestore)** – Banco de dados em tempo real.
+- **Firebase Hosting** – Hospedagem do projeto.
+- **CSS** – Estilização da interface.
+- **Vite** – Empacotador moderno para o ambiente de desenvolvimento.
 
-- ✅ Sistema de quiz com perguntas de múltipla escolha
-- ✅ Pontuação e feedback ao final
-- ✅ Armazenamento de respostas no Firestore
-- ✅ Interface responsiva
+## 🛠️ Instalação e Execução Local
+
+1. **Clone o repositório**
+   ```bash
+   git clone https://github.com/anacostasouza/controle-pedidos.git
+   cd controle-pedidos
