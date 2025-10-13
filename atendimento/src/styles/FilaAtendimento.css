@@ -1,0 +1,208 @@
+:root {
+  --primary-color: #8a2a2c;
+  --primary-hover-color: #681c1d;
+  --secondary-button-color: #ffffff;
+  --secondary-button-hover-color: #e9ecef;
+  --text-color-dark: #212529;
+  --text-color-medium: #343a40;
+  --text-color-light: #6c757d;
+  --border-color: #ccc;
+  --focus-border-color: #d68383;
+  --background-color-light: #f3f4f6;
+  --background-color-white: #ffffff;
+  --background-color-table-header: #f3f3f3;
+  --table-border-color: #ddd;
+  --atrasado-color: #e53e3e;
+  --box-shadow-light: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --box-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.fila-atendimento-container {
+  padding: 70px 20px 20px 20px;
+  margin: 0 auto;
+}
+
+#fila-atendimento-header {
+  margin-top: 10px;
+  font-size: 1.8rem;
+  font-weight: 500;
+  font-family: "Comfortaa", sans-serif;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+#fila-atendimento-list {
+  width: 100%;
+  border-collapse: collapse;
+  box-shadow: var(--box-shadow-light);
+  background-color: var(--background-color-white);
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.fila-atendimento-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 1.08rem;
+  color: var(--text-color-dark);
+  font-family: "Comfortaa", sans-serif;
+  transition: background 0.18s;
+}
+
+.fila-atendimento-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+#cliente-nome,
+#cliente-tipo-atendimento,
+#cliente-status {
+  margin: 0;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.fila-atendimento-item.preferencial {
+  border-left: 10px solid #ff0000;
+  background: #fff6f6;
+  box-shadow: 0 0 8px #e53e3e33;
+}
+
+.fila-atendimento-actions {
+  display: flex;
+  flex-direction: column;
+  columns: 1;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+#chamar-button,
+.finalizar-opcoes button,
+#finalizar-button {
+  width: 150px;
+  background-color: var(--primary-color);
+  color: var(--secondary-button-color);
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: "Comfortaa", sans-serif;
+  font-weight: 550;
+  transition: background-color 0.3s, box-shadow 0.3s;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#deletar-button {
+  background-color: transparent;
+  width: 50px;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+
+#deletar-button:hover .deletar-icon path {
+  stroke: #8a2a2c;
+  transition: stroke 0.2s;
+}
+
+.deletar-icon path {
+  color: var(--atrasado-color);
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.finalizar-opcoes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  background: #f7f7f7;
+  border-radius: 6px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  align-items: stretch;
+}
+.finalizar-opcoes button {
+  width: 100%;
+  margin: 0;
+}
+
+.modal-justificativa {
+  background: #fff;
+  border: 1.5px solid #a43234;
+  border-radius: 8px;
+  padding: 16px;
+  position: absolute;
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  min-width: 260px;
+  right: 0;
+  top: 40px;
+  margin-top: 74px;
+  margin-right: 20px;
+}
+
+.modal-justificativa textarea {
+  width: 100%;
+  margin-top: 8px;
+  margin-bottom: 12px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  resize: vertical;
+  font-family: "Comfortaa", sans-serif;
+}
+.modal-justificativa textarea:focus {
+  outline: none;
+  border: 1px solid var(--primary-hover-color);
+  box-shadow: 0 0 2px var(--primary-hover-color);
+  transition: border 0.3s, box-shadow 0.3s;
+}
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-justificativa button {
+  margin-right: 8px;
+  width: 150px;
+  background-color: var(--primary-color);
+  color: var(--secondary-button-color);
+  border: none;
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: "Comfortaa", sans-serif;
+  font-weight: 550;
+  transition: background-color 0.3s, box-shadow 0.3s;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

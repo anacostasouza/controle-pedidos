@@ -1,0 +1,176 @@
+:root {
+  --primary-color: #8a2a2c;
+  --primary-hover-color: #681c1d;
+  --secondary-button-color: #ffffff;
+  --secondary-button-hover-color: #e9ecef;
+  --text-color-dark: #212529;
+  --text-color-medium: #343a40;
+  --text-color-light: #6c757d;
+  --border-color: #ccc;
+  --focus-border-color: #d68383;
+  --background-color-light: #f3f4f6;
+  --background-color-white: #ffffff;
+  --background-color-table-header: #f3f3f3;
+  --table-border-color: #ddd;
+  --atrasado-color: #e53e3e;
+  --box-shadow-light: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --box-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.aviso {
+  font-family: "Comfortaa", sans-serif;
+  font-weight: 600;
+}
+
+/* ---------- Estrutura Principal ---------- */
+.table-historico {
+  border-radius: 27.719px;
+  border: 2.772px solid var(--border-color, #fff);
+  background: var(--color-dark-blue);
+  padding: 12px 16px;
+  list-style: none;
+}
+
+.title-historico {
+  font-family: "Comfortaa", sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.title-historico h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 500;
+}
+
+/* ---------- Filtros ---------- */
+#filtros-historico {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+#filtros-historico input[type="date"],
+#filtros-historico-secundario select {
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 14px;
+  font-family: "Comfortaa", sans-serif;
+  font-weight: 500;
+}
+
+#filtros-historico input[type="date"]:hover,
+#filtros-historico-secundario select:hover {
+  border: 1px solid var(--primary-hover-color);
+  animation: border-animation 0.3s ease-in-out;
+}
+
+#filtros-historico input[type="date"]:focus,
+#filtros-historico-secundario select:focus {
+  outline: none;
+  border: 2px solid var(--primary-hover-color);
+  box-shadow: 0 0 5px var(--primary-hover-color);
+}
+
+#filtros-historico button {
+  background-color: var(--primary-color);
+  color: var(--secondary-button-color);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-family: "Comfortaa", sans-serif;
+  margin: 0;
+}
+
+#filtros-historico button:hover {
+  background-color: var(--primary-hover-color);
+}
+
+#filtros-historico-secundario {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+/* ---------- Tabela ---------- */
+#tabela-historico {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "Comfortaa", sans-serif;
+  box-shadow: var(--box-shadow-light);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#tabela-historico thead {
+  background-color: var(--background-color-table-header);
+  color: var(--text-color-dark);
+  text-align: center;
+  font-size: 18px;
+  font-weight: 600;
+  border-bottom: 2px solid var(--table-border-color);
+  box-shadow: var(--box-shadow-light);
+  padding: 12px 12px;
+}
+
+#tabela-historico tbody {
+  background-color: var(--background-color-white);
+  color: var(--text-color-dark);
+  font-size: 18px;
+  font-weight: 500;
+  text-align: center;
+}
+
+#tabela-historico tbody tr:nth-child(even) {
+  background-color: var(--background-color-light);
+}
+
+#tabela-historico tbody tr:hover {
+  background-color: var(--secondary-button-hover-color);
+  box-shadow: var(--box-shadow-hover);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#tabela-historico th,
+#tabela-historico td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--table-border-color);
+}
+
+/* ---------- Botão Exportar ---------- */
+.export-btn {
+  background-color: var(--primary-color);
+  color: var(--secondary-button-color);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-family: "Comfortaa", sans-serif;
+  margin-top: 15px;
+}
+
+#relatorio-atendimentos {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}
+
+/* ---------- Animação de Borda ---------- */
+@keyframes border-animation {
+  0% {
+    border-color: var(--border-color);
+  }
+  100% {
+    border-color: var(--primary-hover-color);
+  }
+}
+

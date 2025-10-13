@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "gestaopedidos-desenhar",
+    "prod": "gestaopedidos-desenhar"
+  }
+}

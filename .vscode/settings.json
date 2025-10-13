@@ -1,0 +1,21 @@
+{
+    "cSpell.words": [
+        "Buqb",
+        "FMKG",
+        "galpao",
+        "Galpao",
+        "historico",
+        "horario",
+        "LYKM",
+        "producao",
+        "Responsaveis",
+        "responsavel",
+        "servico",
+        "Servicos"
+    ],
+    "cSpell.enabled": false,
+    "sonarlint.connectedMode.project": {
+        "connectionId": "anacostasouza",
+        "projectKey": "anacostasouza_controle-pedidos"
+    }
+}

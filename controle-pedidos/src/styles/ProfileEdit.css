@@ -1,0 +1,441 @@
+:root {
+  --gray-light: #f5f5f5;
+  --gray-medium: #e0e0e0;
+  --gray-dark: #333;
+  --text-color: #444;
+  --border-color: #ddd;
+  --input-bg: #fff;
+  --content-bg: #f9f9f9;
+  --shadow-light: 0 2px 5px rgba(0, 0, 0, 0.05);
+  --shadow-medium: 0 5px 15px rgba(0, 0, 0, 0.08);
+  --border-radius-small: 5px;
+  --border-radius-medium: 8px;
+  --border-radius-large: 12px;
+  --font-family-comfortaa: "Comfortaa", cursive;
+}
+
+/* ================== LAYOUT GERAL ================== */
+body {
+  margin: 0;
+  font-family: var(--font-family-comfortaa);
+  background-color: var(--gray-light);
+  color: var(--text-color);
+}
+
+.settings-page {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--content-bg);
+  padding: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.profile-content {
+  flex-grow: 1;
+  width: 100%;
+  background-color: #fff;
+  padding: 30px;
+  border-radius: var(--border-radius-large);
+  margin: 0 auto;
+}
+
+.action-button {
+  display: flex;
+  justify-content: space-around;
+}
+
+/* ================== CABEÇALHO ================== */
+.title-header {
+  font-size: 2.75rem;
+  font-weight: 600;
+  color: var(--gray-dark);
+  margin: 0;
+  letter-spacing: 0.5px;
+  padding: 10px 15px;
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
+  cursor: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.content-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--gray-medium);
+}
+
+.content-title {
+  font-size: 2rem;
+  color: var(--gray-dark);
+  font-weight: 700;
+  margin: 0;
+  text-align: center;
+}
+
+/* ================== FORMULÁRIO ================== */
+
+.borda {
+  margin-top: 5px;
+  border: 0;
+  height: 2px;
+  background-image: linear-gradient(to right, transparent, #ccc, transparent);
+}
+
+.borda-users {
+  margin-top: 5px;
+  border: 0;
+  height: 2px;
+  background-image: linear-gradient(to right, transparent, #ccc, transparent);
+}
+
+.hr {
+  margin-top: 5px;
+  border: 0;
+  height: 2px;
+  background-image: linear-gradient(to right, transparent, #ccc, transparent);
+}
+
+.status-edit h2 {
+  font-size: 2rem;
+}
+
+.status-title, .title-users {
+  font-size: 2.75rem;
+  font-weight: 600;
+  color: var(--gray-dark);
+  margin: 0;
+  letter-spacing: 0.5px;
+  padding: 10px 15px;
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
+  cursor: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.status-subtitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--gray-dark);
+  margin: 0;
+  letter-spacing: 0.5px;
+  padding: 10px 15px;
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
+  cursor: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.status-sequence {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.profile-form-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.header-save {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  margin-bottom: 5px;
+  margin-top: 10px;
+}
+
+.form-group,
+.form-group-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.form-group.full-width,
+.form-group-status.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group label,
+.form-group-status label {
+  margin-bottom: 8px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--gray-dark);
+  letter-spacing: 0.5px;
+  padding: 10px 15px;
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
+  cursor: auto;
+}
+
+.form-group input,
+.form-group select,
+.form-group-status input,
+.form-group-status select,
+.status-sequence input {
+  width: 55%;
+  padding: 10px 15px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-medium);
+  background-color: var(--input-bg);
+  font-size: 1rem;
+  font-family: var(--font-family-comfortaa);
+  color: var(--gray-dark);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group-status input:focus,
+.form-group-status select:focus,
+.status-sequence input:focus {
+  border-color: #8a2a2c;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 106, 0, 0.2);
+}
+
+/* ================== ERROS ================== */
+.profile-error {
+  color: red;
+  background-color: #ffe0e0;
+  border: 1px solid red;
+  padding: 10px;
+  border-radius: var(--border-radius-medium);
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+/* ================== BOTÕES ================== */
+
+.status-button-actions {
+  display: flex;
+  justify-content: space-around;
+  flex-direction: row;
+  margin-top: 5px;
+  margin-bottom: 10px;
+}
+
+.status-button {
+  margin-left: 5px;
+}
+
+.profile-buttons-container {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  margin-top: 20px;
+  width: 100%;
+}
+
+.profile-content button {
+  background-color: var(--primary-color);
+  color: var(--secondary-button-color);
+  font-weight: 700;
+  font-family: Comfortaa, sans-serif;
+  border: none;
+  border-radius: 10px;
+  padding: 0.8rem 1.5rem;
+  cursor: pointer;
+  box-shadow: var(--box-shadow-light);
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+
+.form-action {
+  display: flex;
+  gap: 15px;
+}
+
+.edit-buttons {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 20px;
+}
+
+.users-edit-button {
+  width: 50%;
+  margin-top: 15px;
+  margin-left: 5px;
+  margin-bottom: 10px;
+}
+
+.save-btn,
+.cancel-btn,
+.manage-users-btn,
+.edit-user-button,
+.button-status {
+  padding: 12px 25px;
+  border: none;
+  border-radius: var(--border-radius-medium);
+  font-size: 1rem;
+  font-weight: 500;
+  font-family: var(--font-family-comfortaa);
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+/* Botões principais */
+.save-btn,
+.manage-users-btn,
+.edit-user-button,
+.button-status {
+  background-color: #8a2a2c;
+  color: white;
+}
+
+.save-btn:hover,
+.manage-users-btn:hover,
+.edit-user-button:hover,
+.button-status:hover {
+  background-color: #7c1a1c;
+  transform: translateY(-1px);
+}
+
+.cancel-btn {
+  background-color: var(--gray-medium);
+  color: var(--gray-dark);
+}
+
+.cancel-btn:hover {
+  background-color: var(--gray-light);
+  transform: translateY(-1px);
+}
+
+.edit-user-button:disabled,
+.manage-users-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* ================== LISTA DE USUÁRIOS ================== */
+
+.title-users {
+  font-size: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+.users-form-edit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.users-information {
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 0.5em 0;
+  border-bottom: 3px solid transparent;
+  border-image: linear-gradient(to right, transparent, #ccc, transparent) 1;
+}
+
+.users-list-card {
+  background-color: #fff;
+  padding: 25px;
+  border-radius: var(--border-radius-large);
+  box-shadow: var(--shadow-medium);
+  margin-top: 30px;
+}
+
+.users-list-card h2 {
+  color: var(--gray-dark);
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+}
+
+.users-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.user-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--gray-medium);
+}
+
+.user-item:last-child {
+  border-bottom: none;
+}
+
+.user-item span {
+  flex-grow: 1;
+  margin-right: 15px;
+  color: var(--text-color);
+}
+
+/* ================== ESTADOS DA PÁGINA ================== */
+.profile-page.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5rem;
+  color: var(--gray-dark);
+}
+
+.profile-page.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.profile-page.error-state .profile-error {
+  font-size: 1.2rem;
+}
+
+/* ================== RODAPÉ / LOGO ================== */
+#logo-colorida {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+#logo-colorida img {
+  max-width: 200px;
+  height: auto;
+}
+
+/* ================== RESPONSIVIDADE ================== */
+@media (max-width: 768px) {
+  .settings-page {
+    padding: 15px;
+  }
+  .profile-content {
+    padding: 20px;
+  }
+  .content-title {
+    font-size: 1.8rem;
+  }
+  .profile-buttons-container {
+    flex-direction: column;
+    gap: 15px;
+  }
+  .btn,
+  .manage-users-btn,
+  .save-btn,
+  .cancel-btn {
+    width: 100%;
+  }
+}
