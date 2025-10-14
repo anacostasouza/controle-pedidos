@@ -41,7 +41,6 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
             setUser(usuario);
             setLoading(false);
         });
-
         return () => unsubscribe();
     }, []);
 

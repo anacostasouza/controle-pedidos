@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
-import { capitalizeWords } from '../../../utils/formatUtils';
+import { useState, useEffect } from "react";
+import { getDocs, collection } from "firebase/firestore";
+import { db } from "../../../services/firebase";
 import { formatarTempoHHMMSS } from "../../../utils/timeUtils";
 import { RelatorioAtendimentos } from "./RelatorioAtendimentos";
 import { buscarAtendimentosPorPeriodo } from "../utils/utilsRelatorioAtendimento";
@@ -32,6 +33,7 @@ export function HistoricoAtendimento({
   const [filtroStatus, setFiltroStatus] = useState<string>("");
   const [filtroAtendente, setFiltroAtendente] = useState<string>("");
   const [carregado, setCarregado] = useState(false);
+  const [atendentesMap, setAtendentesMap] = useState<Record<string, string>>({});
 
   // Só busca os atendimentos quando datas são preenchidas e o usuário clicar em "Buscar"
   const buscarHistorico = async () => {
@@ -42,22 +44,35 @@ export function HistoricoAtendimento({
     setCarregado(true);
   };
 
+  useEffect(() => {
+    async function fetchAtendentes() {
+      const snap = await getDocs(collection(db, "usuarios"));
+      const map: Record<string, string> = {};
+      snap.forEach(doc => {
+        const d = doc.data();
+        map[doc.id] = d.displayName || d.nome || doc.id;
+      });
+      setAtendentesMap(map);
+    }
+    fetchAtendentes();
+  }, []);
+
   const statusUnicos = Array.from(
     new Set(atendimentosState.map((a) => a.status))
   ).filter((s) =>
     ["Finalizado", "Cancelado", "Adicionado ao controle de pedidos"].includes(s)
   );
-  const atendentesUnicos = Array.from(
-    new Set(atendimentosState.map((a) => a.atendente).filter(Boolean))
+  // Lista de UIDs únicos
+  const atendentesUnicosUid = Array.from(
+    new Set(atendimentosState.map((a) => a.atendenteUid).filter(Boolean))
   );
 
+  // Filtro por UID
   const atendimentosFiltrados = atendimentosState.filter(
     (a) =>
-      ["Finalizado", "Cancelado", "Adicionado ao controle de pedidos"].includes(
-        a.status
-      ) &&
+      ["Finalizado", "Cancelado", "Adicionado ao controle de pedidos"].includes(a.status) &&
       (filtroStatus ? a.status === filtroStatus : true) &&
-      (filtroAtendente ? a.atendente === filtroAtendente : true)
+      (filtroAtendente ? a.atendenteUid === filtroAtendente : true)
   );
 
   console.log("atendimentosFiltrados", atendimentosFiltrados);
@@ -108,9 +123,9 @@ export function HistoricoAtendimento({
               onChange={(e) => setFiltroAtendente(e.target.value)}
             >
               <option value="">Atendente: Todos</option>
-              {atendentesUnicos.map((at) => (
-                <option key={at} value={at}>
-                  {at}
+              {atendentesUnicosUid.map((uid) => (
+                <option key={uid} value={uid}>
+                  {atendentesMap[uid] || uid}
                 </option>
               ))}
             </select>
@@ -131,11 +146,16 @@ export function HistoricoAtendimento({
             <tbody>
               {atendimentosFiltrados.map((atendimento, index) => (
                 <tr key={index}>
-                  <td>{capitalizeWords(atendimento.nomeCliente)}</td>
+                  <td>{atendimento.nomeCliente}</td>
                   <td>{atendimento.codigoPedido || "-"}</td>
                   <td>{atendimento.tipoAtendimento}</td>
                   <td>{atendimento.status}</td>
-                  <td>{atendimento.atendente}</td>
+                  <td>
+                    {atendentesMap[atendimento.atendenteUid] ||
+                      atendimento.atendente ||
+                      atendimento.atendenteUid ||
+                      "-"}
+                  </td>
                   <td>{formatarTempoHHMMSS(atendimento.tempoEspera)}</td>
                   <td>{formatarTempoHHMMSS(atendimento.tempoAtendimento)}</td>
                   <td>

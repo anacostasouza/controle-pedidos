@@ -13,7 +13,7 @@ window.getToken = async (): Promise<string | null> => {
 
 export function ProtectedRoute({ Component }: Readonly<{ Component: React.ComponentType }>) {
     const { user, loading, checkingProfile, profileComplete, authorized } = useAuth();
-
+    
     if (loading || checkingProfile || authorized === null) {
         return <div>Carregando...</div>;
     }

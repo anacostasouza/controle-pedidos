@@ -116,6 +116,7 @@ export default function Dashboard() {
         filtroCliente: buscaClienteDebounced, 
         filtroRequerArte: filtroRequerArte ?? "",
         filtroRequerGalpao: filtroRequerGalpao ?? "",
+        filtroOcultarEntregues: "true"
       };
 
       if (currentPage > 1 && lastEntregas[currentPage - 2]) {

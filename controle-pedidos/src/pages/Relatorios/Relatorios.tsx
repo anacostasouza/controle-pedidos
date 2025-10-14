@@ -8,7 +8,6 @@ import { buscarPedidosRelatorio } from "../../services/ControlePedidosServices";
 
 import { capitalizeWords } from "../../utils/formatUtils";
 import Header from "../../components/layout/headerPage";
-import { formatDate } from "../Dashboard/utils/dashboardUtils";
 import {
   gerarExcelPedidosPorServico,
   getTipoServicoLabel,
@@ -16,6 +15,7 @@ import {
   fetchTiposServico,
   fetchSubTiposServico,
   fetchStatusPorServico,
+  formatDate,
 } from "./utils/utilsRelatorios";
 import type { Pedido, StatusPedido } from "../../types/Pedidos";
 
@@ -49,7 +49,7 @@ export default function RelatoriosPage() {
   const [nextLastEntrega, setNextLastEntrega] = useState<number | null>(null);
   const [totalPedidos, setTotalPedidos] = useState<number>(0);
   const [lastEntregas, setLastEntregas] = useState<number[]>([]);
-  const [lastIds, setLastIds] = useState<string[]>([]); // Novo estado para armazenar os últimos IDs
+  const [lastIds, setLastIds] = useState<string[]>([]);
 
   // Busca pedidos filtrados e paginados do backend
   const fetchPedidosBackend = async (pagina: number) => {

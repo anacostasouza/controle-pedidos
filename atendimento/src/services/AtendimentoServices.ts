@@ -68,7 +68,7 @@ export async function deletarAtendimento(id: string) {
 
 // Atualizar historico do atendimento
 
-export async function atualizarHistoricoAtendimento(id: string, status: string, atendente?: string) {
+export async function atualizarHistoricoAtendimento(id: string, status: string, atendente?: string, atendenteUid?: string) {
   const auth = getAuth();
   const user = auth.currentUser;
   if (!user) throw new Error("Usuário não autenticado");
@@ -76,6 +76,7 @@ export async function atualizarHistoricoAtendimento(id: string, status: string, 
 
   const body: any = { status };
   if (atendente) body.atendente = atendente;
+  if (atendenteUid) body.atendenteUid = atendenteUid;
 
   const response = await fetch(
     `${API_URL}/atualizarHistorico/${id}`,

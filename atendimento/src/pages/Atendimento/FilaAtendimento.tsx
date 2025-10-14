@@ -61,6 +61,7 @@ export function FilaAtendimento() {
     await updateDoc(doc(db, "atendimentos", id), {
       status: "Em Atendimento",
       atendente: atendente,
+      atendenteUid: user.uid,
       inicioAtendimento: serverTimestamp(),
     });
     await atualizarHistoricoAtendimento(id, "Em Atendimento", atendente);

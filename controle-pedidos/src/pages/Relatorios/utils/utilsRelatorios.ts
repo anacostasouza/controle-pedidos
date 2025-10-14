@@ -26,6 +26,28 @@ const getSubTipoServicoLabel = (subTipo?: string): string => {
   return SubTipoServicoLabels[subTipo as SubTipoServico] ?? subTipo;
 };
 
+export function formatDate(date: any): string {
+  if (!date) return "-";
+  try {
+    // Firestore Timestamp
+    if (typeof date.toDate === "function") date = date.toDate();
+    // Admin Timestamp serializado
+    if (typeof date._seconds === "number") date = new Date(date._seconds * 1000);
+    // Web Timestamp serializado
+    if (typeof date.seconds === "number") date = new Date(date.seconds * 1000);
+    // String ou Date
+    if (typeof date === "string" || date instanceof Date) {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return "-";
+      return `${d.toLocaleDateString("pt-BR")} ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+    }
+    return "-";
+  } catch {
+    return "-";
+  }
+}
+
+
 // Converte qualquer valor de data para Date de forma segura
 const toDateSafe = (val: any): Date | null => {
   if (!val) return null;

@@ -62,45 +62,52 @@ export const AtendimentoForm: React.FC = () => {
           onChange={(e) => setNomeCliente(e.target.value)}
           required
         />
-        <select
-          id="select-servico"
-          value={tipoAtendimento}
-          onChange={(e) => setTipoAtendimento(e.target.value)}
-          required
-        >
-          <option value="">Selecione o serviço desejado</option>
+
+        <div id="servicos-radio-group">
+          <p>Selecione o serviço desejado:</p>
           {servicos.map((servico) => (
-            <option key={servico.tipo} value={servico.tipo}>
+            <label
+              key={servico.tipo}
+              style={{ display: "block", marginBottom: 4 }}
+            >
+              <input
+                type="radio"
+                name="tipoAtendimento"
+                value={servico.tipo}
+                checked={tipoAtendimento === servico.tipo}
+                onChange={(e) => setTipoAtendimento(e.target.value)}
+                required
+              />
               {servico.tipo}
-            </option>
+            </label>
           ))}
-        </select>
+        </div>
+
         <div id="prioridade-group">
           <p>Entrar na fila:</p>
-
           <div id="button-prioridade">
-              <button
-                type="submit"
-                className={
-                  prioridade === "convencional"
-                    ? "botao-prioridade selecionado"
-                    : "botao-prioridade"
-                }
-                onClick={() => setPrioridade("convencional")}
-              >
-                Convencional
-              </button>
-              <button
-                type="submit"
-                className={
-                  prioridade === "preferencial"
-                    ? "botao-prioridade selecionado"
-                    : "botao-prioridade"
-                }
-                onClick={() => setPrioridade("preferencial")}
-              >
-                Preferencial
-              </button>
+            <button
+              type="submit"
+              className={
+                prioridade === "convencional"
+                  ? "botao-prioridade selecionado"
+                  : "botao-prioridade"
+              }
+              onClick={() => setPrioridade("convencional")}
+            >
+              Convencional
+            </button>
+            <button
+              type="submit"
+              className={
+                prioridade === "preferencial"
+                  ? "botao-prioridade selecionado"
+                  : "botao-prioridade"
+              }
+              onClick={() => setPrioridade("preferencial")}
+            >
+              Preferencial
+            </button>
           </div>
         </div>
         {mensagem && <p className="mensagem">{mensagem}</p>}

@@ -195,12 +195,9 @@ app.get("/dashboard/buscarPedidos", async (req, res) => {
   try {
     const db = admin.firestore();
 
-    // Monta a query principal usando filtrosUtils
     let queryRef: FirebaseFirestore.Query = db.collection("pedidos");
     queryRef = aplicarFiltrosPedidos(queryRef, req.query);
-
     queryRef = queryRef.orderBy("prazos.entrega", "asc");
-
 
     // Paginação eficiente por cursor
     const { itensPorPagina = 20, lastEntrega } = req.query;
@@ -317,15 +314,15 @@ app.get("/relatorios/buscarPedidos", async (req, res) => {
 
     // Filtros de data de retirada
     if (req.query.dataInicioRetirada) {
+      const inicio = new Date(`${req.query.dataInicioRetirada}T00:00:00.000Z`);
       queryRef = queryRef.where(
         "prazos.entrega",
         ">=",
-        Timestamp.fromDate(new Date(String(req.query.dataInicioRetirada)))
+        Timestamp.fromDate(inicio)
       );
     }
     if (req.query.dataFimRetirada) {
-      const fim = new Date(String(req.query.dataFimRetirada));
-      fim.setHours(23, 59, 59, 999);
+      const fim = new Date(`${req.query.dataFimRetirada}T23:59:59.999Z`);
       queryRef = queryRef.where(
         "prazos.entrega",
         "<=",

@@ -74,7 +74,7 @@ app.use(async (req, res, next) => {
 // Rota para adicionar um novo status ao histórico
 app.post("/atualizarHistorico/:id", async (req, res) => {
   const atendimentoId = req.params.id;
-  const { status, atendente } = req.body;
+  const { status, atendente, atendenteUid } = req.body;
   if (!status) {
     res.status(400).send("Status é obrigatório.");
     return;
@@ -97,6 +97,7 @@ app.post("/atualizarHistorico/:id", async (req, res) => {
     };
     if (status === "Em Atendimento" && atendente) {
       updateData.atendente = atendente;
+      updateData.atendenteUid = atendenteUid;
     }
 
     // Se finalizando, calcula e salva os tempos
@@ -277,6 +278,19 @@ function mascararTelefone(ddd: string, numero: string): string {
   return `(${ddd}) ****-${ultimos4}`;
 }
 
+function mascararCpfCnpj(cnpj_cpf: string): string {
+  if (!cnpj_cpf) return "";
+  const tamanho = cnpj_cpf.length;
+  if (tamanho <= 14) {
+    // CPF
+    return `***.***.***-${cnpj_cpf.slice(-2)}`;
+  } else if (tamanho >= 15) {
+    // CNPJ
+    return `**.***.***/****-${cnpj_cpf.slice(-4)}`;
+  }
+  return cnpj_cpf;
+}
+
 app.post("/omie/buscarCliente", async (req, res) => {
   const { clientesFiltro } = req.body;
   if (
@@ -297,7 +311,7 @@ app.post("/omie/buscarCliente", async (req, res) => {
         clientes: clientes.map((cli: any) => ({
           codigo_cliente_omie: cli.codigo_cliente_omie,
           nome: cli.razao_social,
-          cnpj_cpf: cli.cnpj_cpf ? `******${cli.cnpj_cpf.slice(-5)}` : "",
+          cnpj_cpf: mascararCpfCnpj(cli.cnpj_cpf),
           telefone: mascararTelefone(cli.telefone1_ddd, cli.telefone1_numero),
         })),
         criado: false,

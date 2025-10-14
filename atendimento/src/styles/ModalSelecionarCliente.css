@@ -52,6 +52,12 @@
   background-color: #6e2022;
 }
 
+.modal input:focus {
+  border: 2px solid transparent;
+  box-shadow: 0 0 5px rgba(138, 42, 44, 0.5);
+  outline: none;
+}
+
 .modal ul {
   list-style: none;
   padding: 10px;

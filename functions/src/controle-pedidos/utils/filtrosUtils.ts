@@ -2,7 +2,6 @@ import { Timestamp } from "firebase-admin/firestore";
 
 /**
  * Aplica todos os filtros recebidos do frontend em uma query do Firestore.
- * Use para montar a query principal e a de contagem.
  */
 export function aplicarFiltrosPedidos(queryRef: FirebaseFirestore.Query, filtros: any): FirebaseFirestore.Query {
   if (filtros.filtroTipo)
@@ -46,8 +45,18 @@ export function aplicarFiltrosPedidos(queryRef: FirebaseFirestore.Query, filtros
     queryRef = queryRef
       .where("statusAtual", "not-in", ["Entregue", "Concluído"])
       .where("prazos.entrega", "<", Timestamp.now());
-  } else {
-    queryRef = queryRef.where("statusAtual", "!=", "Entregue");
+    // NÃO aplique mais nenhum filtro de statusAtual aqui!
+    return queryRef;
+  }
+
+  // Filtro de status (apenas se não for atrasados)
+  if (filtros.filtroStatus) {
+    queryRef = queryRef.where("statusAtual", "==", filtros.filtroStatus);
+  }
+
+  // Ocultar entregues só se filtroOcultarEntregues estiver ativo (apenas se não for atrasados)
+  else if (filtros.filtroOcultarEntregues === "true") {
+    queryRef = queryRef.where("statusAtual", "not-in", ["Entregue"]);
   }
 
   return queryRef;
