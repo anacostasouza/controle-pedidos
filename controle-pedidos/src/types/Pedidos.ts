@@ -69,7 +69,7 @@ export interface HistoricoStatusItem {
 
 export interface Pedido {
   id?: string;
-  pedidoID: number;
+  pedidoID: string;
   numeroPedido: number;
   nomeCliente: string;
   servico: {
@@ -101,4 +101,5 @@ export interface Pedido {
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
   entregueEm?: Timestamp;
+  codigoClienteOmie?: number;
 }

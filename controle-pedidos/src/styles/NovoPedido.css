@@ -1,6 +1,8 @@
 @import url("https://fonts.googleapis.com/css2?family=Comfortaa:wght@300;400;700&display=swap");
 
-/* ==================== CONTAINER ==================== */
+/*==================================================
+  ESTRUTURA PRINCIPAL
+==================================================*/
 .novo-pedido-container {
   font-family: "Comfortaa", sans-serif;
   background-color: #f3f4f6;
@@ -22,7 +24,6 @@
   margin-bottom: 0.8rem;
 }
 
-/* ==================== FORM ==================== */
 .pedido-form {
   display: flex;
   flex-direction: column;
@@ -38,7 +39,39 @@
   overflow: hidden;
 }
 
-/* ==================== FORM ROWS ==================== */
+/*==================================================
+  MENSAGENS DE INSTRUÇÃO
+==================================================*/
+.instrucoes-cliente {
+  margin: 0 auto 20px auto;
+  padding: 15px 20px;
+  border-radius: 8px;
+  max-width: 900px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  position: relative;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  border-left: 5px solid #ffc107;
+  background-color: #fff8e1;
+  color: #856404;
+}
+
+.instrucoes-cliente strong {
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.instrucoes-cliente.confirmado {
+  background-color: #e8f5e9;
+  border-left-color: #4caf50;
+  color: #155724;
+}
+
+/*==================================================
+  LAYOUT DE FORMULÁRIO
+==================================================*/
 .form-row-novo-pedido,
 .form-row-novo-pedido-tipo-data-horario,
 .form-row-servico,
@@ -78,7 +111,6 @@
   justify-content: flex-end;
 }
 
-/* ==================== FORM GROUPS ==================== */
 .form-group-novo-pedido {
   flex: 1;
   display: flex;
@@ -95,7 +127,10 @@
   font-size: 0.9rem;
 }
 
-/* ==================== INPUTS ==================== */
+/*==================================================
+  CONTROLES DE FORMULÁRIO
+==================================================*/
+/* Inputs e selects */
 .form-group-novo-pedido input,
 .form-group-novo-pedido select,
 .form-group-novo-pedido textarea,
@@ -128,6 +163,7 @@
   resize: vertical;
 }
 
+/* Inputs específicos */
 .numero-pedido-input {
   width: 100%;
   max-width: 220px;
@@ -138,7 +174,17 @@
   min-width: 200px;
 }
 
-/* ==================== CHECKBOX ==================== */
+/* Controles desativados */
+input:disabled,
+select:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+/*==================================================
+  CHECKBOXES
+==================================================*/
 #checkbox-group {
   display: flex;
   flex-direction: column;
@@ -180,7 +226,9 @@
   color: #6c757d;
 }
 
-/* ==================== ACTIONS ==================== */
+/*==================================================
+  BOTÕES E AÇÕES
+==================================================*/
 .form-actions {
   display: flex;
   justify-content: flex-end;
@@ -211,6 +259,13 @@
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
 }
 
+.submit-button:disabled {
+  background-color: #d3a5a6;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
 .cancel-button {
   background-color: #c3c3c3;
   color: #343a40;
@@ -219,10 +274,12 @@
 .cancel-button:hover {
   background-color: #acacac;
   transform: translateY(-2px);
-  box-shadow: 0 3px 8px rgba(0, 0, 0.1);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* ==================== MESSAGES ==================== */
+/*==================================================
+  MENSAGENS DE ERRO
+==================================================*/
 .error-message {
   color: #721c24;
   background-color: #f8d7da;
@@ -233,7 +290,217 @@
   font-size: 0.85rem;
 }
 
-/* ==================== RESPONSIVIDADE ==================== */
+/*==================================================
+  BUSCA DE CLIENTE
+==================================================*/
+/* Container de cliente */
+.cliente-container {
+  position: relative;
+  width: 100%;
+}
+
+.cliente-input-container {
+  position: relative;
+}
+
+.cliente-input {
+  width: 100%;
+  padding: 0.6rem 2.5rem 0.6rem 0.6rem;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  font-family: "Comfortaa", sans-serif;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cliente-input:focus {
+  outline: none;
+  border-color: #8a2a2c;
+  box-shadow: 0 0 0 3px rgba(138, 42, 44, 0.15);
+}
+
+/* Loading spinner */
+.loading-spinner {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.85rem;
+  color: #666;
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+/* Cancelar seleção */
+.cliente-cancelar-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #f0f0f0;
+  border: none;
+  border-radius: 50%;
+  color: #666;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.cliente-cancelar-btn:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+/* Cliente confirmado */
+.cliente-confirmado {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #e6f4ea;
+  border: 1px solid #34a853;
+  border-radius: 6px;
+  color: #1e7e34;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+}
+
+.cliente-codigo {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.cliente-codigo::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: #34a853;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+/* Lista de clientes encontrados */
+.clientes-encontrados-lista {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 250px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #e2e2e2;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  scrollbar-width: thin;
+  scrollbar-color: #8a2a2c #f0f0f0;
+}
+
+.clientes-encontrados-lista::-webkit-scrollbar {
+  width: 8px;
+}
+
+.clientes-encontrados-lista::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 0 8px 8px 0;
+}
+
+.clientes-encontrados-lista::-webkit-scrollbar-thumb {
+  background-color: #8a2a2c;
+  border-radius: 4px;
+}
+
+/* Items de cliente */
+.cliente-item {
+  padding: 10px 15px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.cliente-item:hover {
+  background-color: #f8f4f4;
+}
+
+.cliente-item:active {
+  transform: scale(0.99);
+}
+
+.cliente-item:last-child {
+  border-bottom: none;
+}
+
+.cliente-item-nome {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 2px;
+}
+
+.cliente-item-cnpj,
+.cliente-item-telefone {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 2px;
+}
+
+/* Mensagem de erro na busca */
+.cliente-busca-erro {
+  color: #d32f2f;
+  font-size: 0.85rem;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background-color: rgba(211, 47, 47, 0.08);
+  display: flex;
+  align-items: center;
+}
+
+.cliente-busca-erro::before {
+  content: "⚠️";
+  margin-right: 8px;
+  font-size: 0.9rem;
+}
+
+/* Clientes sem documento */
+.cliente-sem-documento {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background-color: #f9f9f9;
+}
+
+.cliente-sem-documento:hover {
+  background-color: #f5f5f5;
+}
+
+.aviso-sem-documento {
+  color: #d32f2f;
+  font-size: 0.75em;
+  font-weight: normal;
+  background-color: rgba(211, 47, 47, 0.08);
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  display: inline-block;
+}
+
+.nenhum-cliente {
+  padding: 20px 15px;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+}
+
+/*==================================================
+  RESPONSIVIDADE
+==================================================*/
 @media (max-width: 992px) {
   .pedido-form {
     padding: 1rem;
@@ -253,6 +520,24 @@
   .form-actions {
     justify-content: center;
   }
+  
+  .clientes-encontrados-lista {
+    max-height: 200px;
+  }
+  
+  .cliente-item {
+    padding: 12px;
+  }
+  
+  .instrucoes-cliente {
+    flex-direction: column;
+    text-align: center;
+    padding: 12px;
+  }
+  
+  .instrucoes-cliente::before {
+    margin: 0 0 8px 0;
+  }
 }
 
 @media (max-width: 576px) {
@@ -267,6 +552,26 @@
   .submit-button,
   .cancel-button {
     padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+  
+  .clientes-encontrados-lista {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    max-height: 60vh;
+    top: auto;
+    bottom: 10px;
+    border-radius: 12px;
+    box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.2);
+  }
+  
+  .nenhum-cliente {
+    padding: 30px 15px;
+  }
+  
+  .instrucoes-cliente {
+    margin-bottom: 15px;
     font-size: 0.85rem;
   }
 }

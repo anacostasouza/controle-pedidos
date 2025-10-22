@@ -64,7 +64,7 @@ export function FilaAtendimento() {
       atendenteUid: user.uid,
       inicioAtendimento: serverTimestamp(),
     });
-    await atualizarHistoricoAtendimento(id, "Em Atendimento", atendente);
+    await atualizarHistoricoAtendimento(id, "Em Atendimento", atendente, user.uid);
   };
 
   const filaOrdenada = fila.slice().sort((a, b) => {

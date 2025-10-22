@@ -1,0 +1,797 @@
+:root {
+  --primary-color: #8a2a2c;
+  --primary-hover-color: #681c1d;
+  --secondary-button-color: #ffffff;
+  --secondary-button-hover-color: #e9ecef;
+  --text-color-dark: #212529;
+  --text-color-medium: #343a40;
+  --text-color-light: #6c757d;
+  --border-color: #ccc;
+  --focus-border-color: #d68383;
+  --background-color-light: #f3f4f6;
+  --background-color-white: #ffffff;
+  --background-color-table-header: #f3f3f3;
+  --table-border-color: #ddd;
+  --atrasado-color: #e53e3e;
+  --box-shadow-light: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --box-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--background-color-light);
+}
+
+#welcome-page {
+  max-width: 100vw;
+  min-height: 100vh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: row;
+  width: 100vw;
+}
+
+#left-side,
+#right-side {
+  width: 50%;
+  min-width: 0;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+#left-side {
+  align-items: center;
+  padding-right: 0;
+  gap: 20px;
+}
+
+#right-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  width: 50%;
+  min-height: 100%;
+  box-sizing: border-box;
+  padding-right: 6%;
+}
+
+#left-side h1 {
+  color: #4b4b4d;
+  font-family: "Comfortaa", sans-serif;
+  font-size: 80px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: normal;
+  text-align: center;
+  margin: 0;
+}
+
+#left-side h3 {
+  color: #4b4b4d;
+  text-align: center;
+  font-family: "Comfortaa", sans-serif;
+  font-size: 30px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: normal;
+  margin: 0;
+}
+
+#right-side h1 {
+  color: var(--text-color-dark);
+  font-family: "Comfortaa", sans-serif;
+  font-size: 50px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: normal;
+  text-align: right;
+  margin-bottom: 20px;
+  display: flex;
+}
+
+.mensagem {
+  max-width: 500px;
+  color: var(--text-color-dark);
+  font-family: "Comfortaa", sans-serif;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: normal;
+  text-align: right;
+  margin-bottom: 20px;
+  display: flex;
+}
+
+#form-welcome {
+  width: 100%;
+  max-width: 500px;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+#form-welcome input[type="text"],
+#form-welcome select {
+  max-width: 700px;
+  min-width: 400px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 10px;
+  margin-bottom: 16px;
+  border: 1.5px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 15px;
+  font-family: "Comfortaa", sans-serif;
+  text-align: right;
+  background-color: var(--background-color-white);
+  color: var(--text-color-dark);
+}
+
+#form-welcome input[type="text"]::placeholder,
+#form-welcome select::placeholder {
+  color: var(--text-color-light);
+}
+
+#form-welcome input[type="text"]:focus,
+#form-welcome select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 5px var(--primary-color);
+}
+
+button {
+  background-color: var(--primary-color);
+  color: var(--secondary-button-color);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-family: "Comfortaa", sans-serif;
+  font-size: 16px;
+  margin-top: 20px;
+  display: flex;
+}
+
+button:hover {
+  background-color: var(--primary-hover-color);
+}
+
+button:focus {
+  outline: none;
+  box-shadow: 0 0 5px var(--focus-border-color);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+#servicos-radio-group {
+  font-family: "Comfortaa", sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  accent-color: var(--primary-color);
+}
+
+#prioridade-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+#prioridade-group p {
+  font-family: "Comfortaa", sans-serif;
+  font-size: 30px;
+  color: var(--text-color-dark);
+  margin: 0;
+  text-align: center;
+}
+
+#button-prioridade {
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+}
+
+#button-prioridade button {
+  padding: 8px 16px;
+  font-size: 18px;
+  width: 190px;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#prioridade-group input[type="radio"] {
+  accent-color: var(--primary-color);
+}
+
+#prioridade-group label {
+  font-family: "Comfortaa", sans-serif;
+  font-size: 20px;
+  color: var(--text-color-dark);
+  cursor: pointer;
+}
+
+#prioridade-group input[type="radio"] {
+  margin-right: 5px;
+  cursor: pointer;
+  color: var(--primary-color);
+}
+
+#background-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  min-width: 100%;
+  min-height: 100%;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  opacity: 0.9;
+  z-index: -1;
+  pointer-events: none;
+  transform: translate(350px, 0px);
+}
+
+#desenhar-svg path {
+  fill: transparent;
+  stroke: #fff;
+  stroke-width: 0.1;
+  stroke-dasharray: 50;
+  stroke-dashoffset: 50;
+  animation: logoAnimation 1.5s ease-in-out 1 forwards;
+}
+
+#logo-path1 {
+  fill: transparent;
+  stroke: #fff;
+  stroke-width: 0.1;
+  stroke-dasharray: 50;
+  stroke-dashoffset: 50;
+  animation: logoAnimation2 1.5s ease-in-out 1 forwards;
+}
+
+#logo-path2 {
+  fill: transparent;
+  stroke: #fff;
+  stroke-width: 0.1;
+  stroke-dasharray: 50;
+  stroke-dashoffset: 50;
+  animation: logoAnimation 1.5s ease-in-out 1 forwards;
+}
+
+#logo {
+  display: flex;
+  width: 100%;
+  height: auto;
+  justify-content: center;
+}
+
+@keyframes logoAnimation {
+  0% {
+    stroke-dashoffset: 50;
+    fill: transparent;
+    opacity: 0.2;
+    filter: blur(2px);
+  }
+  60% {
+    stroke-dashoffset: 0;
+    fill: transparent;
+    opacity: 1;
+    filter: blur(0);
+  }
+  80% {
+    fill: #e0e0e0;
+    opacity: 1;
+  }
+  100% {
+    fill: #4b4b4d;
+    opacity: 1;
+    filter: none;
+  }
+}
+
+@keyframes logoAnimation2 {
+  0% {
+    stroke-dashoffset: 50;
+    fill: transparent;
+    opacity: 0.2;
+    filter: blur(2px);
+  }
+  60% {
+    stroke-dashoffset: 0;
+    fill: transparent;
+    opacity: 1;
+    filter: blur(0);
+  }
+  80% {
+    fill: #e0e0e0;
+    opacity: 1;
+  }
+  100% {
+    fill: #a43234;
+    opacity: 1;
+    filter: none;
+  }
+}
+
+#logo {
+  animation: logoFloat 3.5s ease-in-out infinite alternate;
+}
+
+@keyframes logoFloat {
+  0% {
+    transform: translateY(0px) scale(1);
+  }
+  100% {
+    transform: translateY(-18px) scale(1.03);
+  }
+}
+
+/* Telas pequenas (celular) - retrato */
+@media (max-width: 600px) and (orientation: portrait) {
+  #welcome-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 10px;
+    width: fit-content;
+  }
+
+  #logo {
+    width: 50%;
+    max-width: 300px;
+    max-height: 80px;
+    margin-bottom: 15px;
+  }
+
+  #logo-svg-geral {
+    max-height: 100px;
+    max-width: 100px;
+  }
+
+  #desenhar-svg {
+    width: 100%;
+    height: auto;
+  }
+  #left-side {
+    padding: 0px;
+    height: 300px !important;
+    min-height: 300px !important;
+    max-height: 300px !important;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  #right-side {
+    height: 300px !important;
+    min-height: 300px !important;
+    max-width: 350px;
+    padding: 0;
+    width: 100%;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+  }
+
+  #right-side h1 {
+    font-size: 1.5rem;
+    color: #4c4c4e;
+  }
+
+  #form-welcome {
+    max-width: 350px;
+    width: 100%;
+    padding: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  button {
+    display: flex;
+    justify-content: center;
+    width: 70%;
+    font-size: 1rem;
+    padding: 12px 0;
+    max-width: 100%;
+  }
+  #prioridade-group label {
+    font-size: 0.95rem;
+  }
+  #background-svg {
+    min-width: 200vw;
+    min-height: 200vh;
+    transform: translate(-400px, -150px) rotate(55deg);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+  }
+
+  #prioridade-group {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    margin-top: 10px;
+    max-width: 280px;
+  }
+
+  #form-welcome input[type="text"],
+  #form-welcome select {
+    width: 280px !important;
+    max-width: 280px !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+    display: flex;
+    text-align: center;
+  }
+
+  #form-welcome select::backdrop {
+    text-align: center;
+    font-family: var(--font-family);
+  }
+}
+
+/* Telas pequenas (celular) - paisagem */
+@media (max-width: 900px) and (orientation: landscape) {
+  #welcome-page {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 10px;
+    width: fit-content;
+    height: 100%;
+  }
+
+  #left-side {
+    width: 40%;
+    max-width: 50%;
+    max-height: none;
+    padding-left: 10px;
+    align-items: center;
+    justify-content: center;
+    height: 300px !important;
+    min-height: 300px !important;
+    display: flex;
+    gap: 20px;
+  }
+
+  #logo {
+    width: 40%;
+    max-width: 200px;
+    max-height: 80px;
+    margin: 0 !important;
+  }
+
+  #logo-svg-geral {
+    max-height: 80px;
+    max-width: 100px;
+  }
+
+  #desenhar-svg {
+    width: 70%;
+    height: auto;
+  }
+
+  #right-side {
+    display: flex;
+    width: 100%;
+    max-width: 60%;
+    max-height: none;
+    padding-right: 10px;
+    justify-content: center;
+    height: 100% !important;
+    align-items: flex-end;
+  }
+
+  #right-side h1 {
+    font-size: 2rem;
+    color: #4c4c4e;
+    display: flex;
+    margin: 5px 0;
+  }
+
+  #prioridade-group {
+    display: flex;
+    justify-content: right;
+    align-items: right;
+    text-align: right;
+    gap: 10px;
+    margin-top: 10px;
+    max-width: 280px;
+  }
+
+  #prioridade-group label {
+    font-size: 1rem;
+  }
+
+  #prioridade-group p {
+    font-size: 1.5rem;
+    margin: 0;
+  }
+
+  #right-side button {
+    font-size: 0.8rem;
+    justify-content: center;
+    display: flex;
+    margin-top: 2px;
+  }
+}
+
+/* Tablets e telas médias - paisagem */
+@media only screen and (min-width: 901px) and (max-width: 1280px) and (orientation: landscape) {
+  #welcome-page {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0;
+    height: auto;
+    min-height: unset;
+    overflow: hidden;
+  }
+
+  #left-side {
+    width: 100%;
+    max-width: 50%;
+    max-height: none;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+  }
+
+  #logo {
+    width: 25%;
+    margin: 0 !important;
+  }
+
+  #desenhar-svg {
+    width: 70%;
+    height: auto;
+  }
+
+  #right-side {
+    display: flex;
+    width: 100%;
+    max-width: 50%;
+    max-height: none;
+    padding: 0;
+    align-items: flex-end;
+    justify-content: center;
+    padding-right: 4vw;
+  }
+
+  #right-side h1 {
+    font-size: 3rem;
+    text-align: center;
+  }
+
+  #form-welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    max-width: 500px;
+    width: 100%;
+    padding-right: 16px;
+  }
+
+  #form-welcome input[type="text"],
+  #form-welcome select {
+    width: 350px;
+    max-width: 90%;
+    min-width: 0;
+    font-size: 1.1rem;
+    padding: 14px 10px;
+  }
+
+  #form-welcome select::backdrop {
+    text-align: center;
+    font-family: var(--font-family);
+  }
+
+  button {
+    width: 60%;
+    font-size: 1.1rem;
+    padding: 14px 0;
+    max-width: 300px;
+    justify-content: center;
+    display: flex;
+  }
+
+  #prioridade-group label,
+  #prioridade-group p {
+    font-size: 1.2rem;
+  }
+
+  #background-svg {
+    min-width: 100%;
+    min-height: 100%;
+    transform: translate(250px, 0px);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+  }
+}
+
+/* Tablets e telas médias - retrato */
+@media only screen and (min-device-width: 601px) and (max-device-width: 1024px) and (orientation: portrait) {
+  html,
+  body {
+    width: 100vw;
+    height: 100vh;
+    min-height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+
+  #welcome-page {
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    justify-content: center;
+  }
+
+  #left-side {
+    width: 100vw !important;
+    height: 20vh !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #logo {
+    width: 20vw;
+    max-width: 200px;
+    position: fixed;
+  }
+
+  #logo-svg-geral {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    max-height: 150px;
+    max-width: 150px;
+  }
+
+  #desenhar-svg {
+    display: none !important;
+  }
+
+  #right-side {
+    display: flex;
+    width: 100vw;
+    height: 70vh;
+    max-width: none;
+    max-height: none;
+    min-height: 0 !important;
+    padding: 0;
+    gap: 15px;
+    align-items: center;
+    justify-content: center;
+    padding-right: 0;
+    margin-bottom: 20px;
+  }
+
+  #right-side h1 {
+    font-size: 4rem;
+    text-align: center;
+    color: #2e2e30;
+    margin-top: 0;
+    margin-bottom: 15px;
+  }
+
+  #form-welcome {
+    gap: 20px;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    max-width: 700px !important;
+    width: 100%;
+    padding: 0;
+  }
+
+  #form-welcome input[type="text"],
+  #form-welcome select {
+    width: 100%;
+    max-width: 70vw;
+    min-width: 70vw;
+    height: 70px;
+    font-size: 1.5rem;
+    padding: 14px;
+    text-align: center;
+    margin-bottom: 5px;
+  }
+
+  #form-welcome button {
+    width: 100%;
+    font-size: 1.2rem;
+    padding: 10px 0;
+    max-width: 500px;
+    height: 50px;
+    justify-content: center;
+    align-items: center;
+    display: flex;
+  }
+
+  #servicos-radio-group {
+    font-family: "Comfortaa", sans-serif;
+    font-size: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    accent-color: var(--primary-color);
+  }
+
+  #prioridade-group {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    margin-top: 10px;
+    max-width: 500px;
+  }
+
+  #prioridade-group p {
+    font-size: 2rem;
+  }
+
+  #button-prioridade {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 500px;
+    min-width: 400px;
+  }
+
+  #button-prioridade button {
+    padding: 20px 0;
+    font-size: 1.5rem;
+  }
+
+  .mensagem {
+    font-size: 1.1rem;
+    max-width: 60%;
+    text-align: center;
+    font-weight: 600;
+    word-break: break-all;
+    margin: 5px auto;
+  }
+}

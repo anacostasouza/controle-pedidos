@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   getFirestore,
@@ -9,6 +10,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import debounce from "lodash.debounce";
 
 import { TipoServico, SubTipoServico } from "../types/Servicos";
 import { tiposServico } from "../types/tipoServicos";
@@ -18,7 +20,10 @@ import type { Pedido } from "../types/Pedidos";
 import { fetchStatusSequence } from "../utils/firestoreUtils";
 import { generateTimeOptions } from "../utils/timeUtils";
 import HeaderPage from "../components/layout/headerPage";
-import { criarPedido } from "../services/ControlePedidosServices";
+import {
+  criarPedido,
+  buscarClienteOmie,
+} from "../services/ControlePedidosServices";
 
 import "../styles/NovoPedido.css";
 
@@ -41,27 +46,48 @@ export default function NovoPedido() {
   const location = useLocation();
 
   // ------------------------------
-  // Estados principais
+  // Parâmetros da URL
   // ------------------------------
+  const params = new URLSearchParams(globalThis.location.search);
+  const numeroPedidoParam = params.get("numeroPedido");
+  const numeroPedido = numeroPedidoParam ? Number(numeroPedidoParam) : undefined;
+
+  const paramsURL = new URLSearchParams(location.search);
+  const nomeCliente = paramsURL.get("nomeCliente") || "";
+  const atendimentoId = paramsURL.get("atendimentoId") || "";
+  const origem = paramsURL.get("origem") || "";
+  const numeroPedidoState = paramsURL.get("codigoPedido") || "";
+  const codigoClienteOmieParam = paramsURL.get("codigoClienteOmie");
+  const codigoClienteOmie = codigoClienteOmieParam
+    ? Number(codigoClienteOmieParam)
+    : undefined;
+
+  // ------------------------------
+  // Estados
+  // ------------------------------
+  // Estados do usuário
   const [userDisplayName, setUserDisplayName] = useState<string | null>(null);
   const [userSetorLabel, setUserSetorLabel] = useState<string | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [selectedResponsavel, setSelectedResponsavel] = useState<string>("");
+  
+  // Estados do formulário
   const [retrabalho, setRetrabalho] = useState(false);
-
   const [error, setError] = useState("");
+  const [clienteConfirmado, setClienteConfirmado] = useState(false);
+  
+  // Estados da busca de cliente
+  const [clientesEncontrados, setClientesEncontrados] = useState<any[]>([]);
+  const [buscandoCliente, setBuscandoCliente] = useState(false);
+  const [showClientesList, setShowClientesList] = useState(false);
+  const [errorBuscaCliente, setErrorBuscaCliente] = useState("");
 
-  const params = new URLSearchParams(window.location.search);
-  const numeroPedidoParam = params.get("numeroPedido");
-  const numeroPedido = numeroPedidoParam
-    ? Number(numeroPedidoParam)
-    : undefined;
-
+  // Estado principal do formulário
   const [formData, setFormData] = useState<
     Omit<Pedido, "id" | "criadoEm" | "atualizadoEm" | "historicoStatus">
   >({
-    pedidoID: Math.floor(Math.random() * 9000) + 1000,
+    pedidoID: "",
     numeroPedido: numeroPedido || 0,
     nomeCliente: "",
     servico: { tipo: "" as unknown as TipoServico, servicoID: 0 },
@@ -75,20 +101,10 @@ export default function NovoPedido() {
     setoresResponsaveis: [],
   });
 
-  const paramsURL = new URLSearchParams(location.search);
-
-  const nomeCliente = paramsURL.get("nomeCliente") || "";
-  const atendimentoId = paramsURL.get("atendimentoId") || "";
-  const origem = paramsURL.get("origem") || "";
-  const numeroPedidoState = paramsURL.get("codigoPedido") || "";
-  const codigoClienteOmieParam = paramsURL.get("codigoClienteOmie");
-  const codigoClienteOmie = codigoClienteOmieParam
-    ? Number(codigoClienteOmieParam)
-    : undefined;
-
   // ------------------------------
-  // Busca usuário logado + lista de usuários
+  // Effects
   // ------------------------------
+  // Carrega usuário e lista de usuários
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoadingUser(true);
@@ -159,8 +175,7 @@ export default function NovoPedido() {
     fetchInitialData();
   }, [auth, db, navigate]);
 
-  // ------------------------------
-  // Ao inicializar o formData, já preencha nomeCliente se vier do state
+  // Preenche nome do cliente se vier da URL
   useEffect(() => {
     if (nomeCliente) {
       setFormData((prev) => ({
@@ -170,18 +185,112 @@ export default function NovoPedido() {
     }
   }, [nomeCliente]);
 
+  // Preenche número do pedido se vier da URL
   useEffect(() => {
     if (numeroPedidoState) {
       setFormData((prev) => ({
         ...prev,
-        numeroPedido: parseInt(numeroPedidoState, 10),
+        numeroPedido: Number.parseInt(numeroPedidoState, 10),
       }));
     }
   }, [numeroPedidoState]);
 
+  // Sincroniza prazo de arte com entrega para tipo de serviço Arte
+  useEffect(() => {
+    const tipoArte = tiposServico.find(
+      (s) => s.label.toLowerCase() === "arte"
+    )?.value;
+    if (formData.servico.tipo === tipoArte && formData.prazos.entrega) {
+      setFormData((prev) => ({
+        ...prev,
+        prazos: {
+          ...prev.prazos,
+          arte: prev.prazos.entrega,
+        },
+      }));
+    }
+  }, [formData.servico.tipo, formData.prazos.entrega]);
+
   // ------------------------------
-  // Funções de validação
+  // Funções de busca de cliente
   // ------------------------------
+  // Debounce para busca de cliente
+  const debouncedSearchCliente = useCallback(
+    debounce(async (searchTerm: string) => {
+      if (!searchTerm || searchTerm.length < 3) {
+        setClientesEncontrados([]);
+        setShowClientesList(false);
+        return;
+      }
+
+      setBuscandoCliente(true);
+      setErrorBuscaCliente("");
+
+      try {
+        const result = await buscarClienteOmie(searchTerm);
+        setClientesEncontrados(result.clientes || []);
+        setShowClientesList(true);
+      } catch (error) {
+        setErrorBuscaCliente(String(error) || "Erro ao buscar clientes");
+        setClientesEncontrados([]);
+      } finally {
+        setBuscandoCliente(false);
+      }
+    }, 500),
+    []
+  );
+
+  // Função para tratar a mudança no input de cliente
+  const handleClienteInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // Se já havia um cliente confirmado e o valor mudou, desconfirme
+    if (clienteConfirmado) {
+      setClienteConfirmado(false);
+    }
+
+    setFormData({ ...formData, nomeCliente: value });
+    debouncedSearchCliente(value);
+  };
+
+  // Função para selecionar um cliente da lista
+  const selecionarCliente = (cliente: any) => {
+    // Verifica se o cliente tem CPF/CNPJ
+    if (
+      !cliente.cnpj_cpf ||
+      cliente.cnpj_cpf === "**.**.***.****-**" ||
+      cliente.cnpj_cpf === "***.***.***.***-**"
+    ) {
+      setErrorBuscaCliente(
+        "Este cliente não possui CPF/CNPJ cadastrado. Selecione outro cliente."
+      );
+      return;
+    }
+
+    setFormData({
+      ...formData,
+      nomeCliente: cliente.nome,
+      codigoClienteOmie: cliente.codigo_cliente_omie,
+    });
+    setShowClientesList(false);
+    setErrorBuscaCliente("");
+    setClienteConfirmado(true); // Cliente confirmado
+  };
+
+  // Função para cancelar a seleção do cliente
+  const cancelarSelecaoCliente = () => {
+    setClienteConfirmado(false);
+    setFormData({
+      ...formData,
+      nomeCliente: "",
+      codigoClienteOmie: undefined,
+    });
+  };
+
+  // ------------------------------
+  // Funções de validação e submissão
+  // ------------------------------
+  // Validação do formulário
   const validateForm = (): boolean => {
     if (formData.numeroPedido <= 0) {
       setError("Número do pedido inválido");
@@ -228,9 +337,7 @@ export default function NovoPedido() {
     return true;
   };
 
-  // ------------------------------
-  // Handle Submit
-  // ------------------------------
+  // Submit do formulário
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -262,7 +369,7 @@ export default function NovoPedido() {
       // Ajuste do horário na data de entrega
       const [hours, minutes] = (formData.horarioRetirada ?? "08:00").split(":");
       const entregaDate = formData.prazos.entrega.toDate();
-      entregaDate.setHours(parseInt(hours), parseInt(minutes));
+      entregaDate.setHours(Number.parseInt(hours), Number.parseInt(minutes));
 
       const servicoToSave = {
         tipo: formData.servico.tipo,
@@ -316,25 +423,7 @@ export default function NovoPedido() {
   };
 
   // ------------------------------
-  // Effect para sincronizar prazo de arte com entrega
-  // ------------------------------
-  useEffect(() => {
-    const tipoArte = tiposServico.find(
-      (s) => s.label.toLowerCase() === "arte"
-    )?.value;
-    if (formData.servico.tipo === tipoArte && formData.prazos.entrega) {
-      setFormData((prev) => ({
-        ...prev,
-        prazos: {
-          ...prev.prazos,
-          arte: prev.prazos.entrega,
-        },
-      }));
-    }
-  }, [formData.servico.tipo, formData.prazos.entrega]);
-
-  // ------------------------------
-  // Render
+  // Renderização
   // ------------------------------
   if (loadingUser) return <div>Carregando dados do usuário...</div>;
 
@@ -346,6 +435,20 @@ export default function NovoPedido() {
 
       <div className="novo-pedido-container">
         <h1>Cadastro de Novo Pedido</h1>
+        
+        {!clienteConfirmado && (
+          <div className="instrucoes-cliente">
+            Primeiro, pesquise e selecione um cliente para continuar.
+            Os demais campos serão habilitados após a confirmação do cliente.
+          </div>
+        )}
+
+        {clienteConfirmado && (
+          <div className="instrucoes-cliente confirmado">
+            <strong>Cliente confirmado!</strong> Agora você pode preencher os detalhes do pedido.
+          </div>
+        )}
+        
         {error && <div className="error-message">{error}</div>}
 
         <form onSubmit={handleSubmit} className="pedido-form">
@@ -370,19 +473,105 @@ export default function NovoPedido() {
               />
             </div>
 
-            <div className="form-group-novo-pedido">
-              <label htmlFor="nome-cliente-input">Nome do Cliente *</label>
-              <input
-                id="nome-cliente-input"
-                type="text"
-                value={formData.nomeCliente}
-                onChange={(e) =>
-                  setFormData({ ...formData, nomeCliente: e.target.value })
-                }
-                required
-                placeholder="Nome completo do cliente"
-                minLength={3}
-              />
+            <div className="form-group-novo-pedido cliente-container">
+              <label htmlFor="nome-cliente">Nome do Cliente / CPF/CNPJ *</label>
+              <div className="cliente-input-container">
+                <input
+                  id="nome-cliente"
+                  type="text"
+                  value={formData.nomeCliente}
+                  onChange={handleClienteInputChange}
+                  onFocus={() =>
+                    formData.nomeCliente &&
+                    formData.nomeCliente.length >= 3 &&
+                    !clienteConfirmado &&
+                    setShowClientesList(true)
+                  }
+                  required
+                  placeholder="Digite nome do cliente ou CPF/CNPJ"
+                  className="cliente-input"
+                  disabled={clienteConfirmado}
+                />
+
+                {clienteConfirmado && (
+                  <button
+                    type="button"
+                    className="cliente-cancelar-btn"
+                    onClick={cancelarSelecaoCliente}
+                    title="Trocar cliente"
+                  >
+                    ✕
+                  </button>
+                )}
+
+                {buscandoCliente && (
+                  <div className="loading-spinner">Buscando...</div>
+                )}
+
+                {/* Lista de clientes encontrados */}
+                {showClientesList && clientesEncontrados.length > 0 && (
+                  <div className="clientes-encontrados-lista">
+                    {clientesEncontrados.map((cliente) => {
+                      const semCpfCnpj =
+                        !cliente.cnpj_cpf ||
+                        cliente.cnpj_cpf === "**.**.***.****-**" ||
+                        cliente.cnpj_cpf === "***.***.***.***-**";
+
+                      return (
+                        <div
+                          key={cliente.codigo_cliente_omie}
+                          className={`cliente-item ${
+                            semCpfCnpj ? "cliente-sem-documento" : ""
+                          }`}
+                          onClick={() =>
+                            !semCpfCnpj && selecionarCliente(cliente)
+                          }
+                          title={
+                            semCpfCnpj
+                              ? "Este cliente não possui CPF/CNPJ cadastrado"
+                              : ""
+                          }
+                        >
+                          <div className="cliente-item-nome">
+                            {cliente.nome}
+                            {semCpfCnpj && (
+                              <span className="aviso-sem-documento">
+                                {" "}
+                                (Sem CPF/CNPJ)
+                              </span>
+                            )}
+                          </div>
+                          {cliente.cnpj_cpf && (
+                            <div className="cliente-item-cnpj">
+                              {cliente.cnpj_cpf}
+                            </div>
+                          )}
+                          {cliente.telefone && (
+                            <div className="cliente-item-telefone">
+                              {cliente.telefone}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {showClientesList &&
+                  clientesEncontrados.length === 0 &&
+                  !buscandoCliente && (
+                    <div className="clientes-encontrados-lista">
+                      <div className="nenhum-cliente">
+                        Nenhum cliente encontrado.
+                      </div>
+                    </div>
+                  )}
+
+                {errorBuscaCliente && (
+                  <div className="cliente-busca-erro">{errorBuscaCliente}</div>
+                )}
+                
+              </div>
             </div>
           </div>
 
@@ -407,6 +596,7 @@ export default function NovoPedido() {
                   }));
                 }}
                 required
+                disabled={!clienteConfirmado}
               >
                 <option value="" disabled>
                   Selecione um tipo de serviço
@@ -437,6 +627,7 @@ export default function NovoPedido() {
                       },
                     })
                   }
+                  disabled={!clienteConfirmado}
                 >
                   <option value="">Selecione um subtipo</option>
                   {tiposServico
@@ -465,6 +656,7 @@ export default function NovoPedido() {
                 value={selectedResponsavel}
                 onChange={(e) => setSelectedResponsavel(e.target.value)}
                 required
+                disabled={!clienteConfirmado}
               >
                 <option value="">Selecione um responsável</option>
                 {users.map((user) => (
@@ -490,6 +682,7 @@ export default function NovoPedido() {
                   })
                 }
                 required
+                disabled={!clienteConfirmado}
               >
                 <option value="Retirada">Retirada</option>
                 <option value="Entrega">Entrega</option>
@@ -520,6 +713,7 @@ export default function NovoPedido() {
                   }
                 }}
                 required
+                disabled={!clienteConfirmado}
               />
             </div>
 
@@ -537,6 +731,7 @@ export default function NovoPedido() {
                   })
                 }
                 required
+                disabled={!clienteConfirmado}
               >
                 {generateTimeOptions().map((time) => (
                   <option key={time.value} value={time.value}>
@@ -555,10 +750,12 @@ export default function NovoPedido() {
                   type="checkbox"
                   checked={retrabalho}
                   onChange={(e) => setRetrabalho(e.target.checked)}
+                  disabled={!clienteConfirmado}
                 />
                 Pedido de Retrabalho
               </label>
             </div>
+            
             {formData.servico.tipo !== TipoServico.ARTE && (
               <div id="checkbox-group">
                 <label>
@@ -575,6 +772,7 @@ export default function NovoPedido() {
                         },
                       }));
                     }}
+                    disabled={!clienteConfirmado}
                   />
                   Requer Criação de Arte
                 </label>
@@ -606,6 +804,7 @@ export default function NovoPedido() {
                         }
                       }}
                       required
+                      disabled={!clienteConfirmado}
                     />
                   </div>
                 )}
@@ -624,6 +823,7 @@ export default function NovoPedido() {
                         requerGalpao: e.target.checked,
                       })
                     }
+                    disabled={!clienteConfirmado}
                   />
                   Requer Produção/Galpão
                 </label>
@@ -634,7 +834,11 @@ export default function NovoPedido() {
 
           {/* Botão submit */}
           <div className="form-row-submit">
-            <button type="submit" className="submit-button">
+            <button
+              type="submit"
+              className="submit-button"
+              disabled={!clienteConfirmado}
+            >
               Cadastrar Pedido
             </button>
           </div>

@@ -1,31 +1,50 @@
-atendimento/.gitignore
-atendimento/eslint.config.js
-atendimento/index.html
-atendimento/package-lock.json
-atendimento/package.json
-atendimento/README.md
-atendimento/tsconfig.app.json
-atendimento/tsconfig.json
-atendimento/tsconfig.node.json
-atendimento/vite.config.ts
-atendimento/public/vite.svg
-atendimento/src/App.tsx
-atendimento/src/main.tsx
-atendimento/src/vite-env.d.ts
-atendimento/src/assets/logo.png
-atendimento/src/components/AtendimentoLista.tsx
-atendimento/src/pages/AtendimentoFinalizado.tsx
-atendimento/src/pages/AtendimentoForm.tsx
-atendimento/src/pages/Welcome.tsx
-atendimento/src/routes/AppRoutes.tsx
-atendimento/src/services/atendimentoService.ts
-atendimento/src/services/controlePedidosService.ts
-atendimento/src/services/firebase.ts
-atendimento/src/styles/AtendimentoForm.css
-atendimento/src/styles/index.css
-atendimento/src/styles/Welcome.css
-atendimento/src/types/Atendimento.ts
-atendimento/src/types/PedidoAtendimento.ts
-atendimento/src/types/ServicoAtendimento.ts
-atendimento/src/utils/firestoreUtilsAtendimento.ts
-atendimento/src/utils/ServicoAtendimento.ts
+# Dados sensíveis e arquivos de configuração
+*.env
+**/serviceAccount.json
+**/firebase-debug.log
+**/.firebaserc
+
+# Dependências e build
+node_modules/
+**/node_modules/
+dist/
+build/
+.firebase/
+functions/lib/
+functions/node_modules/
+
+# Arquivos de configuração locais
+*.local.js
+*.local.ts
+*.local.json
+
+# Arquivos de cache e lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Arquivos de log
+*.log
+
+# Arquivos de imagens e assets grandes
+**/public/
+**/src/assets/
+
+# Arquivos temporários do sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos de IDE
+.vscode/
+.idea/
+
+# Proteja scripts e configs sensíveis
+**/serviceAccount.json
+**/.env
+**/.env.*
+**/.firebaserc
+
+# Proteja dados do Firestore export
+firestore-export/
+firestore-backup/
+

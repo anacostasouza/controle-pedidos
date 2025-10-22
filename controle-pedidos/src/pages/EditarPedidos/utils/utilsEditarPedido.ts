@@ -264,131 +264,34 @@ export const atualizarPedidoCompleto = async (
   }
 };
 
-export const montarUpdatesParaBackend = async (
-  pedidoAtual: Pedido,
+export async function montarUpdatesParaBackend(
   userInfo: UserInfo,
   updateData: PedidoUpdateData
-): Promise<Record<string, any>> => {
-  const now = Timestamp.now();
-  const { userSetor, userDisplayName } = userInfo;
-  const {
-    novoStatusGeral,
-    novoStatusArte,
-    novoStatusGalpao,
-    novaDataEntrega,
-    novoHorarioEntrega,
-  } = updateData;
+) {
+  // Separe as atualizações por tipo
+  const updates: any = {};
 
-  let marcarComoEntregue = false;
-  const updates: Record<string, any> = {
-    atualizadoEm: now,
-  };
-
-  if (
-    novoStatusGeral !== undefined &&
-    novoStatusGeral !== pedidoAtual.statusAtual
-  ) {
-    const historicoStatus = [...(pedidoAtual.historicoStatus || [])];
-    historicoStatus.push({
-      status: novoStatusGeral,
-      data: now,
-      responsavel: userDisplayName,
-      setor: userSetor,
-    });
-    updates.statusAtual = novoStatusGeral;
-    updates.historicoStatus = historicoStatus;
-
-    if (novoStatusGeral === "Concluído") {
-      updates.StatusArte = [
-        ...(pedidoAtual.StatusArte || []),
-        { status: "Concluído", data: now, responsavel: userDisplayName },
-      ];
-      updates.StatusGalpao = [
-        ...(pedidoAtual.StatusGalpao || []),
-        { status: "Concluído", data: now, responsavel: userDisplayName },
-      ];
-      if (pedidoAtual.servico.tipo === "ARTE") {
-        marcarComoEntregue = true;
-      }
-    }
+  // Atualização de data/horário de entrega (permitida para o responsável)
+  if (updateData.novaDataEntrega && updateData.novaDataEntrega !== "") {
+    updates.novaDataEntrega = updateData.novaDataEntrega;
+    updates.novoHorarioEntrega = updateData.novoHorarioEntrega || "08:00";
   }
 
-  if (
-    (pedidoAtual.requerArte || pedidoAtual.servico.tipo === "ARTE") &&
-    novoStatusArte !== undefined
-  ) {
-    const ultimoStatusArte = pedidoAtual.StatusArte?.at(-1)?.status;
-    if (novoStatusArte !== ultimoStatusArte) {
-      const statusArteHistory = [...(pedidoAtual.StatusArte || [])];
-      statusArteHistory.push({
-        status: novoStatusArte,
-        data: now,
-        responsavel: userDisplayName,
-      });
-      updates.StatusArte = statusArteHistory;
-    }
+  // Atualizações de status (verificar permissões específicas)
+  if (updateData.novoStatusGeral !== undefined) {
+    updates.novoStatusGeral = updateData.novoStatusGeral;
   }
 
-  if (
-    (pedidoAtual.requerGalpao ||
-      pedidoAtual.servico.tipo === "COMUNICACAO_VISUAL") &&
-    novoStatusGalpao !== undefined
-  ) {
-    const ultimoStatusGalpao = pedidoAtual.StatusGalpao?.at(-1)?.status;
-    if (novoStatusGalpao !== ultimoStatusGalpao) {
-      const statusGalpaoHistory = [...(pedidoAtual.StatusGalpao || [])];
-      statusGalpaoHistory.push({
-        status: novoStatusGalpao,
-        data: now,
-        responsavel: userDisplayName,
-      });
-      updates.StatusGalpao = statusGalpaoHistory;
-    }
+  if (updateData.novoStatusArte !== undefined) {
+    updates.novoStatusArte = updateData.novoStatusArte;
   }
 
-  const oldEntregaDateStr =
-    pedidoAtual.prazos?.entrega?.toDate().toISOString().split("T")[0] || "";
-  const oldHorarioEntregaStr = pedidoAtual.horarioRetirada ?? "";
-
-  if (
-    novaDataEntrega !== oldEntregaDateStr ||
-    novoHorarioEntrega !== oldHorarioEntregaStr
-  ) {
-    if (novaDataEntrega && novoHorarioEntrega) {
-      const [year, month, day] = novaDataEntrega.split("-").map(Number);
-      const [hours, minutes] = novoHorarioEntrega.split(":").map(Number);
-      const combinedDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
-      updates["prazos"] = {
-        ...pedidoAtual.prazos,
-        entrega: Timestamp.fromDate(combinedDate),
-      };
-      updates.horarioRetirada = novoHorarioEntrega;
-    } else if (!novaDataEntrega && !novoHorarioEntrega) {
-      updates["prazos"] = { ...pedidoAtual.prazos, entrega: null };
-      updates.horarioRetirada = null;
-    } else {
-      if (!novaDataEntrega) {
-        updates["prazos"] = { ...pedidoAtual.prazos, entrega: null };
-      }
-      if (!novoHorarioEntrega) {
-        updates.horarioRetirada = null;
-      }
-    }
+  if (updateData.novoStatusGalpao !== undefined) {
+    updates.novoStatusGalpao = updateData.novoStatusGalpao;
   }
 
-  if (marcarComoEntregue) {
-    updates.statusAtual = "Entregue";
-    updates.entregueEm = now;
-    updates.historicoStatus = [
-      ...(updates.historicoStatus || pedidoAtual.historicoStatus || []),
-      {
-        status: "Entregue",
-        data: now,
-        responsavel: userDisplayName,
-        setor: userSetor,
-      },
-    ];
-  }
+  // Informações do usuário que está fazendo a atualização
+  updates.userInfo = userInfo;
 
   return updates;
-};
+}

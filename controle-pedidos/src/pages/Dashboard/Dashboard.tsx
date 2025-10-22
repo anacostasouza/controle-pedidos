@@ -125,9 +125,6 @@ export default function Dashboard() {
       const token = (await getAuth().currentUser?.getIdToken()) || "";
       const data = await buscarPedidos(params, token);
 
-      // Adicione o log aqui:
-      console.log("Pedidos recebidos do backend:", data.pedidos);
-
       const pedidosConvertidos = (data.pedidos || []).map((pedido: any) => ({
         ...pedido,
         prazos: {

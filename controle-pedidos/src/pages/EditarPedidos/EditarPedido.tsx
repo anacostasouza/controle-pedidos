@@ -52,9 +52,10 @@ export default function EditarPedido() {
   const podeEditarStatusArte = setoresPermitidosArte.includes(userSetor ?? "");
   const podeEditarStatusGalpao = setoresPermitidosGalpao.includes(userSetor ?? "");
   const podeEditarStatusGeral =
-    setoresPermitidosStatusGeral.includes(userSetor ?? "") ||
-    (pedido?.servico.tipo === TipoServico.TERCEIRIZADO && userDisplayName === pedido?.responsavel) ||
-    (pedido?.servico.tipo === TipoServico.ARTE && userSetor === "ARTE");
+  setoresPermitidosStatusGeral.includes(userSetor ?? "") ||
+  (pedido?.servico.tipo === TipoServico.TERCEIRIZADO && userDisplayName === pedido?.responsavel) ||
+  (pedido?.servico.tipo === TipoServico.GRAFICA_RAPIDA && userDisplayName === pedido?.responsavel) ||
+  (pedido?.servico.tipo === TipoServico.ARTE && userSetor === "ARTE");
 
   const podeEditarPrazoEntregaCalculado =
     userDisplayName === pedido?.responsavel || setoresPermitidosPrazoEntrega.includes(userSetor ?? "");
@@ -172,20 +173,25 @@ export default function EditarPedido() {
       return;
     }
 
-    const userInfo: UserInfo = { userSetor: userSetor as SetorValue, userDisplayName };
-
-    const updateData: PedidoUpdateData = {
-      novoStatusGeral: novoStatus,
-      novoStatusArte:
-        pedido.requerArte && pedido.servico.tipo !== TipoServico.ARTE ? novoStatusArte : undefined,
-      novoStatusGalpao: pedido.requerGalpao ? novoStatusGalpao : undefined,
-      novaDataEntrega: dataEntrega,
-      novoHorarioEntrega: horarioEntrega,
-    };
-
     try {
-      // Use a função utilitária para montar o objeto updates
-      const updates = await montarUpdatesParaBackend(pedido, userInfo, updateData);
+      // Força renovação do token antes da operação
+      const auth = getAuth();
+      if (auth.currentUser) {
+        await auth.currentUser.getIdToken(true);
+      }
+      
+      const userInfo: UserInfo = { userSetor: userSetor as SetorValue, userDisplayName };
+
+      const updateData: PedidoUpdateData = {
+        novoStatusGeral: novoStatus,
+        novoStatusArte:
+          pedido.requerArte && pedido.servico.tipo !== TipoServico.ARTE ? novoStatusArte : undefined,
+        novoStatusGalpao: pedido.requerGalpao ? novoStatusGalpao : undefined,
+        novaDataEntrega: dataEntrega,
+        novoHorarioEntrega: horarioEntrega,
+      };
+
+      const updates = await montarUpdatesParaBackend(userInfo, updateData);
 
       // Envie para o backend
       await atualizarPedidoBackend(id, updates);
@@ -194,7 +200,14 @@ export default function EditarPedido() {
       navigate("/dashboard");
     } catch (error) {
       console.error("Erro ao atualizar pedido:", error);
-      alert("Erro ao atualizar pedido: " + (error as Error).message);
+      if (String(error).includes("expirada")) {
+        window.alert("Sessão expirada. Redirecionando para login...");
+        window.location.href = "/";
+      } else if (String(error).includes("Sem permissão")) {
+        alert("Você não tem permissão para atualizar alguns dos campos modificados.");
+      } else {
+        alert("Erro ao atualizar pedido: " + (error as Error).message);
+      }
     }
   };
 

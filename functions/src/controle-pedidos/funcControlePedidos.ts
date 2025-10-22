@@ -1,9 +1,9 @@
 import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
 import express from "express";
-import { Timestamp } from "firebase-admin/firestore";
+import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { deepConvertTimestamps } from "../utils/deepConvertTimestamps";
-import { podeEditarPedidoBackend } from "../utils/permissaoUtils";
+import { podeEditarPedidoBackend, podeEditarPrazoEntrega, podeEditarStatusArte, podeEditarStatusGalpao } from "../utils/permissaoUtils";
 import { authMiddleware } from "../utils/authMiddleware";
 import { aplicarFiltrosPedidos } from "./utils/filtrosUtils";
 
@@ -28,7 +28,6 @@ app.use(authMiddleware);
 // Rota para criar pedido
 app.post("/dashboard/criarPedido", async (req, res) => {
   try {
-    debugger;
     const {
       numeroPedido,
       nomeCliente,
@@ -48,7 +47,6 @@ app.post("/dashboard/criarPedido", async (req, res) => {
       atendimentoId,
       origem,
       codigoClienteOmie,
-      telefone,
       retrabalho,
     } = req.body;
 
@@ -91,7 +89,7 @@ app.post("/dashboard/criarPedido", async (req, res) => {
     }
 
     const pedidoData = deepConvertTimestamps({
-      pedidoID: 0,
+      pedidoID: "",
       numeroPedido: Number(numeroPedido),
       nomeCliente: nomeClienteUpper,
       servico: {
@@ -115,13 +113,15 @@ app.post("/dashboard/criarPedido", async (req, res) => {
       atendimentoId: atendimentoId || null,
       origem: origem || null,
       codigoClienteOmie: codigoClienteOmie ? Number(codigoClienteOmie) : null,
-      telefone: telefone || null,
       criadoEm: Timestamp.now(),
       atualizadoEm: Timestamp.now(),
       entregueEm: null,
     });
 
+
     const pedidoRef = await db.collection("pedidos").add(pedidoData);
+    
+
     await pedidoRef.update({ pedidoID: pedidoRef.id });
 
     return res.status(201).json({ pedidoID: pedidoRef.id });
@@ -134,31 +134,169 @@ app.post("/dashboard/criarPedido", async (req, res) => {
 // Rota para editar pedido
 app.post("/dashboard/editarPedido", async (req, res) => {
   try {
-    const { pedidoID, ...updateData } = req.body;
+    const {
+      pedidoID,
+      novaDataEntrega,
+      novoHorarioEntrega,
+      novoStatusGeral,
+      novoStatusArte,
+      novoStatusGalpao,
+      userInfo,
+    } = req.body;
 
-    if (!pedidoID) {
-      return res
-        .status(400)
-        .json({ message: "Parâmetro obrigatório não preenchido" });
-    }
-
+    // Busca o pedido
     const db = admin.firestore();
     const pedidoRef = db.collection("pedidos").doc(pedidoID);
+    const pedidoSnap = await pedidoRef.get();
 
-    const pedidoDoc = await pedidoRef.get();
-    if (!pedidoDoc.exists) {
+    if (!pedidoSnap.exists) {
       return res.status(404).json({ message: "Pedido não encontrado" });
     }
-    const pedido = pedidoDoc.data();
 
-    if (!pedido || !podeEditarPedidoBackend(pedido, (req as any).user)) {
-      return res
-        .status(403)
-        .json({ message: "Você não tem permissão para editar este pedido." });
+    // Adicione uma verificação explícita de tipo
+    const pedido = pedidoSnap.data();
+    if (!pedido) {
+      return res.status(500).json({ message: "Erro ao obter dados do pedido" });
     }
 
-    const updateDataWithTimestamps = deepConvertTimestamps(updateData);
-    await pedidoRef.update(updateDataWithTimestamps);
+    const currentUser = (req as any).user;
+    
+    const updateData: any = {};
+
+    // Verificações específicas para cada tipo de operação
+    const podeEditarPrazo = podeEditarPrazoEntrega(pedido, currentUser);
+    const podeEditarStatus = podeEditarPedidoBackend(pedido, currentUser);
+    const podeEditarArte = podeEditarStatusArte(pedido, currentUser);
+    const podeEditarGalpao = podeEditarStatusGalpao(pedido, currentUser);
+
+    // Verificar cada operação individualmente
+    if (novaDataEntrega && !podeEditarPrazo) {
+      return res.status(403).json({
+        message: "Sem permissão para realizar esta operação",
+        details: "Você não tem permissão para alterar a data de entrega."
+      });
+    }
+
+    if (novoStatusGeral && novoStatusGeral !== pedido.statusAtual && !podeEditarStatus) {
+      return res.status(403).json({
+        message: "Sem permissão para realizar esta operação",
+        details: "Você não tem permissão para alterar o status geral."
+      });
+    }
+
+    // Verificar permissão para editar status de arte
+    if (novoStatusArte !== undefined && !podeEditarArte) {
+      return res.status(403).json({
+        message: "Sem permissão para realizar esta operação",
+        details: "Você não tem permissão para alterar o status da arte."
+      });
+    }
+
+    // Verificar permissão para editar status de galpão
+    if (novoStatusGalpao !== undefined && !podeEditarGalpao) {
+      return res.status(403).json({
+        message: "Sem permissão para realizar esta operação",
+        details: "Você não tem permissão para alterar o status do galpão."
+      });
+    }
+
+    // Se tem permissão para editar data/horário E está tentando editar esses campos
+    if (podeEditarPrazo && novaDataEntrega) {
+      // Converta a data de string para timestamp
+      const [year, month, day] = novaDataEntrega.split("-").map(Number);
+      const entregaDate = new Date(year, month - 1, day);
+
+      // Correção: Use Timestamp do firebase-admin corretamente
+      updateData["prazos.entrega"] = Timestamp.fromDate(entregaDate);
+      updateData.horarioRetirada = novoHorarioEntrega || "08:00";
+    }
+
+    // Se tem permissão para editar status E está tentando editar algum status
+    if (
+      podeEditarStatus &&
+      (novoStatusGeral !== undefined ||
+        novoStatusArte !== undefined ||
+        novoStatusGalpao !== undefined)
+    ) {
+      const now = Timestamp.now();
+
+      // Atualizar status geral
+      if (
+        novoStatusGeral !== undefined &&
+        novoStatusGeral !== pedido.statusAtual
+      ) {
+        updateData.statusAtual = novoStatusGeral;
+
+        // Adicionar ao histórico
+        updateData.historicoStatus = FieldValue.arrayUnion({
+          status: novoStatusGeral,
+          data: now,
+          responsavel: userInfo?.userDisplayName || "Sistema",
+          setor: userInfo?.userSetor || "SISTEMA",
+        });
+
+        // Se for "Concluído", atualizar também StatusArte e StatusGalpao
+        if (novoStatusGeral === "Concluído") {
+          if (pedido.requerArte) {
+            updateData.StatusArte = FieldValue.arrayUnion({
+              status: "Concluído",
+              data: now,
+              responsavel: userInfo?.userDisplayName || "Sistema",
+            });
+          }
+
+          if (pedido.requerGalpao) {
+            updateData.StatusGalpao = FieldValue.arrayUnion({
+              status: "Concluído",
+              data: now,
+              responsavel: userInfo?.userDisplayName || "Sistema",
+            });
+          }
+        }
+      }
+
+      // Atualizar status arte
+      if (novoStatusArte !== undefined && pedido.requerArte) {
+        const ultimoStatusArte =
+          pedido.StatusArte && pedido.StatusArte.length > 0
+            ? pedido.StatusArte[pedido.StatusArte.length - 1].status
+            : null;
+
+        if (novoStatusArte !== ultimoStatusArte) {
+          updateData.StatusArte = FieldValue.arrayUnion({
+            status: novoStatusArte,
+            data: now,
+            responsavel: userInfo?.userDisplayName || "Sistema",
+          });
+        }
+      }
+
+      // Atualizar status galpão
+      if (novoStatusGalpao !== undefined && pedido.requerGalpao) {
+        const ultimoStatusGalpao =
+          pedido.StatusGalpao && pedido.StatusGalpao.length > 0
+            ? pedido.StatusGalpao[pedido.StatusGalpao.length - 1].status
+            : null;
+
+        if (novoStatusGalpao !== ultimoStatusGalpao) {
+          updateData.StatusGalpao = FieldValue.arrayUnion({
+            status: novoStatusGalpao,
+            data: now,
+            responsavel: userInfo?.userDisplayName || "Sistema",
+          });
+        }
+      }
+    }
+
+    // Se não há nada para atualizar
+    if (Object.keys(updateData).length === 0) {
+      return res
+        .status(400)
+        .json({ message: "Nenhum dado válido para atualização" });
+    }
+
+    // Atualiza o pedido
+    await pedidoRef.update(updateData);
 
     return res.status(200).json({ message: "Pedido atualizado com sucesso" });
   } catch (error) {
@@ -234,9 +372,7 @@ app.get("/dashboard/buscarPedidos", async (req, res) => {
         const countSnap = await countRef.count().get();
         // @ts-ignore
         total = countSnap.data().count || 0;
-        console.log("Contagem total de pedidos:", total);
       } catch (err) {
-        console.error("Erro na contagem:", err);
         total = null;
       }
 
@@ -386,14 +522,6 @@ app.get("/relatorios/buscarPedidos", async (req, res) => {
       prazos: doc.data().prazos ?? {},
     }));
 
-    // LOG: quantidade de pedidos retornados
-    console.log(
-      `[Relatórios] Filtros:`,
-      req.query,
-      `| Pedidos retornados:`,
-      pedidos.length
-    );
-
     // Cursor para próxima página
     let nextLastEntrega: number | null = null;
     let nextLastId: string | null = null;
@@ -489,6 +617,132 @@ app.get("/relatorios/buscarPedidos", async (req, res) => {
   } catch (error) {
     console.error("Erro ao buscar pedidos:", error, req.query);
     return res.status(500).json({ message: "Erro ao buscar pedidos" });
+  }
+});
+
+// Função auxiliar para mascarar dados
+function mascararTelefone(ddd: string, numero: string): string {
+  if (!numero) return "";
+  const ultimos4 = numero.slice(-4);
+  return `(${ddd}) ****-${ultimos4}`;
+}
+
+function mascararCpfCnpj(cnpj_cpf: string): string {
+  if (!cnpj_cpf) return "";
+  const tamanho = cnpj_cpf.length;
+  if (tamanho <= 14) {
+    // CPF
+    return `***.***.***-${cnpj_cpf.slice(-2)}`;
+  } else if (tamanho >= 15) {
+    // CNPJ
+    return `**.***.***/****-${cnpj_cpf.slice(-4)}`;
+  }
+  return cnpj_cpf;
+}
+
+// Função para buscar cliente no Omie
+async function buscarClienteOmie(nomeCliente: string, cnpj_cpf?: string) {
+  // Prepara clientesFiltro considerando se o input é um CPF/CNPJ
+  const clientesFiltro = [];
+  
+  // Se o cnpj_cpf foi passado diretamente
+  if (cnpj_cpf) {
+    clientesFiltro.push({
+      razao_social: "",
+      cnpj_cpf,
+      inativo: "N",
+    });
+  } 
+  // Se o nomeCliente parece ser um CPF/CNPJ (só números)
+  else if (nomeCliente && /^\d{11,14}$/.test(nomeCliente.replace(/\D/g, ''))) {
+    clientesFiltro.push({
+      razao_social: "",
+      cnpj_cpf: nomeCliente.replace(/\D/g, ''),
+      inativo: "N",
+    });
+  } 
+  // Caso contrário, busca por nome
+  else {
+    clientesFiltro.push({
+      razao_social: nomeCliente,
+      cnpj_cpf: "",
+      inativo: "N",
+    });
+  }
+
+  const payload = {
+    call: "ListarClientes",
+    app_key: process.env.OMIE_APP_KEY,
+    app_secret: process.env.OMIE_APP_SECRET,
+    param: [
+      {
+        pagina: 1,
+        registros_por_pagina: 50,
+        apenas_importado_api: "N",
+        clientesFiltro,
+      },
+    ],
+  };
+
+  const omieApiUrl = process.env.OMIE_BASE_URL_CLIENTS;
+  if (!omieApiUrl) {
+    throw new Error("OMIE_BASE_URL_CLIENTS environment variable is not set");
+  }
+  
+  const axios = require('axios');
+  const { data } = await axios.post(omieApiUrl, payload, {
+    headers: { "Content-Type": "application/json" },
+  });
+  return data;
+}
+
+// Modifique a rota para buscar cliente para aceitar tanto nome quanto CPF/CNPJ
+app.post("/omie/buscarClientes", async (req, res) => {
+  try {
+    const { clientesFiltro } = req.body;
+    
+    if (!clientesFiltro || !Array.isArray(clientesFiltro)) {
+      return res.status(400).json({ message: "Parâmetros de busca inválidos" });
+    }
+    
+    const { razao_social, cnpj_cpf } = clientesFiltro[0];
+    
+    // Se não tem nome nem CPF/CNPJ, retorna erro
+    if (!razao_social && !cnpj_cpf) {
+      return res.status(400).json({ message: "Nome do cliente ou CPF/CNPJ é obrigatório" });
+    }
+
+    // Se tem apenas números, trata como CPF/CNPJ
+    let termoBusca = razao_social;
+    let cpfCnpj = cnpj_cpf;
+    
+    if (!razao_social && cpfCnpj) {
+      // É uma busca por CPF/CNPJ
+      cpfCnpj = cpfCnpj.replace(/\D/g, '');
+    } else if (razao_social && /^\d+$/.test(razao_social.replace(/\D/g, ''))) {
+      // O campo razao_social contém apenas números, trata como CPF/CNPJ
+      cpfCnpj = razao_social.replace(/\D/g, '');
+      termoBusca = "";
+    }
+
+    const resultadoBusca = await buscarClienteOmie(termoBusca, cpfCnpj);
+    const clientes = resultadoBusca?.clientes_cadastro || [];
+    
+    if (clientes.length > 0) {
+      return res.status(200).json({
+        clientes: clientes.map((cli: any) => ({
+          codigo_cliente_omie: cli.codigo_cliente_omie,
+          nome: cli.razao_social,
+          cnpj_cpf: mascararCpfCnpj(cli.cnpj_cpf),
+          telefone: mascararTelefone(cli.telefone1_ddd, cli.telefone1_numero),
+        })),
+      });
+    }
+
+    return res.status(404).json({ message: "Cliente não encontrado" });
+  } catch (error) {
+    console.error("Erro ao buscar cliente Omie:", error);
+    return res.status(500).json({ message: "Erro ao buscar cliente Omie" });
   }
 });
 

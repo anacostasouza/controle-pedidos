@@ -107,6 +107,21 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
         return () => { isMounted = false; };
     }, [user]);
 
+    useEffect(() => {
+        if (user) {
+            const tokenCheckInterval = setInterval(async () => {
+                try {
+                    await user.getIdToken(true);
+                } catch {
+                    clearInterval(tokenCheckInterval);
+                    logout();
+                }
+            }, 45 * 60 * 1000); 
+            
+            return () => clearInterval(tokenCheckInterval);
+        }
+    }, [user]);
+
     async function logout() {
         await signOut(auth);
         setUser(null);

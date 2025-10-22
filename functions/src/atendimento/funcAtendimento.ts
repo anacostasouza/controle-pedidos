@@ -136,7 +136,7 @@ app.post("/atualizarHistorico/:id", async (req, res) => {
 
     res.status(200).send({ message: "Histórico atualizado." });
   } catch (error) {
-    console.error("Erro ao atualizar histórico:");
+    console.error("Erro ao atualizar histórico:", error);
     res.status(500).send("Erro interno ao atualizar histórico.");
   }
 });
