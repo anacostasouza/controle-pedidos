@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -111,7 +112,7 @@ export default function NovoPedido() {
       const currentUser = auth.currentUser;
 
       if (!currentUser) {
-        alert("Usuário não autenticado. Redirecionando para login.");
+        setError("Usuário não autenticado. Redirecionando para login.");
         navigate("/");
         return;
       }
@@ -140,7 +141,7 @@ export default function NovoPedido() {
           }));
           setSelectedResponsavel(currentUser.uid);
         } else {
-          alert("Dados do usuário não encontrados. Redirecionando.");
+          setError("Dados do usuário não encontrados. Redirecionando.");
           navigate("/");
           return;
         }
@@ -163,9 +164,8 @@ export default function NovoPedido() {
           a.displayName.localeCompare(b.displayName)
         );
         setUsers(sortedUsers);
-      } catch (err) {
-        console.error("Erro ao buscar dados:", err);
-        alert("Erro ao carregar dados. Tente novamente.");
+      } catch {
+        setError("Erro ao carregar dados. Tente novamente.");
         navigate("/");
       } finally {
         setLoadingUser(false);
@@ -334,6 +334,23 @@ export default function NovoPedido() {
       return false;
     }
 
+    // Nova validação para data e horário de entrega
+    if (formData.prazos.entrega) {
+      const entregaDate = formData.prazos.entrega.toDate();
+      const [hours, minutes] = (formData.horarioRetirada ?? "08:00")
+        .split(":")
+        .map(Number);
+      
+      // Ajusta o horário para o definido pelo usuário
+      entregaDate.setHours(hours, minutes, 0, 0);
+      
+      const now = new Date();
+      if (entregaDate < now) {
+        setError("A data e horário de entrega não podem ser anteriores ao momento atual.");
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -392,8 +409,8 @@ export default function NovoPedido() {
           formData.servico.subTipo ?? ""
         );
         if (sequence.length > 0) statusInicial = sequence[0];
-      } catch (err) {
-        console.error("Erro ao buscar status inicial:", err);
+      } catch (_) {
+        // Fallback para status inicial padrão já está definido acima
       }
 
       // Gravação no Firestore
@@ -416,8 +433,7 @@ export default function NovoPedido() {
       });
 
       navigate("/dashboard");
-    } catch (error) {
-      console.error("Erro ao cadastrar pedido:", error);
+    } catch (_) {
       setError("Erro ao cadastrar pedido. Tente novamente.");
     }
   };

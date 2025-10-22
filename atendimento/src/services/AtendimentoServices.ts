@@ -105,11 +105,11 @@ export const handleAdicionarControlePedidos = (atendimento: any) => {
   }).toString();
 
   const baseUrl =
-    window.location.hostname === "localhost"
+    globalThis.location.hostname === "localhost"
       ? "http://localhost:5174/novo-pedido"
       : "https://gestaopedidos-desenhar.web.app/novo-pedido";
 
-  window.location.href = `${baseUrl}?${params}`;
+  globalThis.location.href = `${baseUrl}?${params}`;
 };
 
 export function listenFilaAtendimento(callback: (fila: any[]) => void) {

@@ -400,8 +400,13 @@ select:disabled {
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 100;
-  scrollbar-width: thin;
-  scrollbar-color: #8a2a2c #f0f0f0;
+}
+
+@supports (scrollbar-width: thin) {
+  .clientes-encontrados-lista {
+    scrollbar-width: thin;
+    scrollbar-color: #8a2a2c #f0f0f0;
+  }
 }
 
 .clientes-encontrados-lista::-webkit-scrollbar {

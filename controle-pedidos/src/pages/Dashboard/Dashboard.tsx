@@ -2,7 +2,8 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import debounce from "lodash/debounce";
 import { useNavigate } from "react-router-dom";
 import {
   getFirestore,
@@ -41,19 +42,8 @@ export default function Dashboard() {
   const [_loading, setLoading] = useState(true);
 
   const [buscaCliente, setBuscaCliente] = useState("");
-  const [buscaClienteDebounced, setBuscaClienteDebounced] = useState("");
-  useEffect(() => {
-    const handler = setTimeout(
-      () => setBuscaClienteDebounced(buscaCliente),
-      400
-    );
-    return () => clearTimeout(handler);
-  }, [buscaCliente]);
-
   const [filtroServico, setFiltroServico] = useState<TipoServicoValue | "">("");
-  const [filtroSubTipo, setFiltroSubTipo] = useState<SubTipoServicoValue | "">(
-    ""
-  );
+  const [filtroSubTipo, setFiltroSubTipo] = useState<SubTipoServicoValue | "">("");
   const [filtroStatus, setFiltroStatus] = useState("");
   const [filtroAtrasados, setFiltroAtrasados] = useState(false);
   const [filtroRequerArte, setFiltroRequerArte] = useState("");
@@ -63,25 +53,17 @@ export default function Dashboard() {
   const [pedidosFiltrados, setPedidosFiltrados] = useState<Pedido[]>([]);
   const [userSetor, setUserSetor] = useState("");
   const [userDisplayName, setUserDisplayName] = useState("");
-  const [statusOptions, setStatusOptions] = useState<StatusPedido[]>(
-    STATUS_SEQUENCE_DEFAULT
-  );
-  const [subTipoOptions, setSubTipoOptions] = useState<
-    { value: SubTipoServicoValue; label: string }[]
-  >([]);
-  const [etapasPorPedido, setEtapasPorPedido] = useState<
-    Record<string, Awaited<ReturnType<typeof getTodasEtapasDoPedido>>>
-  >({});
+  const [statusOptions, setStatusOptions] = useState<StatusPedido[]>(STATUS_SEQUENCE_DEFAULT);
+  const [subTipoOptions, setSubTipoOptions] = useState<{ value: SubTipoServicoValue; label: string }[]>([]);
+  const [etapasPorPedido, setEtapasPorPedido] = useState<Record<string, Awaited<ReturnType<typeof getTodasEtapasDoPedido>>>>({});
   const [responsaveisOptions, setResponsaveisOptions] = useState<{ uid: string, displayName: string }[]>([]);
   const [totalPedidosFiltrados, setTotalPedidosFiltrados] = useState(0);
 
-  // --- Paginação real ---
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [lastEntregas, setLastEntregas] = useState<number[]>([]);
   const totalPages = Math.ceil(totalPedidosFiltrados / itemsPerPage);
 
-  // --- Autenticação ---
   useEffect(() => {
     const auth = getAuth();
     const db = getFirestore();
@@ -102,78 +84,90 @@ export default function Dashboard() {
     return () => unsubscribeAuth();
   }, [navigate]);
 
-  // --- Busca pedidos paginados e filtrados via backend ---
-  useEffect(() => {
-    async function fetchPedidos() {
+  const debouncedFetchPedidos = useCallback(
+    debounce(async (params) => {
       setLoading(true);
-      const params: Record<string, string> = {
-        filtroTipo: filtroServico, 
-        filtroSubTipo,             
-        filtroStatus,
-        filtroResponsavelUid: filtroResponsavel,
-        filtroAtrasados: filtroAtrasados ? "true" : "",
-        porPagina: itemsPerPage.toString(),
-        filtroCliente: buscaClienteDebounced, 
-        filtroRequerArte: filtroRequerArte ?? "",
-        filtroRequerGalpao: filtroRequerGalpao ?? "",
-        filtroOcultarEntregues: "true"
-      };
-
-      if (currentPage > 1 && lastEntregas[currentPage - 2]) {
-        params.lastEntrega = lastEntregas[currentPage - 2].toString();
-      }
       const token = (await getAuth().currentUser?.getIdToken()) || "";
-      const data = await buscarPedidos(params, token);
+      try {
+        const data = await buscarPedidos(params, token);
 
-      const pedidosConvertidos = (data.pedidos || []).map((pedido: any) => ({
-        ...pedido,
-        prazos: {
-          ...pedido.prazos,
-          entrega: convertToTimestamp(pedido.prazos?.entrega),
-          producao: convertToTimestamp(pedido.prazos?.producao),
-          arte: convertToTimestamp(pedido.prazos?.arte),
-        },
-        criadoEm: convertToTimestamp(pedido.criadoEm),
-        atualizadoEm: convertToTimestamp(pedido.atualizadoEm),
-        entregueEm: convertToTimestamp(pedido.entregueEm),
-      }));
-      setPedidos(pedidosConvertidos);
-      setTotalPedidosFiltrados(data.total || 0);
-      if (data.nextLastEntrega) {
-        setLastEntregas((prev) => {
-          const arr = [...prev];
-          arr[currentPage - 1] = data.nextLastEntrega;
-          return arr;
-        });
+        const pedidosConvertidos = (data.pedidos || []).map((pedido: any) => ({
+          ...pedido,
+          prazos: {
+            ...pedido.prazos,
+            entrega: convertToTimestamp(pedido.prazos?.entrega),
+            producao: convertToTimestamp(pedido.prazos?.producao),
+            arte: convertToTimestamp(pedido.prazos?.arte),
+          },
+          criadoEm: convertToTimestamp(pedido.criadoEm),
+          atualizadoEm: convertToTimestamp(pedido.atualizadoEm),
+          entregueEm: convertToTimestamp(pedido.entregueEm),
+        }));
+
+        setPedidos(pedidosConvertidos);
+        setTotalPedidosFiltrados(data.total || 0);
+
+        if (data.nextLastEntrega) {
+          setLastEntregas((prev) => {
+            const arr = [...prev];
+            arr[currentPage - 1] = data.nextLastEntrega;
+            return arr;
+          });
+        }
+      } catch (error) {
+        console.log("Erro ao buscar pedidos:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
+    }, 400),
+    []
+  );
+
+  useEffect(() => {
+    const params: Record<string, string> = {
+      filtroTipo: filtroServico, 
+      filtroSubTipo,             
+      filtroStatus,
+      filtroResponsavelUid: filtroResponsavel,
+      filtroAtrasados: filtroAtrasados ? "true" : "",
+      porPagina: itemsPerPage.toString(),
+      filtroCliente: buscaCliente,
+      filtroRequerArte: filtroRequerArte ?? "",
+      filtroRequerGalpao: filtroRequerGalpao ?? "",
+      filtroOcultarEntregues: "true"
+    };
+
+    if (currentPage > 1 && lastEntregas[currentPage - 2]) {
+      params.lastEntrega = lastEntregas[currentPage - 2].toString();
     }
-    fetchPedidos();
+    
+    debouncedFetchPedidos(params);
+    
+    return () => {
+      debouncedFetchPedidos.cancel();
+    };
   }, [
     filtroServico,
     filtroSubTipo,
     filtroStatus,
     filtroResponsavel,
     filtroAtrasados,
-    buscaClienteDebounced,
+    buscaCliente,
     currentPage,
     itemsPerPage,
     filtroRequerArte,
     filtroRequerGalpao,
   ]);
 
-  // --- Contagem eficiente: só quando filtros mudam ---
   useEffect(() => {
     const db = getFirestore();
     const pedidosCollectionRef = collection(db, "pedidos");
 
     const filtros = [];
     if (filtroServico) filtros.push(where("servico.tipo", "==", filtroServico));
-    if (filtroSubTipo)
-      filtros.push(where("servico.subTipo", "==", filtroSubTipo));
+    if (filtroSubTipo) filtros.push(where("servico.subTipo", "==", filtroSubTipo));
     if (filtroStatus) filtros.push(where("statusAtual", "==", filtroStatus));
-    if (filtroResponsavel)
-      filtros.push(where("responsavel", "==", filtroResponsavel));
+    if (filtroResponsavel) filtros.push(where("responsavel", "==", filtroResponsavel));
     filtros.push(where("statusAtual", "!=", "Entregue"));
 
     const qContagem = query(pedidosCollectionRef, ...filtros);
@@ -182,7 +176,6 @@ export default function Dashboard() {
     });
   }, [filtroServico, filtroSubTipo, filtroStatus, filtroResponsavel]);
 
-  // --- Atualiza status e subtipos ---
   useEffect(() => {
     async function atualizarOpcoes() {
       if (!filtroServico) {
@@ -213,7 +206,6 @@ export default function Dashboard() {
     atualizarOpcoes();
   }, [pedidos, filtroServico, filtroSubTipo]);
 
-  // --- Carrega etapas ---
   useEffect(() => {
     async function carregarEtapas() {
       if (!pedidosFiltrados.length) return setEtapasPorPedido({});
@@ -228,7 +220,6 @@ export default function Dashboard() {
     carregarEtapas();
   }, [pedidosFiltrados]);
 
-  // Função original para verificar permissão de edição de pedido
   const podeEditarPedido = (pedido: Pedido): boolean => {
     if (!userSetor) return false;
     if (pedido.statusAtual === "Entregue") return false;
@@ -248,7 +239,6 @@ export default function Dashboard() {
     return false;
   };
 
-  // --- Marcar como entregue ---
   const handleMarcarComoEntregue = async (
     pedidoId: string,
     currentStatus: StatusPedido
@@ -257,7 +247,7 @@ export default function Dashboard() {
       return alert("Você não tem permissão.");
     if (currentStatus !== "Concluído")
       return alert("Apenas pedidos 'Concluído'.");
-    if (!window.confirm("Deseja marcar este pedido como ENTREGUE?")) return;
+    if (!globalThis.confirm("Deseja marcar este pedido como ENTREGUE?")) return;
 
     try {
       await marcarComoEntregueBackend(pedidoId);
@@ -267,10 +257,8 @@ export default function Dashboard() {
     }
   };
 
-  // Exibe ações para todos, mas o Firestore pode negar a operação
   const shouldShowActionsColumn = true;
 
-  // --- Zera paginação ao mudar filtros/busca ---
   useEffect(() => {
     setCurrentPage(1);
     setLastEntregas([]);
@@ -280,10 +268,9 @@ export default function Dashboard() {
     filtroStatus,
     filtroResponsavel,
     filtroAtrasados,
-    buscaClienteDebounced,
+    buscaCliente,
   ]);
 
-  // --- Carrega responsáveis disponíveis ---
   useEffect(() => {
     async function fetchResponsaveis() {
       const db = getFirestore();

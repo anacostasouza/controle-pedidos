@@ -118,10 +118,7 @@ app.post("/dashboard/criarPedido", async (req, res) => {
       entregueEm: null,
     });
 
-
     const pedidoRef = await db.collection("pedidos").add(pedidoData);
-    
-
     await pedidoRef.update({ pedidoID: pedidoRef.id });
 
     return res.status(201).json({ pedidoID: pedidoRef.id });
@@ -144,7 +141,6 @@ app.post("/dashboard/editarPedido", async (req, res) => {
       userInfo,
     } = req.body;
 
-    // Busca o pedido
     const db = admin.firestore();
     const pedidoRef = db.collection("pedidos").doc(pedidoID);
     const pedidoSnap = await pedidoRef.get();
@@ -153,23 +149,19 @@ app.post("/dashboard/editarPedido", async (req, res) => {
       return res.status(404).json({ message: "Pedido não encontrado" });
     }
 
-    // Adicione uma verificação explícita de tipo
     const pedido = pedidoSnap.data();
     if (!pedido) {
       return res.status(500).json({ message: "Erro ao obter dados do pedido" });
     }
 
     const currentUser = (req as any).user;
-    
     const updateData: any = {};
 
-    // Verificações específicas para cada tipo de operação
     const podeEditarPrazo = podeEditarPrazoEntrega(pedido, currentUser);
     const podeEditarStatus = podeEditarPedidoBackend(pedido, currentUser);
     const podeEditarArte = podeEditarStatusArte(pedido, currentUser);
     const podeEditarGalpao = podeEditarStatusGalpao(pedido, currentUser);
 
-    // Verificar cada operação individualmente
     if (novaDataEntrega && !podeEditarPrazo) {
       return res.status(403).json({
         message: "Sem permissão para realizar esta operação",
@@ -184,7 +176,6 @@ app.post("/dashboard/editarPedido", async (req, res) => {
       });
     }
 
-    // Verificar permissão para editar status de arte
     if (novoStatusArte !== undefined && !podeEditarArte) {
       return res.status(403).json({
         message: "Sem permissão para realizar esta operação",
@@ -192,7 +183,6 @@ app.post("/dashboard/editarPedido", async (req, res) => {
       });
     }
 
-    // Verificar permissão para editar status de galpão
     if (novoStatusGalpao !== undefined && !podeEditarGalpao) {
       return res.status(403).json({
         message: "Sem permissão para realizar esta operação",
@@ -200,18 +190,28 @@ app.post("/dashboard/editarPedido", async (req, res) => {
       });
     }
 
-    // Se tem permissão para editar data/horário E está tentando editar esses campos
     if (podeEditarPrazo && novaDataEntrega) {
-      // Converta a data de string para timestamp
-      const [year, month, day] = novaDataEntrega.split("-").map(Number);
-      const entregaDate = new Date(year, month - 1, day);
-
-      // Correção: Use Timestamp do firebase-admin corretamente
-      updateData["prazos.entrega"] = Timestamp.fromDate(entregaDate);
-      updateData.horarioRetirada = novoHorarioEntrega || "08:00";
+      try {
+        const [year, month, day] = novaDataEntrega.split("-").map(Number);
+        const brasilTimeOffsetMs = 3 * 60 * 60 * 1000; // +3 horas em ms para compensar o UTC-3
+        
+        const horario = novoHorarioEntrega || "08:00";
+        const [hours, minutes] = horario.split(":").map(Number);
+        
+        const utcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0));
+        const adjustedDate = new Date(utcDate.getTime() + brasilTimeOffsetMs);
+        
+        updateData["prazos.entrega"] = Timestamp.fromDate(adjustedDate);
+        updateData.horarioRetirada = horario;
+      } catch (error) {
+        console.error("Erro ao processar data:", error);
+        return res.status(400).json({ 
+          message: "Erro ao processar data de entrega", 
+          details: String(error)
+        });
+      }
     }
 
-    // Se tem permissão para editar status E está tentando editar algum status
     if (
       podeEditarStatus &&
       (novoStatusGeral !== undefined ||
@@ -220,14 +220,12 @@ app.post("/dashboard/editarPedido", async (req, res) => {
     ) {
       const now = Timestamp.now();
 
-      // Atualizar status geral
       if (
         novoStatusGeral !== undefined &&
         novoStatusGeral !== pedido.statusAtual
       ) {
         updateData.statusAtual = novoStatusGeral;
 
-        // Adicionar ao histórico
         updateData.historicoStatus = FieldValue.arrayUnion({
           status: novoStatusGeral,
           data: now,
@@ -235,7 +233,6 @@ app.post("/dashboard/editarPedido", async (req, res) => {
           setor: userInfo?.userSetor || "SISTEMA",
         });
 
-        // Se for "Concluído", atualizar também StatusArte e StatusGalpao
         if (novoStatusGeral === "Concluído") {
           if (pedido.requerArte) {
             updateData.StatusArte = FieldValue.arrayUnion({
@@ -255,11 +252,10 @@ app.post("/dashboard/editarPedido", async (req, res) => {
         }
       }
 
-      // Atualizar status arte
       if (novoStatusArte !== undefined && pedido.requerArte) {
         const ultimoStatusArte =
           pedido.StatusArte && pedido.StatusArte.length > 0
-            ? pedido.StatusArte[pedido.StatusArte.length - 1].status
+            ? pedido.StatusArte.at(-1).status
             : null;
 
         if (novoStatusArte !== ultimoStatusArte) {
@@ -271,11 +267,10 @@ app.post("/dashboard/editarPedido", async (req, res) => {
         }
       }
 
-      // Atualizar status galpão
       if (novoStatusGalpao !== undefined && pedido.requerGalpao) {
         const ultimoStatusGalpao =
           pedido.StatusGalpao && pedido.StatusGalpao.length > 0
-            ? pedido.StatusGalpao[pedido.StatusGalpao.length - 1].status
+            ? pedido.StatusGalpao.at(-1).status
             : null;
 
         if (novoStatusGalpao !== ultimoStatusGalpao) {
@@ -288,16 +283,13 @@ app.post("/dashboard/editarPedido", async (req, res) => {
       }
     }
 
-    // Se não há nada para atualizar
     if (Object.keys(updateData).length === 0) {
       return res
         .status(400)
         .json({ message: "Nenhum dado válido para atualização" });
     }
 
-    // Atualiza o pedido
     await pedidoRef.update(updateData);
-
     return res.status(200).json({ message: "Pedido atualizado com sucesso" });
   } catch (error) {
     console.error("Erro ao editar pedido:", error);
@@ -337,9 +329,8 @@ app.get("/dashboard/buscarPedidos", async (req, res) => {
     queryRef = aplicarFiltrosPedidos(queryRef, req.query);
     queryRef = queryRef.orderBy("prazos.entrega", "asc");
 
-    // Paginação eficiente por cursor
     const { itensPorPagina = 20, lastEntrega } = req.query;
-    if (lastEntrega && !isNaN(Number(lastEntrega))) {
+    if (lastEntrega && !Number.isNaN(Number(lastEntrega))) {
       const lastTimestamp = Timestamp.fromMillis(Number(lastEntrega));
       queryRef = queryRef.startAfter(lastTimestamp);
     }
@@ -353,8 +344,8 @@ app.get("/dashboard/buscarPedidos", async (req, res) => {
       })) as any[];
 
       let nextLastEntrega: number | null = null;
-      if (pedidos.length > 0 && pedidos[pedidos.length - 1].prazos?.entrega) {
-        const entrega = pedidos[pedidos.length - 1].prazos.entrega;
+      if (pedidos.length > 0 && pedidos.at(-1).prazos?.entrega) {
+        const entrega = pedidos.at(-1).prazos.entrega;
         if (typeof entrega._seconds === "number") {
           nextLastEntrega = entrega._seconds * 1000;
         } else if (typeof entrega.seconds === "number") {
@@ -362,7 +353,6 @@ app.get("/dashboard/buscarPedidos", async (req, res) => {
         }
       }
 
-      // Contagem total eficiente usando filtrosUtils
       let total: number | null = 0;
       try {
         let countRef: FirebaseFirestore.Query = db.collection("pedidos");
@@ -382,7 +372,7 @@ app.get("/dashboard/buscarPedidos", async (req, res) => {
       return res.status(500).json({ message: "Erro ao buscar pedidos" });
     }
   } catch (error) {
-    console.error("Erro ao buscar pedidos:", error, req.query);
+    console.error("Erro ao buscar pedidos:", error);
     return res.status(500).json({ message: "Erro ao buscar pedidos" });
   }
 });
@@ -423,17 +413,14 @@ app.post("/dashboard/marcarComoEntregue", async (req, res) => {
   }
 });
 
-// ---------------------- Rotas para relatórios ----------------------
-
+// Rotas para relatórios
 app.get("/relatorios/buscarPedidos", async (req, res) => {
   try {
     const db = admin.firestore();
 
-    // Monta a query principal usando filtrosUtils
     let queryRef: FirebaseFirestore.Query = db.collection("pedidos");
     queryRef = aplicarFiltrosPedidos(queryRef, req.query);
 
-    // Filtros de data de inclusão
     if (req.query.dataInicioInclusao) {
       queryRef = queryRef.where(
         "criadoEm",
@@ -448,7 +435,6 @@ app.get("/relatorios/buscarPedidos", async (req, res) => {
       queryRef = queryRef.where("criadoEm", "<=", Timestamp.fromDate(fim));
     }
 
-    // Filtros de data de retirada
     if (req.query.dataInicioRetirada) {
       const inicio = new Date(`${req.query.dataInicioRetirada}T00:00:00.000Z`);
       queryRef = queryRef.where(
@@ -466,7 +452,6 @@ app.get("/relatorios/buscarPedidos", async (req, res) => {
       );
     }
 
-    // Filtros de serviço
     if (req.query.filtroTipo)
       queryRef = queryRef.where("servico.tipo", "==", req.query.filtroTipo);
 
@@ -477,7 +462,6 @@ app.get("/relatorios/buscarPedidos", async (req, res) => {
         req.query.filtroSubTipo
       );
 
-    // Filtros de cliente ou código pedido
     if (req.query.filtroCliente) {
       if (/^\d+$/.test(String(req.query.filtroCliente))) {
         queryRef = queryRef.where(
@@ -494,7 +478,6 @@ app.get("/relatorios/buscarPedidos", async (req, res) => {
       }
     }
 
-    // Filtro de responsável (UID)
     if (req.query.filtroResponsavelUid)
       queryRef = queryRef.where(
         "responsavelUid",
@@ -502,18 +485,15 @@ app.get("/relatorios/buscarPedidos", async (req, res) => {
         req.query.filtroResponsavelUid
       );
 
-    // Paginação correta: ordene por campo + id
     queryRef = queryRef.orderBy("prazos.entrega", "asc");
 
-    // Paginação eficiente por cursor
     const { itensPorPagina = 20, lastEntrega, lastId } = req.query;
-    if (lastEntrega && !isNaN(Number(lastEntrega))) {
+    if (lastEntrega && !Number.isNaN(Number(lastEntrega))) {
       const lastTimestamp = Timestamp.fromMillis(Number(lastEntrega));
       queryRef = queryRef.startAfter(lastTimestamp);
     }
     queryRef = queryRef.limit(Number(itensPorPagina));
 
-    // Busca
     const snapshot = await queryRef.get();
     const pedidos = snapshot.docs.map((doc) => ({
       id: doc.id,
@@ -522,7 +502,6 @@ app.get("/relatorios/buscarPedidos", async (req, res) => {
       prazos: doc.data().prazos ?? {},
     }));
 
-    // Cursor para próxima página
     let nextLastEntrega: number | null = null;
     let nextLastId: string | null = null;
     if (pedidos.length > 0 && pedidos[pedidos.length - 1].prazos?.entrega) {
@@ -535,13 +514,11 @@ app.get("/relatorios/buscarPedidos", async (req, res) => {
       nextLastId = pedidos[pedidos.length - 1].id;
     }
 
-    // Contagem total (opcional)
     let total: number | null = 0;
     try {
       let countRef: FirebaseFirestore.Query = db.collection("pedidos");
       countRef = aplicarFiltrosPedidos(countRef, req.query);
 
-      // Repita todos os filtros de data e serviço
       if (req.query.dataInicioInclusao) {
         countRef = countRef.where(
           "criadoEm",
@@ -609,18 +586,17 @@ app.get("/relatorios/buscarPedidos", async (req, res) => {
       // @ts-ignore
       total = countSnap.data().count || 0;
     } catch (err) {
-      console.error("Erro na contagem:", err);
       total = null;
     }
 
     return res.json({ pedidos, nextLastEntrega, nextLastId, total });
   } catch (error) {
-    console.error("Erro ao buscar pedidos:", error, req.query);
+    console.error("Erro ao buscar pedidos:", error);
     return res.status(500).json({ message: "Erro ao buscar pedidos" });
   }
 });
 
-// Função auxiliar para mascarar dados
+// Funções para mascarar dados pessoais
 function mascararTelefone(ddd: string, numero: string): string {
   if (!numero) return "";
   const ultimos4 = numero.slice(-4);
@@ -631,10 +607,8 @@ function mascararCpfCnpj(cnpj_cpf: string): string {
   if (!cnpj_cpf) return "";
   const tamanho = cnpj_cpf.length;
   if (tamanho <= 14) {
-    // CPF
     return `***.***.***-${cnpj_cpf.slice(-2)}`;
   } else if (tamanho >= 15) {
-    // CNPJ
     return `**.***.***/****-${cnpj_cpf.slice(-4)}`;
   }
   return cnpj_cpf;
@@ -642,10 +616,8 @@ function mascararCpfCnpj(cnpj_cpf: string): string {
 
 // Função para buscar cliente no Omie
 async function buscarClienteOmie(nomeCliente: string, cnpj_cpf?: string) {
-  // Prepara clientesFiltro considerando se o input é um CPF/CNPJ
   const clientesFiltro = [];
   
-  // Se o cnpj_cpf foi passado diretamente
   if (cnpj_cpf) {
     clientesFiltro.push({
       razao_social: "",
@@ -653,7 +625,6 @@ async function buscarClienteOmie(nomeCliente: string, cnpj_cpf?: string) {
       inativo: "N",
     });
   } 
-  // Se o nomeCliente parece ser um CPF/CNPJ (só números)
   else if (nomeCliente && /^\d{11,14}$/.test(nomeCliente.replace(/\D/g, ''))) {
     clientesFiltro.push({
       razao_social: "",
@@ -661,7 +632,6 @@ async function buscarClienteOmie(nomeCliente: string, cnpj_cpf?: string) {
       inativo: "N",
     });
   } 
-  // Caso contrário, busca por nome
   else {
     clientesFiltro.push({
       razao_social: nomeCliente,
@@ -696,7 +666,7 @@ async function buscarClienteOmie(nomeCliente: string, cnpj_cpf?: string) {
   return data;
 }
 
-// Modifique a rota para buscar cliente para aceitar tanto nome quanto CPF/CNPJ
+// API para busca de clientes
 app.post("/omie/buscarClientes", async (req, res) => {
   try {
     const { clientesFiltro } = req.body;
@@ -707,20 +677,16 @@ app.post("/omie/buscarClientes", async (req, res) => {
     
     const { razao_social, cnpj_cpf } = clientesFiltro[0];
     
-    // Se não tem nome nem CPF/CNPJ, retorna erro
     if (!razao_social && !cnpj_cpf) {
       return res.status(400).json({ message: "Nome do cliente ou CPF/CNPJ é obrigatório" });
     }
 
-    // Se tem apenas números, trata como CPF/CNPJ
     let termoBusca = razao_social;
     let cpfCnpj = cnpj_cpf;
     
     if (!razao_social && cpfCnpj) {
-      // É uma busca por CPF/CNPJ
       cpfCnpj = cpfCnpj.replace(/\D/g, '');
     } else if (razao_social && /^\d+$/.test(razao_social.replace(/\D/g, ''))) {
-      // O campo razao_social contém apenas números, trata como CPF/CNPJ
       cpfCnpj = razao_social.replace(/\D/g, '');
       termoBusca = "";
     }

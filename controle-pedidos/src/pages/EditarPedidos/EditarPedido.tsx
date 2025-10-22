@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getAuth } from "firebase/auth";
@@ -35,6 +36,7 @@ export default function EditarPedido() {
   const [userDisplayName, setUserDisplayName] = useState<string | null>(null);
   const [dataEntrega, setDataEntrega] = useState<string>("");
   const [horarioEntrega, setHorarioEntrega] = useState<string>("");
+  const [error, setError] = useState<string>("");
 
   const [originalStatus, setOriginalStatus] = useState<StatusPedido | undefined>();
   const [originalStatusArte, setOriginalStatusArte] = useState<StatusArte | undefined>();
@@ -52,10 +54,10 @@ export default function EditarPedido() {
   const podeEditarStatusArte = setoresPermitidosArte.includes(userSetor ?? "");
   const podeEditarStatusGalpao = setoresPermitidosGalpao.includes(userSetor ?? "");
   const podeEditarStatusGeral =
-  setoresPermitidosStatusGeral.includes(userSetor ?? "") ||
-  (pedido?.servico.tipo === TipoServico.TERCEIRIZADO && userDisplayName === pedido?.responsavel) ||
-  (pedido?.servico.tipo === TipoServico.GRAFICA_RAPIDA && userDisplayName === pedido?.responsavel) ||
-  (pedido?.servico.tipo === TipoServico.ARTE && userSetor === "ARTE");
+    setoresPermitidosStatusGeral.includes(userSetor ?? "") ||
+    (pedido?.servico.tipo === TipoServico.TERCEIRIZADO && userDisplayName === pedido?.responsavel) ||
+    (pedido?.servico.tipo === TipoServico.GRAFICA_RAPIDA && userDisplayName === pedido?.responsavel) ||
+    (pedido?.servico.tipo === TipoServico.ARTE && userSetor === "ARTE");
 
   const podeEditarPrazoEntregaCalculado =
     userDisplayName === pedido?.responsavel || setoresPermitidosPrazoEntrega.includes(userSetor ?? "");
@@ -67,7 +69,7 @@ export default function EditarPedido() {
       const currentUser = auth.currentUser;
 
       if (!currentUser) {
-        alert("Usuário não autenticado. Redirecionando para login.");
+        setError("Usuário não autenticado. Redirecionando para login.");
         navigate("/");
         return;
       }
@@ -81,12 +83,11 @@ export default function EditarPedido() {
           setUserDisplayName(usuarioData.displayName ?? null);
           setUserSetor(usuarioData.setor ?? null);
         } else {
-          alert("Usuário não encontrado. Redirecionando.");
+          setError("Usuário não encontrado. Redirecionando.");
           navigate("/");
         }
       } catch (error) {
-        console.error("Erro ao buscar usuário:", error);
-        alert("Erro ao buscar dados do usuário.");
+        setError("Erro ao buscar dados do usuário.");
         navigate("/");
       }
     };
@@ -103,7 +104,7 @@ export default function EditarPedido() {
       try {
         const data = await fetchPedidoById(id);
         if (!data) {
-          alert("Pedido não encontrado.");
+          setError("Pedido não encontrado.");
           navigate("/dashboard");
           return;
         }
@@ -155,8 +156,7 @@ export default function EditarPedido() {
           setOriginalHorarioEntrega(hora);
         }
       } catch (error) {
-        console.error("Erro ao buscar pedido e status:", error);
-        alert("Erro ao carregar pedido.");
+        setError("Erro ao carregar pedido.");
         navigate("/dashboard");
       } finally {
         setLoading(false);
@@ -166,13 +166,35 @@ export default function EditarPedido() {
     fetchPedidoEStatus();
   }, [id, navigate]);
 
+  const validarDataHorarioEntrega = (): boolean => {
+    if (!dataEntrega || !horarioEntrega) return true;
+    
+    const [year, month, day] = dataEntrega.split("-").map(Number);
+    const [hours, minutes] = horarioEntrega.split(":").map(Number);
+    
+    const entregaDate = new Date(year, month - 1, day, hours, minutes);
+    const now = new Date();
+    
+    return entregaDate >= now;
+  };
+
   // --- Atualiza pedido ---
   const handleUpdatePedido = async () => {
+    setError("");
+    
     if (!id || !pedido || userSetor === null || userDisplayName === null) {
-      alert("Erro: Dados necessários para atualização não carregados.");
+      setError("Erro: Dados necessários para atualização não carregados.");
       return;
     }
-
+    
+    // Nova validação para data e horário
+    if (dataEntrega !== originalDataEntrega || horarioEntrega !== originalHorarioEntrega) {
+      if (!validarDataHorarioEntrega()) {
+        setError("A data e horário de entrega não podem ser anteriores ao momento atual.");
+        return;
+      }
+    }
+    
     try {
       // Força renovação do token antes da operação
       const auth = getAuth();
@@ -196,17 +218,19 @@ export default function EditarPedido() {
       // Envie para o backend
       await atualizarPedidoBackend(id, updates);
 
-      alert("Pedido atualizado com sucesso!");
+      setError(""); // Limpar erro se houver
       navigate("/dashboard");
     } catch (error) {
       console.error("Erro ao atualizar pedido:", error);
       if (String(error).includes("expirada")) {
-        window.alert("Sessão expirada. Redirecionando para login...");
-        window.location.href = "/";
+        setError("Sessão expirada. Redirecionando para login...");
+        setTimeout(() => {
+          navigate("/");
+        }, 2000);
       } else if (String(error).includes("Sem permissão")) {
-        alert("Você não tem permissão para atualizar alguns dos campos modificados.");
+        setError("Você não tem permissão para atualizar alguns dos campos modificados.");
       } else {
-        alert("Erro ao atualizar pedido: " + (error as Error).message);
+        setError("Erro ao atualizar pedido: " + (error as Error).message);
       }
     }
   };
@@ -214,14 +238,13 @@ export default function EditarPedido() {
   // --- Excluir pedido ---
   const handleDelete = async () => {
     if (!id) return;
-    if (!window.confirm("Tem certeza que deseja excluir este pedido?")) return;
+    if (!globalThis.confirm("Tem certeza que deseja excluir este pedido?")) return;
 
     try {
       await deletarPedidoBackend(id); 
       navigate("/dashboard");
     } catch (error) {
-      console.error("Erro ao excluir pedido:", error);
-      alert("Erro ao excluir pedido");
+      setError("Erro ao excluir pedido: " + (error as Error).message);
     }
   };
 
@@ -292,6 +315,13 @@ export default function EditarPedido() {
                     ))}
                   </select>
                 </div>
+                
+                {!validarDataHorarioEntrega() && (
+                  <div className="warning-message">
+                    Atenção: A data e horário selecionados são anteriores ao momento atual.
+                    O pedido não poderá ser atualizado com esta configuração.
+                  </div>
+                )}
               </div>
             )}
 
@@ -350,6 +380,8 @@ export default function EditarPedido() {
               </div>
             ) : null}
           </div>
+
+          {error && <div className="error-message">{error}</div>}
 
           {/* Botão Atualizar */}
           <button onClick={handleUpdatePedido} disabled={!hasChanges} className="update-button">
