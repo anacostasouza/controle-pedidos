@@ -206,3 +206,420 @@
   align-items: center;
   justify-content: center;
 }
+
+/* Estilo do modal */
+.modal-registro-direto-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-registro-direto {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  overflow-x: hidden; /* ADICIONADO - previne scroll horizontal */
+  animation: fadeIn 0.3s ease-out;
+  box-sizing: border-box; /* ADICIONADO */
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+  background-color: #f8f9fa;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+  font-weight: 500;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.btn-close:hover {
+  color: #333;
+}
+
+.modal-body {
+  padding: 20px;
+  font-family: 'Comfortaa', sans-serif;
+  box-sizing: border-box; /* ADICIONADO */
+}
+
+/* Estilos do formulário */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #444;
+}
+
+.form-group input[type="text"],
+.form-group select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+  box-sizing: border-box; /* ADICIONADO */
+}
+
+.form-group input[type="text"]:focus,
+.form-group select:focus {
+  border-color: var(--primary-color);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+}
+
+/* Estilo para o grupo de botões de prioridade */
+.prioridade-buttons {
+  display: flex;
+  gap: 10px;
+  font-family: 'Comfortaa', sans-serif;
+}
+
+.botao-prioridade {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #f8f9fa;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  font-family: 'Comfortaa', sans-serif;
+}
+
+.botao-prioridade.selecionado {
+  background-color: var(--primary-hover-color);
+  color: white;
+  border-color: var(--secondary-button-hover-color);
+}
+
+/* Estilo para o grupo de checkbox */
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  margin-top: 12px;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+.checkbox-group input[type="checkbox"] {
+  margin-right: 8px;
+  accent-color: var(--primary-color);
+}
+
+.consumidor-info {
+  margin-top: 6px;
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border-left: 3px solid var(--primary-color);
+}
+
+.consumidor-info small {
+  color: #666;
+  font-size: 12px;
+}
+
+/* Estilos para os botões de ação */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn-primary {
+  font-family: 'Comfortaa', sans-serif;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover-color);
+}
+
+.btn-secondary {
+  background-color: #f1f3f4;
+  color: #5f6368;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: #e8eaed;
+}
+
+.btn-registro-direto {
+  width: 150px;
+  background-color: var(--primary-color);
+  color: var(--secondary-button-color);
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: "Comfortaa", sans-serif;
+  font-weight: 550;
+  transition: background-color 0.3s, box-shadow 0.3s;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-registro-direto:hover {
+  background-color: var(--primary-hover-color);
+}
+
+/* Estilos para os radio buttons de tipo de atendimento */
+#servicos-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+#servicos-radio-group label {
+  display: flex;
+  align-items: center;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+#servicos-radio-group input[type="radio"] {
+  margin-right: 8px;
+  accent-color: var(--primary-color);
+}
+
+/* Estilos para status de loading */
+.loading-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.loading-state::after {
+  content: "";
+  width: 24px;
+  height: 24px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Estilos responsivos */
+@media (max-width: 768px) {
+  .modal-registro-direto {
+    width: 95%;
+    max-height: 85vh;
+  }
+  
+  .form-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  
+  .btn-primary, .btn-secondary {
+    width: 100%;
+  }
+  
+  .prioridade-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+/* input único (nome ou CPF/CNPJ) */
+.cliente-input-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  width: 100%;
+}
+.cliente-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-family: 'Comfortaa', sans-serif;
+  font-size: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  background: var(--background-color-white);
+  color: var(--text-color-dark);
+  box-sizing: border-box;
+}
+
+/* indicador de busca ao lado do input (texto simples ou spinner) */
+.loading-spinner {
+  margin-left: 8px;
+  font-size: 13px;
+  color: var(--text-color-medium);
+}
+
+/* lista de resultados inline */
+.clientes-encontrados-lista {
+  margin-top: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--background-color-white);
+  box-shadow: var(--box-shadow-light);
+  max-height: 220px;
+  overflow: auto;
+  z-index: 60;
+  padding: 4px 0;
+  font-family: 'Comfortaa', sans-serif;
+}
+
+/* item da lista */
+.cliente-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #f5f5f5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cliente-item:last-child { border-bottom: none; }
+.cliente-item:hover { background: var(--background-color-light); }
+.cliente-item-nome { font-weight: 600; color: var(--text-color-dark); font-size: 14px; }
+.cliente-item-cnpj,
+.cliente-item-telefone { font-size: 12px; color: var(--text-color-light); }
+
+/* aviso quando cliente não tem documento */
+.cliente-sem-documento .cliente-item-nome { opacity: 0.9; }
+.aviso-sem-documento { font-weight: 500; color: var(--text-color-medium); font-size: 12px; margin-left: 6px; }
+
+/* opção rápida para usar como consumidor (quando marcado) */
+.consumidor-option {
+  padding: 10px 14px;
+  cursor: pointer;
+  background: linear-gradient(90deg, rgba(255,255,255,1) 0%, rgba(250,250,250,1) 100%);
+  border-bottom: 1px solid #f5f5f5;
+  color: var(--text-color-medium);
+  font-size: 13px;
+}
+.consumidor-option:hover { background: var(--background-color-light); }
+
+/* mensagem de erro na busca */
+.cliente-busca-erro { margin-top: 6px; color: #b00020; font-size: 13px; }
+
+/* não mostrar bloco antigo que exibia código Omie */
+.cliente-info { display: none !important; }
+
+.btn-limpar-selecao {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.btn-limpar-selecao:hover {
+  color: #333;
+}
+
+.cliente-input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.cliente-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.cliente-item-info {
+  flex: 1;
+}
+
+.btn-selecionar-cliente {
+  padding: 6px 12px;
+  font-size: 13px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: 'Comfortaa', sans-serif;
+}
+
+.btn-selecionar-cliente:hover:not(:disabled) {
+  background-color: var(--primary-hover-color);
+}
+
+.btn-selecionar-cliente:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}

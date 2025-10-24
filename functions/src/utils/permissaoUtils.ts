@@ -1,4 +1,3 @@
-// Funções existentes
 export function podeEditarPedidoBackend(pedido: any, usuario: any): boolean {
   // Verifica se o usuário é o responsável pelo pedido
   const isResponsavel =
@@ -46,10 +45,18 @@ export function podeEditarStatusGeral(pedido: any, user: any) {
   );
 }
 
+
+// Método para verificar se o usuário pode editar o status de arte
 export function podeEditarStatusArte(pedido: any, user: any) {
   return ["ARTE", "SUPORTE", "GESTAO"].includes(user.setor);
 }
 
+// Método para verificar se o usuário pode editar o status do galpão
 export function podeEditarStatusGalpao(pedido: any, user: any) {
   return ["GALPAO", "SUPORTE", "GESTAO"].includes(user.setor);
+}
+
+// Método para verificar se o usuário pode marcar o pedido como entregue
+export function podeMarcarEntregue(pedido: any, user: any) {
+  return ["BALCAO", "CAIXA", "SUPORTE", "GESTAO"].includes(user.setor);
 }

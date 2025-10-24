@@ -16,7 +16,6 @@ export async function buscarServicosAtendimento(): Promise<ServicoAtendimento[]>
   return snap.docs.map(doc => doc.data() as ServicoAtendimento);
 }
 
-// Para criar atendimento (sem login)
 export async function criarAtendimentoFila(data: {
   nomeCliente: string;
   tipoAtendimento: string;
@@ -97,17 +96,19 @@ export async function atualizarHistoricoAtendimento(id: string, status: string, 
 export const handleAdicionarControlePedidos = (atendimento: any) => {
   const params = new URLSearchParams({
     nomeCliente: atendimento.nomeCliente || "",
-    telefone: atendimento.telefone || "",
     codigoClienteOmie: atendimento.codigoClienteOmie?.toString() || "",
     numeroPedido: atendimento.codigoPedido || "",
     atendimentoId: atendimento.id,
     origem: "atendimento"
   }).toString();
 
-  const baseUrl =
-    globalThis.location.hostname === "localhost"
-      ? "http://localhost:5174/novo-pedido"
-      : "https://gestaopedidos-desenhar.web.app/novo-pedido";
+  console.log("MODE:", import.meta.env.MODE);
+  console.log("DEV URL:", import.meta.env.VITE_CONTROLE_PEDIDOS_URL_DEV);
+  console.log("PROD URL:", import.meta.env.VITE_CONTROLE_PEDIDOS_URL_PROD);
+
+  const baseUrl = import.meta.env.MODE === "development" 
+  ? import.meta.env.VITE_CONTROLE_PEDIDOS_URL_DEV
+  : import.meta.env.VITE_CONTROLE_PEDIDOS_URL_PROD;
 
   globalThis.location.href = `${baseUrl}?${params}`;
 };
@@ -179,4 +180,32 @@ export async function buscarClienteOmie(clientesFiltro: any) {
   );
   if (!response.ok) throw new Error(await response.text());
   return response.json();
+}
+
+
+// Registrar atendimento
+
+export async function registrarAtendimento(atendimentoData: any): Promise<string> {
+  const auth = getAuth();
+  const user = auth.currentUser;
+  if (!user) throw new Error("Usuario não autenticado");
+  const token = await user.getIdToken();
+
+  const response = await fetch(
+    `${API_URL}/registrarAtendimento`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(atendimentoData),
+    }
+  );
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Erro ao registrar atendimento: ${errorText}`);
+  }
+  const result = await response.json();
+  return result.atendimentoId;
 }

@@ -10,7 +10,7 @@ export function ModalSelecionarCliente({
   onConfirm,
   dadosBusca,
   setDadosBusca,
-  erroCpf, // <-- Adicione esta prop
+  erroCpf, 
 }: any) {
   const [nome, setNome] = useState(dadosBusca?.nome || "");
   const [cnpj_cpf, setCnpjCpf] = useState(dadosBusca?.cnpj_cpf || "");

@@ -3,7 +3,7 @@ import * as admin from "firebase-admin";
 import express from "express";
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { deepConvertTimestamps } from "../utils/deepConvertTimestamps";
-import { podeEditarPedidoBackend, podeEditarPrazoEntrega, podeEditarStatusArte, podeEditarStatusGalpao } from "../utils/permissaoUtils";
+import { podeEditarPedidoBackend, podeEditarPrazoEntrega, podeEditarStatusArte, podeEditarStatusGalpao, podeMarcarEntregue } from "../utils/permissaoUtils";
 import { authMiddleware } from "../utils/authMiddleware";
 import { aplicarFiltrosPedidos } from "./utils/filtrosUtils";
 
@@ -388,7 +388,7 @@ app.post("/dashboard/marcarComoEntregue", async (req, res) => {
     }
     const pedido = pedidoDoc.data();
 
-    if (!pedido || !podeEditarPedidoBackend(pedido, (req as any).user)) {
+    if (!pedido || !podeMarcarEntregue(pedido, (req as any).user)) {
       return res.status(403).json({ message: "Você não tem permissão." });
     }
     if (pedido.statusAtual !== "Concluído") {
@@ -402,7 +402,7 @@ app.post("/dashboard/marcarComoEntregue", async (req, res) => {
       atualizadoEm: now,
       historicoStatus: [
         ...(pedido.historicoStatus ?? []),
-        { status: "Entregue", data: now },
+        { status: "Entregue", data: now, responsavel: (req as any).user.name, setor: (req as any).user.setor },
       ],
     });
 

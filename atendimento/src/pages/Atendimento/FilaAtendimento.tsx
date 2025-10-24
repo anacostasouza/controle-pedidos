@@ -11,6 +11,7 @@ import Login from "../Login/Login";
 import HeaderPage from "../../components/layout/headerPage";
 import "../../styles/FilaAtendimento.css";
 import FilaAtendimentoList from "./components/FilaAtendimentoList";
+import RegistroAtendimento from "./components/RegistroAtendimento"
 import { tempoAguardandoSegundos } from "../../utils/timeUtils";
 
 export function FilaAtendimento() {
@@ -19,6 +20,7 @@ export function FilaAtendimento() {
   const [loading, setLoading] = useState(true);
   const [finalizarId, setFinalizarId] = useState<string | null>(null);
   const [, setItemFinalizar] = useState<any>(null);
+  const [showRegistroDireto, setShowRegistroDireto] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => setFila((f) => [...f]), 1000);
@@ -46,6 +48,11 @@ export function FilaAtendimento() {
     setItemFinalizar(item);
     setFinalizarId(item.id);
   };
+
+  const handleRegistroAtendimento = () => {
+    setShowRegistroDireto(false);
+    alert("Atendimento registrado com sucesso.");
+  }
 
   const handleChamarAtendimento = async (id: string) => {
     if (!user) {
@@ -90,8 +97,21 @@ export function FilaAtendimento() {
       <HeaderPage />
       <div className="fila-atendimento-container">
         <div id="fila-atendimento-header">
-          Total na fila: {filaAguardando.length}
+          <span>Total na fila: {filaAguardando.length}</span>
+          <button 
+            className="btn-registro-direto" 
+            onClick={() => setShowRegistroDireto(true)}
+          >
+            Registro Direto de Atendimento
+          </button>
         </div>
+        {showRegistroDireto && (
+          <RegistroAtendimento
+            onClose={() => setShowRegistroDireto(false)}
+            onSuccess={handleRegistroAtendimento}
+          />
+        )}
+
 
         <h3>Fila de Espera</h3>
         <FilaAtendimentoList

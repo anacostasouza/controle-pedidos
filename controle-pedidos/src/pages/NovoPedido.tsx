@@ -195,6 +195,32 @@ export default function NovoPedido() {
     }
   }, [numeroPedidoState]);
 
+useEffect(() => {
+  if (origem === "atendimento" && nomeCliente && codigoClienteOmie) {
+    setClienteConfirmado(true);
+    
+    setFormData(prevData => ({
+      ...prevData,
+      nomeCliente: nomeCliente,
+      codigoClienteOmie: codigoClienteOmie
+    }));
+    
+    const timer = setTimeout(() => {
+      const notificationDiv = document.createElement('div');
+      notificationDiv.className = 'notification success-notification';
+      notificationDiv.textContent = 'Cliente importado automaticamente do Atendimento';
+      document.querySelector('.novo-pedido-container')?.appendChild(notificationDiv);
+      
+      setTimeout(() => {
+        notificationDiv.style.opacity = '0';
+        setTimeout(() => notificationDiv.remove(), 500);
+      }, 5000);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }
+}, [origem, nomeCliente, codigoClienteOmie]);
+
   // Sincroniza prazo de arte com entrega para tipo de serviço Arte
   useEffect(() => {
     const tipoArte = tiposServico.find(

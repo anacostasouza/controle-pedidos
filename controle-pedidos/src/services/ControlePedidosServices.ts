@@ -259,7 +259,7 @@ export async function marcarComoEntregueBackend(pedidoID: string) {
     }
     const userToken = await currentUser.getIdToken(true);
 
-    const response = await fetchWithAuth(
+    const response = await fetch(
       `${API_URL}/dashboard/marcarComoEntregue`,
       {
         method: "POST",
@@ -271,22 +271,27 @@ export async function marcarComoEntregueBackend(pedidoID: string) {
       }
     );
 
+
+    const responseData = await response.json().catch(() => ({ 
+      message: "Erro desconhecido" 
+    }));
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: "Erro desconhecido" }));
-      
       if (response.status === 401) {
         globalThis.alert("Sessão expirada. Redirecionando para login...");
         await auth.signOut();
         globalThis.location.href = "/";
         throw new Error("Sessão expirada");
       } else if (response.status === 403) {
-        throw new Error("Sem permissão para realizar esta operação");
+        throw new Error(`Sem permissão: ${responseData.message || "Você não tem permissão para esta operação"}`);
+      } else if (response.status === 400) {
+        throw new Error(`Erro de validação: ${responseData.message || "Verifique os dados informados"}`);
+      } else {
+        throw new Error(responseData.message || "Erro ao marcar como entregue");
       }
-      
-      throw new Error(errorData.message || "Erro ao marcar como entregue");
     }
     
-    return await response.json();
+    return responseData;
   } catch (error) {
     console.error("Erro ao marcar como entregue:", error);
     throw error;

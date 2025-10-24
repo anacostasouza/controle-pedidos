@@ -220,6 +220,33 @@ app.get("/atendimentosPorPeriodo", async (req, res) => {
   }
 });
 
+// Rota para registrar atendimento direto
+app.post("/registrarAtendimento", async (req, res) => {
+  try {
+    const atendimentoData = req.body;
+
+    if (!atendimentoData.nomeCliente || !atendimentoData.tipoAtendimento) {
+      res
+        .status(400)
+        .send("Nome do cliente e tipo de atendimento são obrigatórios.");
+      return;
+    }
+
+    const docRef = await admin
+    .firestore()
+    .collection("atendimentos")
+    .add({
+      ...atendimentoData,
+      criadoEm: Timestamp.now()
+    })
+
+    res.status(201).send({ atendimentoId: docRef.id });
+  } catch (error) {
+    console.error("Erro ao registrar atendimento direto:", error);
+    res.status(500).send("Erro interno ao registrar atendimento direto.");
+  }
+});
+
 // Função para converter segundos em formato HH:MM:SS
 function segundosParaHHMMSS(segundos: number): string {
   const h = Math.floor(segundos / 3600);

@@ -24,7 +24,35 @@ export async function authMiddleware(
       if (!isAllowed) {
         return res.status(403).json({ message: "Acesso negado" });
       }
+
       (req as any).user = decodedToken;
+
+      try {
+        const db = admin.firestore();
+        const userDoc = await db
+          .collection("usuarios")
+          .doc(decodedToken.uid)
+          .get();
+
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+
+          (req as any).user = {
+            ...(req as any).user,
+            setor: userData?.setor,
+            setorName: userData?.setorName,
+            displayName: userData?.displayName || decodedToken.name,
+          };
+        }
+      } catch (error) {
+        console.warn(
+          "Erro ao buscar dados adicionais do usuário:",
+          error
+        );
+      }
+
+      Object.freeze((req as any).user);
+
       return next();
     } catch (err) {
       return res.status(401).json({ message: "Token inválido" });
