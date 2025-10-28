@@ -161,10 +161,10 @@ body {
 
 .header-save {
   display: flex;
-  flex-direction: row; /* já é padrão, mas pode deixar explícito */
+  flex-direction: row; 
   justify-content: center;
   align-items: center;
-  gap: 16px; /* opcional: espaço entre os itens */
+  gap: 16px; 
   margin-bottom: 40px;
 }
 

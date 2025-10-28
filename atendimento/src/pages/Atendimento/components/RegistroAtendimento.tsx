@@ -86,12 +86,13 @@ export default function RegistroAtendimento({ onClose, onSuccess }: Readonly<Reg
       
       const resultado = await buscarClienteOmie(clientesFiltro);
       const lista = Array.isArray(resultado?.clientes) ? resultado.clientes : [];
+      
       setClientesEncontrados(lista);
       setShowClientesList(lista.length > 0); 
       return lista;
     } catch (err) {
       console.error('Erro ao buscar clientes:', err);
-      setErrorBuscaCliente(String(err) || 'Erro ao buscar clientes');
+      setErrorBuscaCliente('Erro ao buscar clientes. Tente novamente.');
       setClientesEncontrados([]);
       setShowClientesList(false);
       return [];
@@ -108,13 +109,20 @@ export default function RegistroAtendimento({ onClose, onSuccess }: Readonly<Reg
         return;
       }
       await buscarClientesOmiePorTermo(term.trim());
-    }, 500),
+    }, 800), 
     []
   );
+
+  useEffect(() => {
+    return () => {
+      debouncedSearchCliente.cancel();
+    };
+  }, [debouncedSearchCliente]);
 
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
+    setErrorBuscaCliente('');
 
     if (formData.isConsumidor) {
       setFormData(prev => ({ ...prev, nomeCliente: value }));
@@ -161,6 +169,7 @@ export default function RegistroAtendimento({ onClose, onSuccess }: Readonly<Reg
     }));
     setClientesEncontrados([]);
     setShowClientesList(false);
+    setErrorBuscaCliente('');
   };
 
   const selecionarCliente = (cliente: any) => {
@@ -175,6 +184,7 @@ export default function RegistroAtendimento({ onClose, onSuccess }: Readonly<Reg
     setSearchTerm(nome);
     setSelectedClientName(nome);
     setClienteSelecionado(true);
+    setErrorBuscaCliente('');
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -192,6 +202,7 @@ export default function RegistroAtendimento({ onClose, onSuccess }: Readonly<Reg
         setClientesEncontrados([]);
         setShowClientesList(false);
         setClienteSelecionado(false);
+        setErrorBuscaCliente('');
       } else {
         setFormData(prev => ({ ...prev, isConsumidor: false, nomeCliente: '' }));
         setSearchTerm('');
@@ -211,17 +222,17 @@ export default function RegistroAtendimento({ onClose, onSuccess }: Readonly<Reg
     const termoEntrada = (searchTerm || '').trim();
 
     if (!nomeSalvo && !termoEntrada) {
-      alert('Por favor, preencha o nome do cliente ou CPF/CNPJ.');
+      setErrorBuscaCliente('Por favor, preencha o nome do cliente ou CPF/CNPJ.');
       return;
     }
 
     if (!formData.tipoAtendimento) {
-      alert('Por favor, selecione o tipo de atendimento.');
+      setErrorBuscaCliente('Por favor, selecione o tipo de atendimento.');
       return;
     }
 
     if (!formData.isConsumidor && !formData.codigoClienteOmie) {
-      alert('Por favor, selecione um cliente da lista ou marque como consumidor.');
+      setErrorBuscaCliente('Por favor, selecione um cliente da lista ou marque como consumidor.');
       return;
     }
 
@@ -247,8 +258,13 @@ export default function RegistroAtendimento({ onClose, onSuccess }: Readonly<Reg
       onClose();
     } catch (error) {
       console.error('Erro ao registrar atendimento:', error);
-      alert('Erro ao registrar atendimento. Tente novamente.');
+      setErrorBuscaCliente('Erro ao registrar atendimento. Tente novamente.');
     }
+  };
+
+  const handleClose = () => {
+    debouncedSearchCliente.cancel();
+    onClose();
   };
 
   return (
@@ -256,10 +272,16 @@ export default function RegistroAtendimento({ onClose, onSuccess }: Readonly<Reg
       <div className="modal-registro-direto">
         <div className="modal-header">
           <h2>Registro Direto de Atendimento</h2>
-          <button className="btn-close" onClick={onClose}>×</button>
+          <button className="btn-close" onClick={handleClose}>×</button>
         </div>
 
         <div className="modal-body">
+          {errorBuscaCliente && (
+            <div className="erro-mensagem">
+              {errorBuscaCliente}
+            </div>
+          )}
+
           {etapa === 'formulario' && (
             <form onSubmit={handleSubmitForm}>
               <div className="form-group">
@@ -287,6 +309,7 @@ export default function RegistroAtendimento({ onClose, onSuccess }: Readonly<Reg
                     disabled={clienteSelecionado && !formData.isConsumidor}
                     className="cliente-input"
                   />
+                  {buscandoCliente && <span className="loading-spinner">Buscando...</span>}
                   {clienteSelecionado && !formData.isConsumidor && (
                     <button
                       type="button"
@@ -297,7 +320,6 @@ export default function RegistroAtendimento({ onClose, onSuccess }: Readonly<Reg
                       ×
                     </button>
                   )}
-                  {buscandoCliente && <div className="loading-spinner">Buscando...</div>}
                 </div>
 
                 {showClientesList && clientesEncontrados.length > 0 && !clienteSelecionado && (
@@ -342,8 +364,6 @@ export default function RegistroAtendimento({ onClose, onSuccess }: Readonly<Reg
                     <div className="nenhum-cliente">Nenhum cliente encontrado.</div>
                   </div>
                 )}
-
-                {errorBuscaCliente && <div className="cliente-busca-erro">{errorBuscaCliente}</div>}
               </div>
 
               <div className="form-group">
@@ -395,7 +415,7 @@ export default function RegistroAtendimento({ onClose, onSuccess }: Readonly<Reg
               </div>
 
               <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={onClose}>Cancelar</button>
+                <button type="button" className="btn-secondary" onClick={handleClose}>Cancelar</button>
                 <button type="submit" className="btn-primary">Registrar Atendimento</button>
               </div>
             </form>

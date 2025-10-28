@@ -50,7 +50,6 @@ export function DashboardHeader(props: Readonly<DashboardHeaderProps>) {
     });
   }, []);
 
-  // Atualiza subtipos quando muda o tipo selecionado
   const handleTipoChange = (tipoSelecionado: TipoServicoValue | "") => {
     props.setFiltroServico(tipoSelecionado);
     props.setFiltroSubTipo("");

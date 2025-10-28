@@ -30,7 +30,6 @@ export default function UserList({
           <li className="users-row" key={u.usuarioID}>
             {editingUserId === u.usuarioID ? (
               <div className="user-edit-row">
-                {/* Formulário de edição */}
                 <div className="user-cell user-edit-form-cell">
                   <UserEditForm
                     editingUserName={editingUserName}

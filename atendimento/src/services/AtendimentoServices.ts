@@ -66,14 +66,24 @@ export async function deletarAtendimento(id: string) {
 }
 
 // Atualizar historico do atendimento
-
-export async function atualizarHistoricoAtendimento(id: string, status: string, atendente?: string, atendenteUid?: string) {
+export async function atualizarHistoricoAtendimento(
+  id: string, 
+  status: string, 
+  responsavel?: string, 
+  atendente?: string, 
+  atendenteUid?: string
+) {
   const auth = getAuth();
   const user = auth.currentUser;
   if (!user) throw new Error("Usuário não autenticado");
   const token = await user.getIdToken();
 
-  const body: any = { status };
+  const responsavelFinal = responsavel || user.displayName || user.email || "Desconhecido";
+
+  const body: any = { 
+    status,
+    responsavel: responsavelFinal 
+  };
   if (atendente) body.atendente = atendente;
   if (atendenteUid) body.atendenteUid = atendenteUid;
 
@@ -208,4 +218,50 @@ export async function registrarAtendimento(atendimentoData: any): Promise<string
   }
   const result = await response.json();
   return result.atendimentoId;
+}
+
+// Buscar historico
+export async function buscarHistoricoComFiltros(
+  dataInicio: string,
+  dataFim: string,
+  filtros?: {
+    status?: string;
+    atendenteUid?: string;
+    tipo?: string;
+    consumidor?: boolean; // ✅ MUDOU PARA BOOLEAN
+    tipoAtendimento?: string;
+  }
+): Promise<{
+  atendimentos: any[];
+  total: number;
+  filtrosAplicados: string[];
+  estatisticas: any;
+}> {
+  const auth = getAuth();
+  const user = auth.currentUser;
+  if (!user) throw new Error("Usuário não autenticado");
+  const token = await user.getIdToken();
+
+  const params = new URLSearchParams({
+    dataInicio,
+    dataFim,
+  });
+
+  if (filtros?.status) params.append("status", filtros.status);
+  if (filtros?.atendenteUid) params.append("atendenteUid", filtros.atendenteUid);
+  if (filtros?.tipo) params.append("tipo", filtros.tipo);
+  if (filtros?.consumidor !== undefined) {
+    params.append("consumidor", filtros.consumidor.toString());
+  }
+  if (filtros?.tipoAtendimento) params.append("tipoAtendimento", filtros.tipoAtendimento);
+
+  const response = await fetch(`${API_URL}/historico?${params.toString()}`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) throw new Error(await response.text());
+  return response.json();
 }

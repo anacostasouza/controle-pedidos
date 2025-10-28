@@ -49,7 +49,6 @@ export default function ProfileEditPage(): JSX.Element {
     [usuarioLogado, setoresAdminLabels]
   );
 
-  // 🔹 Carrega perfil e lista de usuários
   useEffect(() => {
     const auth = getAuth();
     const currentUser = auth.currentUser;
@@ -94,7 +93,6 @@ export default function ProfileEditPage(): JSX.Element {
           setSetor(loadedLoggedUser.setor as SetorValue);
 
           if (setoresAdminLabels.includes(loadedLoggedUser.setorNome)) {
-            // 🔹 Carregar todos os usuários
             const usersCollectionRef = collection(db, "usuarios");
             const q = query(usersCollectionRef);
             const querySnapshot = await getDocs(q);
@@ -139,7 +137,6 @@ export default function ProfileEditPage(): JSX.Element {
     fetchInitialData();
   }, [navigate, setoresAdminLabels]);
 
-  // 🔹 Salvar edição do próprio perfil ou de outro usuário
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -156,7 +153,6 @@ export default function ProfileEditPage(): JSX.Element {
       const userDocRef = doc(db, "usuarios", targetUserId);
 
       if (editingUserId) {
-        // Admin editando outro usuário
         await updateDoc(userDocRef, {
           displayName: editingUserName,
           setor: editingUserSetor,
@@ -166,7 +162,6 @@ export default function ProfileEditPage(): JSX.Element {
           updatedAt: Timestamp.now(),
         });
 
-        // Atualiza lista de usuários
         setAllUsers((prev) =>
           prev.map((u) =>
             u.usuarioID === editingUserId
@@ -186,7 +181,6 @@ export default function ProfileEditPage(): JSX.Element {
 
         setEditingUserId(null);
       } else {
-        // Usuário editando a si mesmo
         await updateDoc(userDocRef, {
           displayName: profileName,
           setor,
@@ -194,7 +188,6 @@ export default function ProfileEditPage(): JSX.Element {
           updatedAt: Timestamp.now(),
         });
 
-        // Atualiza também o displayName no Auth
         const auth = getAuth();
         if (auth.currentUser) {
           await updateProfile(auth.currentUser, { displayName: profileName });
@@ -221,7 +214,6 @@ export default function ProfileEditPage(): JSX.Element {
     }
   };
 
-  // 🔹 Admin selecionando outro usuário
   const handleEditOtherUser = (user: Usuario) => {
     if (!isCurrentUserAdmin) return;
     setEditingUserId(user.usuarioID);
@@ -230,7 +222,6 @@ export default function ProfileEditPage(): JSX.Element {
     setEditingUserStatus(user.statusConta);
   };
 
-  // 🔹 Cancelar edição de outro usuário
   const handleCancelEdit = () => {
     setEditingUserId(null);
     setEditingUserName("");
@@ -238,7 +229,6 @@ export default function ProfileEditPage(): JSX.Element {
     setEditingUserStatus(true);
   };
 
-  // 🔹 Carregar logs de atendimentos
   useEffect(() => {
     const fetchLogs = async () => {
       const q = query(
@@ -268,7 +258,6 @@ export default function ProfileEditPage(): JSX.Element {
         className="settings-page"
       >
         <main className="profile-content">
-          {/* Exibe o formulário de perfil */}
           {selected === "profile" && (
             <ProfileForm
               profileName={profileName}
@@ -280,7 +269,6 @@ export default function ProfileEditPage(): JSX.Element {
             />
           )}
 
-          {/* Exibe a lista de usuários */}
           {isCurrentUserAdmin && selected === "users" && (
             <UserList
               allUsers={allUsers}
@@ -299,7 +287,6 @@ export default function ProfileEditPage(): JSX.Element {
             />
           )}
 
-          {/* Exibe o log de atendimentos */}
           {isCurrentUserAdmin && selected === "log" && (
             <LogAtendimentosList logs={logs} />
           )}

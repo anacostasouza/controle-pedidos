@@ -3,6 +3,11 @@ import * as admin from "firebase-admin";
 import express from "express";
 import axios from "axios";
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
+import {
+  buscarAtendimentosComFiltros,
+  validarFiltros,
+  calcularEstatisticas,
+} from "./utils/filtrosUtils";
 
 const app = express();
 
@@ -74,11 +79,18 @@ app.use(async (req, res, next) => {
 // Rota para adicionar um novo status ao histórico
 app.post("/atualizarHistorico/:id", async (req, res) => {
   const atendimentoId = req.params.id;
-  const { status, atendente, atendenteUid } = req.body;
+  const { status, atendente, atendenteUid, responsavel } = req.body;
+  
   if (!status) {
     res.status(400).send("Status é obrigatório.");
     return;
   }
+
+  if (!responsavel) {
+    res.status(400).send("Responsável é obrigatório.");
+    return;
+  }
+
   try {
     const atendimentoRef = admin
       .firestore()
@@ -87,27 +99,29 @@ app.post("/atualizarHistorico/:id", async (req, res) => {
     const docSnap = await atendimentoRef.get();
     const data = docSnap.data();
 
-    // Monta updateData normalmente
+
+    const historicoItem: any = {
+      status,
+      data: Timestamp.now(),
+      responsavel: responsavel 
+    };
+
     const updateData: any = {
       status,
-      historico: FieldValue.arrayUnion({
-        status,
-        data: Timestamp.now(),
-      }),
+      historico: FieldValue.arrayUnion(historicoItem),
     };
+    
     if (status === "Em Atendimento" && atendente) {
       updateData.atendente = atendente;
       updateData.atendenteUid = atendenteUid;
     }
 
-    // Se finalizando, calcula e salva os tempos
     if (
       ["Finalizado", "Cancelado", "Adicionado ao controle de pedidos"].includes(
         status
       ) &&
       data
     ) {
-      // Tempo de espera: diferença entre início (criadoEm) e primeiro "Em Atendimento"
       let tempoEspera: number | null = null;
       let tempoAtendimento: number | null = null;
       const historico = Array.isArray(data.historico) ? data.historico : [];
@@ -141,7 +155,6 @@ app.post("/atualizarHistorico/:id", async (req, res) => {
   }
 });
 
-// Rota para listar atendimentos
 app.get("/filaAtendimento", async (req, res) => {
   try {
     const atendimentosRef = admin.firestore().collection("atendimentos");
@@ -156,7 +169,6 @@ app.get("/filaAtendimento", async (req, res) => {
   }
 });
 
-// Rota para deletar atendimento
 app.delete("/deletarAtendimento/:id", async (req, res) => {
   const atendimentoId = req.params.id;
   try {
@@ -170,8 +182,6 @@ app.delete("/deletarAtendimento/:id", async (req, res) => {
     res.status(500).send("Erro interno ao deletar atendimento.");
   }
 });
-
-// Função para buscar todos os atendimentos
 
 app.get("/todosAtendimentos", async (req, res) => {
   try {
@@ -244,6 +254,49 @@ app.post("/registrarAtendimento", async (req, res) => {
   } catch (error) {
     console.error("Erro ao registrar atendimento direto:", error);
     res.status(500).send("Erro interno ao registrar atendimento direto.");
+  }
+});
+
+// Nova rota: Buscar histórico com filtros (usando filtrosUtils)
+app.get("/historico", async (req, res) => {
+  try {
+    // Valida filtros
+    const validacao = validarFiltros(req.query);
+    if (!validacao.valido) {
+      res.status(400).send(validacao.erro);
+      return;
+    }
+
+    let consumidorBoolean: boolean | undefined = undefined;
+    if (req.query.consumidor === "true") {
+      consumidorBoolean = true;
+    } else if (req.query.consumidor === "false") {
+      consumidorBoolean = false;
+    }
+
+    // Busca com filtros
+    const resultado = await buscarAtendimentosComFiltros({
+      dataInicio: req.query.dataInicio as string,
+      dataFim: req.query.dataFim as string,
+      status: req.query.status as string | undefined,
+      atendenteUid: req.query.atendenteUid as string | undefined,
+      tipo: req.query.tipo as "direto" | "fila" | undefined,
+      consumidor: consumidorBoolean,
+      tipoAtendimento: req.query.tipoAtendimento as string | undefined,
+    });
+
+    // Calcula estatísticas
+    const estatisticas = calcularEstatisticas(resultado.atendimentos);
+
+    res.status(200).json({
+      total: resultado.total,
+      filtrosAplicados: resultado.filtrosAplicados,
+      estatisticas,
+      atendimentos: resultado.atendimentos,
+    });
+  } catch (error: any) {
+    console.error("Erro ao buscar histórico:", error);
+    res.status(500).send(error.message || "Erro ao buscar histórico.");
   }
 });
 

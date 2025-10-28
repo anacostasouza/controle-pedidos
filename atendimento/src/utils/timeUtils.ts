@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-function parseFirestoreDate(data: any): Date | null {
+export function parseFirestoreDate(data: any): Date | null {
   if (!data) return null;
   if (data.seconds) return new Date(data.seconds * 1000);
   if (typeof data === "string" || data instanceof Date) return new Date(data);
@@ -16,7 +16,7 @@ export function tempoAguardando(atendimento: any) {
     ) {
       criado = new Date(atendimento.criadoEm);
     }
-    if (!criado || isNaN(criado.getTime())) return "-";
+    if (!criado || Number.isNaN(criado.getTime())) return "-";
 
     const agora = new Date();
     const diff = Math.floor((agora.getTime() - criado.getTime()) / 1000);
@@ -35,7 +35,7 @@ export function tempoAguardandoSegundos(atendimento: any): number {
   ) {
     criado = new Date(atendimento.criadoEm);
   }
-  if (!criado || isNaN(criado.getTime())) return 0;
+  if (!criado || Number.isNaN(criado.getTime())) return 0;
   const agora = new Date();
   return Math.floor((agora.getTime() - criado.getTime()) / 1000);
 }
@@ -58,7 +58,6 @@ export function tempoAtendimento(atendimento: any) {
     const segundos = diff % 60;
     return `${minutos}m ${segundos}s`;
   }
-  // Se só iniciou, mostra tempo desde o início do atendimento até agora
   if (iniciado && !fim) {
     const inicio = parseFirestoreDate(iniciado.data);
     if (!inicio) return "-";
@@ -92,10 +91,8 @@ export function formatarTempoHHMMSS(tempo: string | number): string {
   const s = totalSegundos % 60;
 
   if (h > 0) {
-    // Mostra HH:MM:SS
     return [h, m, s].map(v => String(v).padStart(2, "0")).join(":");
   }
-  // Mostra MM:SS
   return [m, s].map(v => String(v).padStart(2, "0")).join(":");
 }
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import { buscarTodosAtendimentos } from "../../services/AtendimentoServices";
@@ -6,7 +7,7 @@ import HeaderPage from "../../components/layout/headerPage";
 import "../../styles/dashboard.css";
 
 export default function DashboardPage() {
-    const [atendimentos, setAtendimentos] = useState<any[]>([]);
+    const [_atendimentos, setAtendimentos] = useState<any[]>([]);
 
     useEffect(() => {
         buscarTodosAtendimentos().then(setAtendimentos);
@@ -16,7 +17,7 @@ export default function DashboardPage() {
         <div>
             <HeaderPage />
             <div className="dashboard-container">
-            <HistoricoAtendimento atendimentos={atendimentos} />
+                <HistoricoAtendimento />
             </div>
         </div>
     );

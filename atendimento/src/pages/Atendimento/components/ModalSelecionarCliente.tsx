@@ -68,7 +68,6 @@ export function ModalSelecionarCliente({
           </button>
         </div>
         <div>
-          {/* Exibe aviso visual se houver erro de CPF */}
           {erroCpf && (
             <div style={{ color: "red", marginBottom: 8 }}>
               {erroCpf}

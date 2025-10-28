@@ -31,13 +31,12 @@ const STATUS_CONCLUIDO_EQUIVALENTES = [
   "concluida",
   "concluídos",
   "concluídas",
-  "concluido.", // caso venha com ponto
-  "concluida.", // caso venha com ponto
+  "concluido.", 
+  "concluida.", 
   "concluido(a)",
   "concluida(o)",
 ];
 
-// Função para verificar se o status é equivalente a "concluído"
 export const isStatusConcluido = (status: string): boolean => {
   const norm = normalizarStatus(status);
   return STATUS_CONCLUIDO_EQUIVALENTES.some(eq => norm === normalizarStatus(eq));

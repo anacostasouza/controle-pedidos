@@ -64,6 +64,9 @@ export function FilaAtendimento() {
       alert("Não foi possível identificar o atendente.");
       return;
     }
+    
+    const responsavel = user.displayName || user.email || "Desconhecido";
+    
     const db = getFirestore();
     await updateDoc(doc(db, "atendimentos", id), {
       status: "Em Atendimento",
@@ -71,7 +74,14 @@ export function FilaAtendimento() {
       atendenteUid: user.uid,
       inicioAtendimento: serverTimestamp(),
     });
-    await atualizarHistoricoAtendimento(id, "Em Atendimento", atendente, user.uid);
+    
+    await atualizarHistoricoAtendimento(
+      id, 
+      "Em Atendimento", 
+      responsavel, 
+      atendente, 
+      user.uid
+    );
   };
 
   const filaOrdenada = fila.slice().sort((a, b) => {

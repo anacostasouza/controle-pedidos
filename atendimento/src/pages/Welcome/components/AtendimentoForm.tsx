@@ -46,7 +46,7 @@ export const AtendimentoForm: React.FC = () => {
 
   useEffect(() => {
     if (mensagem) {
-      const timer = setTimeout(() => setMensagem(""), 5000); // 5 segundos
+      const timer = setTimeout(() => setMensagem(""), 5000); 
       return () => clearTimeout(timer);
     }
   }, [mensagem]);

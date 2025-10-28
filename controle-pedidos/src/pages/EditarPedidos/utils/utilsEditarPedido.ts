@@ -174,7 +174,6 @@ export const atualizarPedidoCompleto = async (
         ...(pedidoAtual.StatusGalpao || []),
         { status: "Concluído", data: now, responsavel: userDisplayName },
       ];
-      // Lógica: se for serviço Arte, marcar como Entregue também
       if (pedidoAtual.servico.tipo === TipoServico.ARTE) {
         marcarComoEntregue = true;
       }
@@ -241,7 +240,6 @@ export const atualizarPedidoCompleto = async (
     }
   }
 
-  // Se for serviço Arte e foi concluído, marque como entregue também
   if (marcarComoEntregue) {
     updates.statusAtual = "Entregue";
     updates.entregueEm = now;
@@ -268,16 +266,13 @@ export async function montarUpdatesParaBackend(
   userInfo: UserInfo,
   updateData: PedidoUpdateData
 ) {
-  // Separe as atualizações por tipo
   const updates: any = {};
 
-  // Atualização de data/horário de entrega (permitida para o responsável)
   if (updateData.novaDataEntrega && updateData.novaDataEntrega !== "") {
     updates.novaDataEntrega = updateData.novaDataEntrega;
     updates.novoHorarioEntrega = updateData.novoHorarioEntrega || "08:00";
   }
 
-  // Atualizações de status (verificar permissões específicas)
   if (updateData.novoStatusGeral !== undefined) {
     updates.novoStatusGeral = updateData.novoStatusGeral;
   }
@@ -290,7 +285,6 @@ export async function montarUpdatesParaBackend(
     updates.novoStatusGalpao = updateData.novoStatusGalpao;
   }
 
-  // Informações do usuário que está fazendo a atualização
   updates.userInfo = userInfo;
 
   return updates;

@@ -49,7 +49,6 @@ export function PedidosTable(props: Readonly<PedidosTableProps>) {
                   />
                 );
               } catch (err) {
-                // Log detalhado do erro e do pedido
                 console.error("Erro em PedidoRow:", err, pedido);
                 return (
                   <tr key={pedido.id || Math.random()}>

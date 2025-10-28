@@ -62,7 +62,6 @@ export default function EditarPedido() {
   const podeEditarPrazoEntregaCalculado =
     userDisplayName === pedido?.responsavel || setoresPermitidosPrazoEntrega.includes(userSetor ?? "");
 
-  // --- Busca usuário logado ---
   useEffect(() => {
     const fetchUserSetorAndDisplayName = async () => {
       const auth = getAuth();
@@ -95,7 +94,6 @@ export default function EditarPedido() {
     fetchUserSetorAndDisplayName();
   }, [navigate]);
 
-  // --- Busca pedido completo e status ---
   useEffect(() => {
     const fetchPedidoEStatus = async () => {
       if (!id) return;
