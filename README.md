@@ -1,4 +1,4 @@
-Sistema de Gestão Ontegrada - Desenhar
+Sistema de Gestão Integrada - Desenhar
 
 Sistema completo de gestão de atendimentos e controle de pedidos desenvolvido com React, TypeScript e Firebase.
 
