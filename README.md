@@ -1,6 +1,6 @@
 # Sistema de Gestão Integrada — Desenhar
 
-Sistema completo de gestão de atendimentos e controle de pedidos, desenvolvido com React, TypeScript e Firebase.
+Sistema completo de gestão de atendimentos e controle de pedidos, desenvolvido com React, TypeScript, Vite, Node, Express e Firebase.
 
 ---
 
@@ -47,7 +47,7 @@ desenhar/
   - Histórico completo de atendimentos
   - Filtros avançados (data, atendente, status, tipo)
   - Estatísticas em tempo real
-  - Exportação para Excel
+  - Exportação para Excel (XLSX)
 - Gestão de usuários
   - Log de ações (auditoria)
 
@@ -58,6 +58,7 @@ desenhar/
 - Vite
 - React Router
 - Context API
+- XLSX
 
 ### Estrutura sugerida (atendimento)
 
