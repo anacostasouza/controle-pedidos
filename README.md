@@ -56,6 +56,7 @@ Tecnologias
     Context API (gerenciamento de estado)
 
 Estrutura do Projeto
+
     atendimento/
     ├── src/
     │   ├── components/
