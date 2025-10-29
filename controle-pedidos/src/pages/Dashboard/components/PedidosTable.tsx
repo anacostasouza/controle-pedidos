@@ -14,7 +14,13 @@ interface PedidosTableProps {
 }
 
 export function PedidosTable(props: Readonly<PedidosTableProps>) {
-  if (!props.pedidosFiltrados.length) return <div className="loading">Nenhum pedido encontrado.</div>;
+  if (!props.pedidosFiltrados.length) 
+    return (
+      <div className="no-results">
+        <p>Nenhum pedido encontrado.</p>
+      </div>
+    )
+
 
   return (
     <div className="table-responsive">

@@ -14,6 +14,7 @@ import { auth } from "../services/firebase";
 import "../styles/AppRoutes.css";
 
 import { ProtectedRoute } from "./ProtectedRoute";
+import { Loading } from "../components/Loading/Loading";
 
 import Login from "../pages/Login";
 import ProfileNamePage from "../pages/ProfileNamePage";
@@ -26,7 +27,6 @@ import RelatoriosPage from "../pages/Relatorios/Relatorios";
 import type { User } from "firebase/auth";
 import type { JSX } from "react/jsx-dev-runtime";
 
-// Extend the Window interface to declare getToken
 declare global {
   interface Window {
     getToken: () => Promise<string | null>;
@@ -96,7 +96,7 @@ export default function AppRoutes(): JSX.Element {
   }, [user]);
 
   if (loading) {
-    return <div style={{ textAlign: "center", marginTop: "20px", display: "flex", justifyContent: "center" }}>Carregando...</div>;
+    return <Loading message="Verificando autenticação" />;
   }
 
   const renderProfileNameRoute = (): JSX.Element => {

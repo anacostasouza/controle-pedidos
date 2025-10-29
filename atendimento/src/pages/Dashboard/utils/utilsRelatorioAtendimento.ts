@@ -24,7 +24,7 @@ function formatarDataParaExcel(data: any): string {
     if (typeof data._seconds === "number") return new Date(data._seconds * 1000).toLocaleString("pt-BR");
     if (typeof data === "string" || data instanceof Date) {
         const d = new Date(data);
-        return isNaN(d.getTime()) ? "" : d.toLocaleString("pt-BR");
+        return Number.isNaN(d.getTime()) ? "" : d.toLocaleString("pt-BR");
     }
     return "";
 }
@@ -58,8 +58,8 @@ export const gerarExcelAtendimentos = async (
             a.tipoAtendimento,
             a.status,
             a.atendente || "",
-            isAtendimentoDireto ? "Direto" : "Fila",           // ✅ NOVA COLUNA
-            isConsumidor ? "Sim" : "Não",                      // ✅ NOVA COLUNA
+            isAtendimentoDireto ? "Direto" : "Fila",          
+            isConsumidor ? "Sim" : "Não",                     
             isAtendimentoDireto ? "-" : (typeof a.tempoEspera === "number" ? formatarTempo(a.tempoEspera) : a.tempoEspera || ""),
             isAtendimentoDireto ? "-" : (typeof a.tempoAtendimento === "number" ? formatarTempo(a.tempoAtendimento) : a.tempoAtendimento || ""),
             formatarDataParaExcel(a.criadoEm),

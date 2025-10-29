@@ -6,7 +6,7 @@ import type { SetorValue } from "../types/Setores";
 
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_EMULATOR_URL;
 
 export async function criarPedido({
   formData,
@@ -60,7 +60,6 @@ export async function criarPedido({
       atualizadoEm: now,
     };
 
-    // Adicione campos opcionais apenas se tiverem valores válidos
     if (origem) pedidoData.origem = origem;
     if (atendimentoId) pedidoData.atendimentoId = atendimentoId;
     if (codigoClienteOmie) pedidoData.codigoClienteOmie = codigoClienteOmie;

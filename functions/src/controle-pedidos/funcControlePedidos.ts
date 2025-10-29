@@ -157,6 +157,7 @@ app.post("/dashboard/editarPedido", async (req, res) => {
     const currentUser = (req as any).user;
     const updateData: any = {};
 
+
     const podeEditarPrazo = podeEditarPrazoEntrega(pedido, currentUser);
     const podeEditarStatus = podeEditarPedidoBackend(pedido, currentUser);
     const podeEditarArte = podeEditarStatusArte(pedido, currentUser);
