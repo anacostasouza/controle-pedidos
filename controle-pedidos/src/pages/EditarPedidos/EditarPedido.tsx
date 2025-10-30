@@ -32,6 +32,7 @@ import { generateTimeOptions } from "../../utils/timeUtils.ts";
 
 import { db } from "../../services/firebase.ts";
 import "../../styles/EditarPedido.css";
+import { set } from "lodash";
 
 export default function EditarPedido() {
   const { id } = useParams();
@@ -48,6 +49,7 @@ export default function EditarPedido() {
   const [loading, setLoading] = useState(true);
   const [userSetor, setUserSetor] = useState<string | null>(null);
   const [userDisplayName, setUserDisplayName] = useState<string | null>(null);
+  const [userUID, setUserUID] = useState<string | null>(null);
   const [dataEntrega, setDataEntrega] = useState<string>("");
   const [horarioEntrega, setHorarioEntrega] = useState<string>("");
   const [error, setError] = useState<string>("");
@@ -77,17 +79,20 @@ export default function EditarPedido() {
   const setoresPermitidosStatusGeral = ["PRODUCAO_LOJA", "SUPORTE", "GESTAO"];
   const setoresPermitidosPrazoEntrega = ["SUPORTE", "GESTAO"];
 
+
   const podeEditarStatusArte = setoresPermitidosArte.includes(userSetor ?? "");
   const podeEditarStatusGalpao = setoresPermitidosGalpao.includes(
     userSetor ?? ""
   );
 
-  const podeEditarStatusGeral = setoresPermitidosStatusGeral.includes(
-    userSetor ?? ""
-  );
+  const podeEditarStatusGeral =
+    setoresPermitidosStatusGeral.includes(userSetor ?? "") ||
+    (pedido?.servico.tipo === TipoServico.TERCEIRIZADO && (userDisplayName === pedido?.responsavel || userUID === pedido?.responsavelUid)) ||
+    (pedido?.servico.tipo === TipoServico.GRAFICA_RAPIDA && (userDisplayName === pedido?.responsavel || userUID === pedido?.responsavelUid)) ||
+    (pedido?.servico.tipo === TipoServico.ARTE && userSetor === "ARTE");
 
   const podeEditarPrazoEntregaCalculado =
-    userDisplayName === pedido?.responsavel ||
+    userDisplayName === pedido?.responsavel || userUID === pedido?.responsavelUid ||
     setoresPermitidosPrazoEntrega.includes(userSetor ?? "");
 
   useEffect(() => {
@@ -108,7 +113,9 @@ export default function EditarPedido() {
         if (docSnap.exists()) {
           const usuarioData = docSnap.data();
           setUserDisplayName(usuarioData.displayName ?? null);
+          setUserUID(currentUser.uid);
           setUserSetor(usuarioData.setor ?? null);
+          
         } else {
           setError("Usuário não encontrado. Redirecionando.");
           navigate("/");
@@ -121,6 +128,7 @@ export default function EditarPedido() {
 
     fetchUserSetorAndDisplayName();
   }, [navigate]);
+  
 
   useEffect(() => {
     const fetchPedidoEStatus = async () => {
@@ -190,7 +198,7 @@ export default function EditarPedido() {
         setLoading(false);
       }
     };
-
+  
     fetchPedidoEStatus();
   }, [id, navigate]);
 
@@ -210,7 +218,7 @@ export default function EditarPedido() {
     setError("");
     setSuccessMessage("");
 
-    if (!id || !pedido || userSetor === null || userDisplayName === null) {
+    if (!id || !pedido || userSetor === null || userDisplayName === null || userUID === null) {
       setError("Erro: Dados necessários para atualização não carregados.");
       return;
     }
@@ -236,6 +244,7 @@ export default function EditarPedido() {
       const userInfo: UserInfo = {
         userSetor: userSetor as SetorValue,
         userDisplayName,
+        userUID,
       };
 
       const updateData: PedidoUpdateData = {
@@ -427,14 +436,13 @@ export default function EditarPedido() {
             )}
 
             {podeEditarStatusGeral && (
+              
               <div className="status-form">
-                <label htmlFor="status-geral">Novo Status:</label>
+                <label htmlFor="novoStatus">Novo Status:</label>
                 <select
-                  id="status-geral"
+                  id="novoStatus"
                   value={novoStatus}
-                  onChange={(e) =>
-                    setNovoStatus(e.target.value as StatusPedido)
-                  }
+                  onChange={(e) => setNovoStatus(e.target.value as StatusPedido)}
                 >
                   {statusDisponiveis.map((status) => (
                     <option key={status} value={status}>

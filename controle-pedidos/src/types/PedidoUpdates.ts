@@ -12,4 +12,5 @@ export interface PedidoUpdateData {
 export interface UserInfo {
   userSetor: SetorValue;
   userDisplayName: string;
+  userUID: string;
 }

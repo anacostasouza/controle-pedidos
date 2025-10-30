@@ -78,6 +78,7 @@ export interface Pedido {
     servicoID: number;
   };
   responsavel: string;
+  responsavelUid: string;
   retrabalho?: boolean;
   requerArte?: boolean;
   StatusArte?: StatusArteHist[];
