@@ -114,7 +114,6 @@
 
 .fila-atendimento-item:hover {
   background-color: var(--background-color-light);
-  transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   border-color: #cbd5e1;
 }
@@ -299,8 +298,8 @@
   position: fixed;
   z-index: 100;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  min-width: 300px;
-  max-width: 90%;
+  min-width: 400px;
+  max-width: 100%;
   right: 50%;
   top: 50%;
   transform: translate(50%, -50%);
@@ -315,7 +314,8 @@
 }
 
 .modal-justificativa textarea {
-  width: 100%;
+  display: flex;
+  width: 90%;
   margin-top: 8px;
   margin-bottom: 16px;
   padding: 10px;

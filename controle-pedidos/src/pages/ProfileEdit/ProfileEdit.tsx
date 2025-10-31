@@ -10,14 +10,15 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { db } from "../services/firebase";
+import { db } from "../../services/firebase";
 
-import logoColorida from "../assets/LogoColorida.png";
-import "../styles/ProfileEdit.css";
+import logoColorida from "../../assets/LogoColorida.png";
+import "../../styles/ProfileEdit.css";
 
-import { setores, type SetorValue } from "../types/Setores";
-import type { Usuario } from "../types/Usuario";
-import { capitalizeWords } from "../utils/formatUtils";
+import ProfileSidebar from "./components/ProfileSideBar";
+import { setores, type SetorValue } from "../../types/Setores";
+import type { Usuario } from "../../types/Usuario";
+import { capitalizeWords } from "../../utils/formatUtils";
 
 interface ServicoStatus {
   id: string;
@@ -47,13 +48,16 @@ export default function EditProfilePage(): JSX.Element {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
 
+  const [selected, setSelected] = useState<
+    "profile" | "users" | "editSequenceStatus"
+  >("profile");
+
   const setoresAdminLabels = useMemo(() => ["Suporte", "Gestão"], []);
   const isCurrentUserAdmin = useMemo(
     () => setoresAdminLabels.includes(usuarioLogado?.setorNome ?? ""),
     [usuarioLogado, setoresAdminLabels]
   );
 
-  // 🔹 Carrega perfil, lista de usuários e serviços
   useEffect(() => {
     const auth = getAuth();
     const currentUser = auth.currentUser;
@@ -98,7 +102,6 @@ export default function EditProfilePage(): JSX.Element {
           setSetor(loadedLoggedUser.setor as SetorValue);
 
           if (setoresAdminLabels.includes(loadedLoggedUser.setorNome)) {
-            // 🔹 Carregar todos os usuários
             const usersCollectionRef = collection(db, "usuarios");
             const q = query(usersCollectionRef);
             const querySnapshot = await getDocs(q);
@@ -128,7 +131,6 @@ export default function EditProfilePage(): JSX.Element {
             });
             setAllUsers(loadedUsers);
 
-            // 🔹 Carregar serviços
             const servicosRef = collection(db, "servicosStatus");
             const servicosSnap = await getDocs(servicosRef);
             const loadedServicos: ServicoStatus[] = [];
@@ -158,7 +160,6 @@ export default function EditProfilePage(): JSX.Element {
     fetchInitialData();
   }, [navigate, setoresAdminLabels]);
 
-  // 🔹 Salvar edição do próprio perfil ou de outro usuário
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -175,7 +176,6 @@ export default function EditProfilePage(): JSX.Element {
       const userDocRef = doc(db, "usuarios", targetUserId);
 
       if (editingUserId) {
-        // Admin editando outro usuário
         await updateDoc(userDocRef, {
           displayName: editingUserName,
           setor: editingUserSetor,
@@ -185,7 +185,6 @@ export default function EditProfilePage(): JSX.Element {
           updatedAt: Timestamp.now(),
         });
 
-        // Atualiza lista de usuários
         setAllUsers((prev) =>
           prev.map((u) =>
             u.usuarioID === editingUserId
@@ -205,7 +204,6 @@ export default function EditProfilePage(): JSX.Element {
 
         setEditingUserId(null);
       } else {
-        // Usuário editando a si mesmo
         await updateDoc(userDocRef, {
           displayName: profileName,
           setor,
@@ -234,7 +232,6 @@ export default function EditProfilePage(): JSX.Element {
     }
   };
 
-  // 🔹 Admin selecionando outro usuário
   const handleEditOtherUser = (user: Usuario) => {
     if (!isCurrentUserAdmin || !showManageUsers) return;
     setEditingUserId(user.usuarioID);
@@ -243,7 +240,6 @@ export default function EditProfilePage(): JSX.Element {
     setEditingUserStatus(user.statusConta);
   };
 
-  // 🔹 Cancelar edição de outro usuário
   const handleCancelEdit = () => {
     setEditingUserId(null);
     setEditingUserName("");
@@ -251,7 +247,6 @@ export default function EditProfilePage(): JSX.Element {
     setEditingUserStatus(true);
   };
 
-  // 🔹 Editar sequência de status
   const handleSequenciaChange = (id: string, index: number, value: string) => {
     setServicosStatus((prev) =>
       prev.map((s) =>
@@ -324,7 +319,6 @@ export default function EditProfilePage(): JSX.Element {
 
           {editingUserId ? (
             <>
-              {/* Admin editando outro usuário */}
               <div className="form-group">
                 <hr className="borda"></hr>
                 <label>Nome</label>
@@ -373,7 +367,6 @@ export default function EditProfilePage(): JSX.Element {
             </>
           ) : (
             <>
-              {/* Usuário editando a si mesmo */}
               <div className="form-group">
                 <label>Nome</label>
                 <input
@@ -402,13 +395,12 @@ export default function EditProfilePage(): JSX.Element {
           )}
         </form>
 
-        {/* Admin pode gerenciar outros usuários */}
         {isCurrentUserAdmin && !editingUserId && (
           <div className="edit-buttons">
             <button
               onClick={() => {
                 setShowManageUsers((prev) => !prev);
-                if (!showManageUsers) setShowEditStatus(false); // fecha status ao abrir usuários
+                if (!showManageUsers) setShowEditStatus(false);
               }}
             >
               {showManageUsers ? "Fechar Usuários" : "Gerenciar Usuários"}
@@ -416,7 +408,7 @@ export default function EditProfilePage(): JSX.Element {
             <button
               onClick={() => {
                 setShowEditStatus((prev) => !prev);
-                if (!showEditStatus) setShowManageUsers(false); // fecha usuários ao abrir status
+                if (!showEditStatus) setShowManageUsers(false);
               }}
             >
               {showEditStatus ? "Fechar Status" : "Editar Sequência de Status"}
@@ -492,6 +484,105 @@ export default function EditProfilePage(): JSX.Element {
 
         <div id="logo-colorida">
           <img src={logoColorida} alt="Logo" />
+        </div>
+        <div style={{ display: "flex" }}>
+          {isCurrentUserAdmin && (
+            <ProfileSidebar selected={selected} setSelected={setSelected} />
+          )}
+          <div className="settings-page">
+            {isCurrentUserAdmin && !editingUserId && (
+              <div className="edit-buttons">
+                <button
+                  onClick={() => {
+                    setShowManageUsers((prev) => !prev);
+                    if (!showManageUsers) setShowEditStatus(false);
+                  }}
+                >
+                  {showManageUsers ? "Fechar Usuários" : "Gerenciar Usuários"}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowEditStatus((prev) => !prev);
+                    if (!showEditStatus) setShowManageUsers(false);
+                  }}
+                >
+                  {showEditStatus
+                    ? "Fechar Status"
+                    : "Editar Sequência de Status"}
+                </button>
+              </div>
+            )}
+
+            {isCurrentUserAdmin && showManageUsers && (
+              <div className="users-form-edit">
+                <div className="header-users">
+                  <hr className="borda-users"></hr>
+                  <h2 className="title-users">Usuários</h2>
+                  <hr className="borda-users"></hr>
+                </div>
+                <ul className="users-list">
+                  {allUsers.map((u) => (
+                    <li className="users-information" key={u.usuarioID}>
+                      {u.displayName} - {u.setorNome} - {u.email} -{" "}
+                      {u.statusConta ? "Ativo" : "Inativo"}
+                      <button
+                        className="users-edit-button"
+                        disabled={u.usuarioID === usuarioLogado?.usuarioID}
+                        onClick={() => handleEditOtherUser(u)}
+                      >
+                        Editar
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {isCurrentUserAdmin && showEditStatus && (
+              <div className="status-edit">
+                <hr className="borda"></hr>
+                <h2 className="status-title">Sequência de Status</h2>
+                <hr className="borda"></hr>
+                {servicosStatus.map((s) => (
+                  <div key={s.id}>
+                    <h3 className="status-subtitle">
+                      {capitalizeWords(s.tipo)}
+                      {s.subTipo ? ` - ${capitalizeWords(s.subTipo)}` : ""}
+                    </h3>
+                    {s.sequenciaStatus.map((st, idx) => (
+                      <div className="status-sequence" key={idx}>
+                        <input
+                          value={st}
+                          onChange={(e) =>
+                            handleSequenciaChange(s.id, idx, e.target.value)
+                          }
+                        />
+                        <button
+                          className="status-button"
+                          onClick={() => handleRemoveStatus(s.id, idx)}
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    ))}
+                    <div className="status-button-actions">
+                      <button onClick={() => handleAddStatus(s.id)}>
+                        Adicionar
+                      </button>
+                      <button onClick={() => handleSalvarSequencia(s.id)}>
+                        Salvar
+                      </button>
+                    </div>
+                    <hr className="borda"></hr>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div id="logo-colorida">
+              <img src={logoColorida} alt="Logo" />
+            </div>
+          </div>
         </div>
       </main>
     </div>

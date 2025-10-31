@@ -21,7 +21,7 @@ import ProfileNamePage from "../pages/ProfileNamePage";
 import Dashboard from "../pages/Dashboard/Dashboard";
 import NovoPedido from "../pages/NovoPedido";
 import EditarPedido from "../pages/EditarPedidos/EditarPedido";
-import ProfileEdit from "../pages/ProfileEdit";
+import ProfileEdit from "../pages/ProfileEdit/ProfileEdit";
 import RelatoriosPage from "../pages/Relatorios/Relatorios";
 
 import type { User } from "firebase/auth";
