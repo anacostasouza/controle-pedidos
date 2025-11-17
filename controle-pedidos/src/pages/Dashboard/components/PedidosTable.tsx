@@ -7,6 +7,8 @@ interface PedidosTableProps {
   pedidosFiltrados: Pedido[];
   etapasPorPedido: Record<string, Awaited<ReturnType<typeof getTodasEtapasDoPedido>>>;
   userSetor: string;
+  userDisplayName: string;
+  userUid: string;
   podeEditarPedido: (pedido: Pedido) => boolean;
   handleMarcarComoEntregue: (pedidoId: string, status: StatusPedido) => void;
   shouldShowActionsColumn: boolean;
@@ -48,6 +50,8 @@ export function PedidosTable(props: Readonly<PedidosTableProps>) {
                     pedido={pedido}
                     etapas={props.etapasPorPedido[pedido.id!]}
                     userSetor={props.userSetor}
+                    userDisplayName={props.userDisplayName}
+                    userUid={props.userUid}
                     podeEditarPedido={props.podeEditarPedido}
                     handleMarcarComoEntregue={props.handleMarcarComoEntregue}
                     navigate={props.navigate}

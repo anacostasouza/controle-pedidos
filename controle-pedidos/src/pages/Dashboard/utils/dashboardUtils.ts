@@ -2,7 +2,7 @@
 import { Timestamp } from "firebase/firestore";
 import type { Pedido, StatusPedido } from "../../../types/Pedidos";
 import { TipoServico, type TipoServicoValue, type SubTipoServicoValue } from "../../../types/Servicos";
-import { fetchStatusSequence } from "../../../utils/firestoreUtils";
+import { fetchStatusSequence } from "../../../utils/FirestoreUtils";
 
 export function convertToTimestamp(ts: any): Timestamp | null {
   if (!ts) return null;

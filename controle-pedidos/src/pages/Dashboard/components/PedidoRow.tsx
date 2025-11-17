@@ -4,13 +4,15 @@ import { getTodasEtapasDoPedido } from "../../../utils/firestoreUtils";
 import { capitalizeWords } from "../../../utils/FormatUtils";
 import { formatDate, isPedidoAtrasado } from "../utils/dashboardUtils";
 import { TipoServicoLabels, SubTipoServicoLabels } from "../../../types/Servicos";
-
+import { podeMarcarEntregue } from "../../../utils/PermissionUtils";
 import { Timestamp } from "firebase/firestore";
 
 interface PedidoRowProps {
   pedido: Pedido;
   etapas: Awaited<ReturnType<typeof getTodasEtapasDoPedido>> | undefined;
   userSetor: string;
+  userDisplayName: string;
+  userUid: string;
   handleMarcarComoEntregue: (pedidoId: string, status: StatusPedido) => void;
   navigate: any;
   showActions: boolean;
@@ -18,13 +20,21 @@ interface PedidoRowProps {
 }
 
 export function PedidoRow(props: Readonly<PedidoRowProps>) {
-  const { pedido, etapas, userSetor, handleMarcarComoEntregue, navigate, showActions, podeEditarPedido } = props;
+  const { pedido, etapas, userSetor, userDisplayName, userUid, handleMarcarComoEntregue, navigate, showActions, podeEditarPedido } = props;
 
   const formatJustDate = (ts?: Timestamp) => ts ? ts.toDate().toLocaleDateString("pt-BR") : "";
 
   const tipoArteFirestoreValue = "ARTE"; 
 
   const isArte = pedido.servico?.tipo === tipoArteFirestoreValue;
+
+  const usuario = {
+    setor: userSetor,
+    displayName: userDisplayName,
+    uid: userUid
+  };
+
+  const podeMarcarComoEntregue = podeMarcarEntregue(pedido, usuario);
 
   if (!pedido || !pedido.servico || !pedido.statusAtual || !pedido.prazos) {
     return <tr><td colSpan={8}>Pedido inválido ou incompleto.</td></tr>;
@@ -77,7 +87,7 @@ export function PedidoRow(props: Readonly<PedidoRowProps>) {
       <td>{pedido.statusAtual}</td>
       {showActions && (
         <td>
-          {["SUPORTE", "GESTAO"].includes(userSetor) ? (
+          {podeMarcarComoEntregue && ["SUPORTE", "GESTAO"].includes(userSetor) ? (
             <>
               {pedido.statusAtual === "Concluído" && <button className="entregar-button" onClick={() => handleMarcarComoEntregue(pedido.id!, pedido.statusAtual)}>Marcar como entregue</button>}
               {podeEditarPedido(pedido) && (
@@ -86,7 +96,7 @@ export function PedidoRow(props: Readonly<PedidoRowProps>) {
             </>
           ) : (
             <>
-              {pedido.statusAtual === "Concluído" && ["CAIXA", "BALCAO"].includes(userSetor) ? (
+              {pedido.statusAtual === "Concluído" && podeMarcarComoEntregue && ["CAIXA", "BALCAO"].includes(userSetor) ? (
                 <button className="entregar-button" onClick={() => handleMarcarComoEntregue(pedido.id!, pedido.statusAtual)}>Marcar como entregue</button>
               ) : (
                 podeEditarPedido(pedido) && (

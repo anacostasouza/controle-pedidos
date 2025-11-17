@@ -23,14 +23,14 @@ import HeaderPage from "../../components/layout/headerPage";
 
 import type { Pedido, StatusPedido } from "../../types/Pedidos";
 import {
-  TipoServico,
   type TipoServicoValue,
   type SubTipoServicoValue,
 } from "../../types/Servicos";
 import { tiposServico } from "../../types/tipoServicos";
 import { STATUS_SEQUENCE_DEFAULT } from "../../types/StatusPedidos";
 import { gerarOpcoesStatus, convertToTimestamp } from "./utils/dashboardUtils";
-import { getTodasEtapasDoPedido } from "../../utils/firestoreUtils";
+import { getTodasEtapasDoPedido } from "../../utils/FirestoreUtils";
+import { podeEditarPedido as podeEditarPedidoUtils, podeMarcarEntregue } from "../../utils/PermissionUtils";
 
 import { PedidosTable } from "./components/PedidosTable";
 import { DashboardHeader } from "./components/DashboardHeader";
@@ -221,40 +221,39 @@ export default function Dashboard() {
   }, [pedidosFiltrados]);
 
   const podeEditarPedido = (pedido: Pedido): boolean => {
-    if (!userSetor) return false;
-    if (pedido.statusAtual === "Entregue") return false;
-    if (["GESTAO", "SUPORTE", "PRODUCAO_LOJA"].includes(userSetor)) return true;
-    if (userDisplayName && pedido.responsavel === userDisplayName) return true;
-    if (
-      userSetor === "ARTE" &&
-      (pedido.requerArte || pedido.servico.tipo === TipoServico.ARTE)
-    )
-      return true;
-    if (
-      userSetor === "GALPAO" &&
-      (pedido.requerGalpao ||
-        pedido.servico.tipo === TipoServico.COMUNICACAO_VISUAL)
-    )
-      return true;
-    return false;
+    if (!userSetor || !userDisplayName) return false;
+    const auth = getAuth();
+    return podeEditarPedidoUtils(pedido, {
+      setor: userSetor,
+      displayName: userDisplayName,
+      uid: auth.currentUser?.uid || ""
+    });
   };
 
   const handleMarcarComoEntregue = async (
     pedidoId: string,
     currentStatus: StatusPedido
   ) => {
-    if (!["CAIXA", "BALCAO", "SUPORTE", "GESTAO"].includes(userSetor))
-      return alert("Você não tem permissão.");
-    if (currentStatus !== "Concluído")
-      return alert("Apenas pedidos 'Concluído'.");
-    if (!globalThis.confirm("Deseja marcar este pedido como ENTREGUE?")) return;
-
-    try {
-      await marcarComoEntregueBackend(pedidoId);
-      alert("Pedido marcado como entregue!");
-    } catch {
-      alert("Erro ao atualizar pedido.");
+    if (!userSetor || !userDisplayName) return alert("Usuário não identificado.");
+    const auth = getAuth();
+    const usuario = {
+      setor: userSetor,
+      displayName: userDisplayName,
+      uid: auth.currentUser?.uid || ""
+    };
+    const pedido = pedidos.find(p => p.id === pedidoId);
+    if (!pedido || !podeMarcarEntregue(pedido, usuario))
+       return alert("Você não tem permissão.");
+    if (!globalThis.confirm("Deseja marcar este pedido como entregue?")) {
+      return;
     }
+
+     try {
+       await marcarComoEntregueBackend(pedidoId);
+       alert("Pedido marcado como entregue!");
+     } catch {
+       alert("Erro ao atualizar pedido.");
+     }
   };
 
   const shouldShowActionsColumn = true;
@@ -321,14 +320,16 @@ export default function Dashboard() {
       />
 
       <PedidosTable
-        pedidosFiltrados={pedidosFiltrados}
-        etapasPorPedido={etapasPorPedido}
-        userSetor={userSetor}
-        handleMarcarComoEntregue={handleMarcarComoEntregue}
-        shouldShowActionsColumn={shouldShowActionsColumn}
-        navigate={navigate}
-        podeEditarPedido={podeEditarPedido}
-      />
+         pedidosFiltrados={pedidosFiltrados}
+         etapasPorPedido={etapasPorPedido}
+         userSetor={userSetor}
+         userDisplayName={userDisplayName}
+         userUid={getAuth().currentUser?.uid || ""}
+         handleMarcarComoEntregue={handleMarcarComoEntregue}
+         shouldShowActionsColumn={shouldShowActionsColumn}
+         navigate={navigate}
+         podeEditarPedido={podeEditarPedido}
+       />
 
       {totalPages > 1 && (
         <div className="pagination">
