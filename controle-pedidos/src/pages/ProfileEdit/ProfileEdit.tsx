@@ -15,10 +15,9 @@ import { db } from "../../services/firebase";
 import logoColorida from "../../assets/LogoColorida.png";
 import "../../styles/ProfileEdit.css";
 
-import ProfileSidebar from "./components/ProfileSideBar";
 import { setores, type SetorValue } from "../../types/Setores";
 import type { Usuario } from "../../types/Usuario";
-import { capitalizeWords } from "../../utils/formatUtils";
+import { capitalizeWords } from "../../utils/FormatUtils";
 
 interface ServicoStatus {
   id: string;
@@ -47,10 +46,6 @@ export default function EditProfilePage(): JSX.Element {
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
-
-  const [selected, setSelected] = useState<
-    "profile" | "users" | "editSequenceStatus"
-  >("profile");
 
   const setoresAdminLabels = useMemo(() => ["Suporte", "Gestão"], []);
   const isCurrentUserAdmin = useMemo(
@@ -321,8 +316,9 @@ export default function EditProfilePage(): JSX.Element {
             <>
               <div className="form-group">
                 <hr className="borda"></hr>
-                <label>Nome</label>
+                <label htmlFor="editingUserName">Nome</label>
                 <input
+                  id="editingUserName"
                   value={editingUserName}
                   onChange={(e) => setEditingUserName(e.target.value)}
                 />
@@ -330,8 +326,9 @@ export default function EditProfilePage(): JSX.Element {
               </div>
               <div className="form-group">
                 <hr className="borda"></hr>
-                <label>Setor</label>
+                <label htmlFor="editingUserSetor">Setor</label>
                 <select
+                  id="editingUserSetor"
                   value={editingUserSetor}
                   onChange={(e) =>
                     setEditingUserSetor(e.target.value as SetorValue)
@@ -347,8 +344,9 @@ export default function EditProfilePage(): JSX.Element {
                 <hr className="borda"></hr>
               </div>
               <div className="form-group">
-                <label>Status da Conta</label>
+                <label htmlFor="editingUserStatus">Status da Conta</label>
                 <select
+                  id="editingUserStatus"
                   value={editingUserStatus ? "true" : "false"}
                   onChange={(e) =>
                     setEditingUserStatus(e.target.value === "true")
@@ -368,15 +366,17 @@ export default function EditProfilePage(): JSX.Element {
           ) : (
             <>
               <div className="form-group">
-                <label>Nome</label>
+                <label htmlFor="profileName">Nome</label>
                 <input
+                  id="profileName"
                   value={profileName}
                   onChange={(e) => setProfileName(e.target.value)}
                 />
               </div>
               <div className="form-group">
-                <label>Setor</label>
+                <label htmlFor="profileSetor">Setor</label>
                 <select
+                  id="profileSetor"
                   value={setor}
                   onChange={(e) => setSetor(e.target.value as SetorValue)}
                 >
@@ -484,105 +484,6 @@ export default function EditProfilePage(): JSX.Element {
 
         <div id="logo-colorida">
           <img src={logoColorida} alt="Logo" />
-        </div>
-        <div style={{ display: "flex" }}>
-          {isCurrentUserAdmin && (
-            <ProfileSidebar selected={selected} setSelected={setSelected} />
-          )}
-          <div className="settings-page">
-            {isCurrentUserAdmin && !editingUserId && (
-              <div className="edit-buttons">
-                <button
-                  onClick={() => {
-                    setShowManageUsers((prev) => !prev);
-                    if (!showManageUsers) setShowEditStatus(false);
-                  }}
-                >
-                  {showManageUsers ? "Fechar Usuários" : "Gerenciar Usuários"}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowEditStatus((prev) => !prev);
-                    if (!showEditStatus) setShowManageUsers(false);
-                  }}
-                >
-                  {showEditStatus
-                    ? "Fechar Status"
-                    : "Editar Sequência de Status"}
-                </button>
-              </div>
-            )}
-
-            {isCurrentUserAdmin && showManageUsers && (
-              <div className="users-form-edit">
-                <div className="header-users">
-                  <hr className="borda-users"></hr>
-                  <h2 className="title-users">Usuários</h2>
-                  <hr className="borda-users"></hr>
-                </div>
-                <ul className="users-list">
-                  {allUsers.map((u) => (
-                    <li className="users-information" key={u.usuarioID}>
-                      {u.displayName} - {u.setorNome} - {u.email} -{" "}
-                      {u.statusConta ? "Ativo" : "Inativo"}
-                      <button
-                        className="users-edit-button"
-                        disabled={u.usuarioID === usuarioLogado?.usuarioID}
-                        onClick={() => handleEditOtherUser(u)}
-                      >
-                        Editar
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {isCurrentUserAdmin && showEditStatus && (
-              <div className="status-edit">
-                <hr className="borda"></hr>
-                <h2 className="status-title">Sequência de Status</h2>
-                <hr className="borda"></hr>
-                {servicosStatus.map((s) => (
-                  <div key={s.id}>
-                    <h3 className="status-subtitle">
-                      {capitalizeWords(s.tipo)}
-                      {s.subTipo ? ` - ${capitalizeWords(s.subTipo)}` : ""}
-                    </h3>
-                    {s.sequenciaStatus.map((st, idx) => (
-                      <div className="status-sequence" key={idx}>
-                        <input
-                          value={st}
-                          onChange={(e) =>
-                            handleSequenciaChange(s.id, idx, e.target.value)
-                          }
-                        />
-                        <button
-                          className="status-button"
-                          onClick={() => handleRemoveStatus(s.id, idx)}
-                        >
-                          Remover
-                        </button>
-                      </div>
-                    ))}
-                    <div className="status-button-actions">
-                      <button onClick={() => handleAddStatus(s.id)}>
-                        Adicionar
-                      </button>
-                      <button onClick={() => handleSalvarSequencia(s.id)}>
-                        Salvar
-                      </button>
-                    </div>
-                    <hr className="borda"></hr>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div id="logo-colorida">
-              <img src={logoColorida} alt="Logo" />
-            </div>
-          </div>
         </div>
       </main>
     </div>

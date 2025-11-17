@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Pedido, StatusPedido } from "../../../types/Pedidos"
 import { getTodasEtapasDoPedido } from "../../../utils/firestoreUtils";
-import { capitalizeWords } from "../../../utils/formatUtils";
+import { capitalizeWords } from "../../../utils/FormatUtils";
 import { formatDate, isPedidoAtrasado } from "../utils/dashboardUtils";
 import { TipoServicoLabels, SubTipoServicoLabels } from "../../../types/Servicos";
 
