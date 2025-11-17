@@ -34,11 +34,21 @@ export function PedidoRow(props: Readonly<PedidoRowProps>) {
     <tr className={`pedidos-row ${pedido.retrabalho ? "retrabalho-row" : ""}`}>
       <td>
         {pedido.numeroPedido}
-        {pedido.retrabalho && (
-          <span className="badge-retrabalho" title="Pedido de retrabalho">
-            Retrabalho
-          </span>
-        )}
+        <div className="badges-container">
+          {pedido.retrabalho && (
+            <span className="badge-retrabalho" title="Pedido de retrabalho">
+              Retrabalho
+            </span>
+          )}
+          {pedido.tipoDeEntrega && (
+            <span 
+              className={`badge-entrega badge-entrega-${pedido.tipoDeEntrega.toLowerCase()}`}
+              title={`Tipo de entrega: ${pedido.tipoDeEntrega}`}
+            >
+              {pedido.tipoDeEntrega}
+            </span>
+          )}
+        </div>
       </td>
       <td>{pedido.nomeCliente}</td>
       <td>{capitalizeWords(pedido.responsavel)}</td>
@@ -67,7 +77,7 @@ export function PedidoRow(props: Readonly<PedidoRowProps>) {
       <td>{pedido.statusAtual}</td>
       {showActions && (
         <td>
-          {userSetor === "SUPORTE" ? (
+          {["SUPORTE", "GESTAO"].includes(userSetor) ? (
             <>
               {pedido.statusAtual === "Concluído" && <button className="entregar-button" onClick={() => handleMarcarComoEntregue(pedido.id!, pedido.statusAtual)}>Marcar como entregue</button>}
               {podeEditarPedido(pedido) && (
@@ -76,7 +86,7 @@ export function PedidoRow(props: Readonly<PedidoRowProps>) {
             </>
           ) : (
             <>
-              {pedido.statusAtual === "Concluído" && ["CAIXA","BALCAO"].includes(userSetor) ? (
+              {pedido.statusAtual === "Concluído" && ["CAIXA", "BALCAO"].includes(userSetor) ? (
                 <button className="entregar-button" onClick={() => handleMarcarComoEntregue(pedido.id!, pedido.statusAtual)}>Marcar como entregue</button>
               ) : (
                 podeEditarPedido(pedido) && (

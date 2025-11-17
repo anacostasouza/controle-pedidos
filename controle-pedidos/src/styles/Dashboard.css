@@ -242,6 +242,40 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
+/* ---------- Badges ---------- */
+
+.badges-container {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  justify-content: center;
+  align-items: center;
+}
+
+/* --------- Tipo de Entrega --------- */
+
+.badge-entrega {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--background-color-white);
+  border-radius: 12px;
+}
+
+.badge-entrega-entrega {
+  background-color: #4b4b4d; 
+}
+
+.badge-entrega-retirada {
+  background-color: #a43234; 
+}
+
+.badge-entrega-instalação {
+  background-color: #000000; 
+}
+
 /* ---------- Retrabalho ---------- */
 .retrabalho-row {
   border-left: 4px solid var(--primary-color);

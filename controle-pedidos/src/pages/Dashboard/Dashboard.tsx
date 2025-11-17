@@ -243,7 +243,7 @@ export default function Dashboard() {
     pedidoId: string,
     currentStatus: StatusPedido
   ) => {
-    if (!["CAIXA", "BALCAO", "SUPORTE"].includes(userSetor))
+    if (!["CAIXA", "BALCAO", "SUPORTE", "GESTAO"].includes(userSetor))
       return alert("Você não tem permissão.");
     if (currentStatus !== "Concluído")
       return alert("Apenas pedidos 'Concluído'.");
