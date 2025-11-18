@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Pedido, StatusPedido } from "../../../types/Pedidos"
-import { getTodasEtapasDoPedido } from "../../../utils/firestoreUtils";
+import { getTodasEtapasDoPedido } from "../../../utils/FirestoreUtils";
 import { PedidoRow } from "../components/PedidoRow"
 
 interface PedidosTableProps {

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Timestamp } from "firebase/firestore";
 import type { Pedido, StatusPedido } from "../../../types/Pedidos";
-import { TipoServico, type TipoServicoValue, type SubTipoServicoValue } from "../../../types/Servicos";
+import {type TipoServicoValue, type SubTipoServicoValue } from "../../../types/Servicos";
 import { fetchStatusSequence } from "../../../utils/FirestoreUtils";
 
 export function convertToTimestamp(ts: any): Timestamp | null {
@@ -65,67 +65,6 @@ export function isPedidoAtrasado(entrega?: any): boolean {
 }
 
 const statusCache = new Map<string, StatusPedido[]>();
-
-export async function filtrarPedidos(
-  pedidos: Pedido[],
-  buscaClienteOuNumero: string,
-  filtroServico: TipoServicoValue | "",
-  filtroStatus: string,
-  filtroAtrasados: boolean,
-  filtroRequerArte: string,
-  filtroRequerGalpao: string,
-  userSetor: string,
-  filtroSubTipo: SubTipoServicoValue | "",
-  filtroResponsavel: string
-): Promise<Pedido[]> {
-  const pedidosFiltrados: Pedido[] = [];
-
-  for (const p of pedidos) {
-    if (p.statusAtual === "Entregue" && (userSetor !== "CAIXA" || filtroStatus !== "Entregue")) continue;
-    if (filtroAtrasados && (p.statusAtual === "Concluído" || p.statusAtual === "Entregue")) continue;
-
-    const termoBuscaLower = buscaClienteOuNumero.toLowerCase();
-    const numeroPedidoAsString = String(p.numeroPedido).toLowerCase();
-
-    if (!p.nomeCliente.toLowerCase().includes(termoBuscaLower) &&
-        !numeroPedidoAsString.includes(termoBuscaLower)) continue;
-
-    if (filtroServico && p.servico.tipo !== filtroServico) continue;
-    if (filtroSubTipo && p.servico.subTipo !== filtroSubTipo) continue;
-    if (filtroResponsavel && p.responsavel !== filtroResponsavel) continue;
-
-    // Filtra status dinâmico
-    if (filtroStatus) {
-      const cacheKey = `${p.servico.tipo}_${p.servico.subTipo ?? "null"}`;
-      let statusDisponiveis = statusCache.get(cacheKey);
-      if (!statusDisponiveis) {
-        try {
-          statusDisponiveis = await fetchStatusSequence(p.servico.tipo, p.servico.subTipo ?? undefined);
-          statusCache.set(cacheKey, statusDisponiveis);
-        } catch {
-          continue;
-        }
-      }
-      if (!statusDisponiveis.includes(filtroStatus as StatusPedido)) continue;
-      if (p.statusAtual !== filtroStatus) continue;
-    }
-
-    if (filtroAtrasados && !isPedidoAtrasado(p.prazos?.entrega) &&
-        p.statusAtual !== "Concluído" && p.statusAtual !== "Entregue") continue;
-
-    // Filtro requerArte
-    if (filtroRequerArte === "true" && !(p.requerArte === true || p.servico.tipo === TipoServico.ARTE)) continue;
-    if (filtroRequerArte === "false" && (p.requerArte === true || p.servico.tipo === TipoServico.ARTE)) continue;
-
-    // Filtro requerGalpao
-    if (filtroRequerGalpao === "true" && !(p.requerGalpao === true || p.servico.tipo === TipoServico.COMUNICACAO_VISUAL)) continue;
-    if (filtroRequerGalpao === "false" && (p.requerGalpao === true || p.servico.tipo === TipoServico.COMUNICACAO_VISUAL)) continue;
-
-    pedidosFiltrados.push(p);
-  }
-
-  return pedidosFiltrados;
-}
 
 export async function gerarOpcoesStatus(
   pedidos: Pedido[],

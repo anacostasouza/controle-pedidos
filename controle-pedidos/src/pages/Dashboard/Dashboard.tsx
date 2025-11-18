@@ -235,25 +235,46 @@ export default function Dashboard() {
     currentStatus: StatusPedido
   ) => {
     if (!userSetor || !userDisplayName) return alert("Usuário não identificado.");
+    
     const auth = getAuth();
     const usuario = {
       setor: userSetor,
       displayName: userDisplayName,
       uid: auth.currentUser?.uid || ""
     };
+    
     const pedido = pedidos.find(p => p.id === pedidoId);
-    if (!pedido || !podeMarcarEntregue(pedido, usuario))
-       return alert("Você não tem permissão.");
-    if (!globalThis.confirm("Deseja marcar este pedido como entregue?")) {
-      return;
+    if (!pedido || !podeMarcarEntregue(pedido, usuario)) {
+      return alert("Você não tem permissão.");
     }
+    
+    if (currentStatus !== "Concluído") {
+      return alert("Apenas pedidos 'Concluído' podem ser marcados como entregues.");
+    }
+    
+    if (!globalThis.confirm("Deseja marcar este pedido como entregue?")) return;
 
-     try {
-       await marcarComoEntregueBackend(pedidoId);
-       alert("Pedido marcado como entregue!");
-     } catch {
-       alert("Erro ao atualizar pedido.");
-     }
+    try {
+      await marcarComoEntregueBackend(pedidoId);
+      alert("Pedido marcado como entregue!");
+      // Recarregar dados após sucesso
+      const params: Record<string, string> = {
+        filtroTipo: filtroServico,
+        filtroSubTipo,
+        filtroStatus,
+        filtroResponsavelUid: filtroResponsavel,
+        filtroAtrasados: filtroAtrasados ? "true" : "",
+        porPagina: itemsPerPage.toString(),
+        filtroCliente: buscaCliente,
+        filtroRequerArte: filtroRequerArte ?? "",
+        filtroRequerGalpao: filtroRequerGalpao ?? "",
+        filtroOcultarEntregues: "true"
+      };
+      debouncedFetchPedidos(params);
+    } catch (error) {
+      console.error("Erro ao marcar como entregue:", error);
+      alert("Erro ao atualizar pedido.");
+    }
   };
 
   const shouldShowActionsColumn = true;
@@ -320,16 +341,16 @@ export default function Dashboard() {
       />
 
       <PedidosTable
-         pedidosFiltrados={pedidosFiltrados}
-         etapasPorPedido={etapasPorPedido}
-         userSetor={userSetor}
-         userDisplayName={userDisplayName}
-         userUid={getAuth().currentUser?.uid || ""}
-         handleMarcarComoEntregue={handleMarcarComoEntregue}
-         shouldShowActionsColumn={shouldShowActionsColumn}
-         navigate={navigate}
-         podeEditarPedido={podeEditarPedido}
-       />
+        pedidosFiltrados={pedidosFiltrados}
+        etapasPorPedido={etapasPorPedido}
+        userSetor={userSetor}
+        userDisplayName={userDisplayName}
+        userUid={getAuth().currentUser?.uid || ""}
+        handleMarcarComoEntregue={handleMarcarComoEntregue}
+        shouldShowActionsColumn={shouldShowActionsColumn}
+        navigate={navigate}
+        podeEditarPedido={podeEditarPedido}
+      />
 
       {totalPages > 1 && (
         <div className="pagination">

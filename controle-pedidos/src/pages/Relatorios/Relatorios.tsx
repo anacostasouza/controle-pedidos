@@ -6,7 +6,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
 import { buscarPedidosRelatorio } from "../../services/ControlePedidosServices";
 
-import { capitalizeWords } from "../../utils/formatUtils";
+import { capitalizeWords } from "../../utils/FormatUtils";
 import Header from "../../components/layout/headerPage";
 import {
   gerarExcelPedidosPorServico,

@@ -13,11 +13,9 @@ export function aplicarFiltrosPedidos(queryRef: FirebaseFirestore.Query, filtros
   if (filtros.filtroStatus)
     queryRef = queryRef.where("statusAtual", "==", filtros.filtroStatus);
 
-  // Filtrar por UID do responsável
   if (filtros.filtroResponsavelUid)
     queryRef = queryRef.where("responsavelUid", "==", filtros.filtroResponsavelUid);
 
-  // Busca por cliente
   if (filtros.filtroCliente) {
     if (/^\d+$/.test(filtros.filtroCliente)) {
       queryRef = queryRef.where("numeroPedido", "==", Number(filtros.filtroCliente));
@@ -26,7 +24,6 @@ export function aplicarFiltrosPedidos(queryRef: FirebaseFirestore.Query, filtros
     }
   }
 
-  // Filtros booleanos
   if (filtros.filtroRequerArte === "true") {
     queryRef = queryRef.where("requerArte", "==", true);
   }
@@ -40,21 +37,17 @@ export function aplicarFiltrosPedidos(queryRef: FirebaseFirestore.Query, filtros
     queryRef = queryRef.where("requerGalpao", "==", false);
   }
 
-  // Filtrar por atrasados
   if (filtros.filtroAtrasados === "true") {
     queryRef = queryRef
       .where("statusAtual", "not-in", ["Entregue", "Concluído"])
       .where("prazos.entrega", "<", Timestamp.now());
-    // NÃO aplique mais nenhum filtro de statusAtual aqui!
     return queryRef;
   }
 
-  // Filtro de status (apenas se não for atrasados)
   if (filtros.filtroStatus) {
     queryRef = queryRef.where("statusAtual", "==", filtros.filtroStatus);
   }
 
-  // Ocultar entregues só se filtroOcultarEntregues estiver ativo (apenas se não for atrasados)
   else if (filtros.filtroOcultarEntregues === "true") {
     queryRef = queryRef.where("statusAtual", "not-in", ["Entregue"]);
   }
