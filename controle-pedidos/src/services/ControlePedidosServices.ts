@@ -4,7 +4,7 @@ import { Timestamp } from "firebase/firestore";
 import type { Pedido } from "../types/Pedidos";
 import type { SetorValue } from "../types/Setores";
 
-import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { fetchWithAuth } from "../utils/FetchWithAuth";
 
 const API_URL = import.meta.env.VITE_API_URL;
 

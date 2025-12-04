@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { doc, setDoc, getDoc, getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getAuth, updateProfile } from "firebase/auth";
 import "../styles/ProfileNamePage.css";
 import logoImage from "../assets/logologin.png";
 import type { JSX } from "react/jsx-dev-runtime";
@@ -64,8 +64,16 @@ export default function ProfileNamePage(): JSX.Element {
 
     setLoading(true);
     try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) {
+        setError("Usuário não autenticado.");
+        return;
+      }
+
+      await updateProfile(user, { displayName: profileName });
+
       const db = getFirestore();
-      const userRef = doc(db, "usuarios", userId);
       const setorSelecionado = setores.find((s) => s.value === setor);
 
       const userData = {
@@ -79,11 +87,18 @@ export default function ProfileNamePage(): JSX.Element {
         statusConta: true,
       };
 
-      await setDoc(userRef, userData, { merge: true });
-      navigate("/dashboard");
+      await setDoc(doc(db, "usuarios", user.uid), userData, { merge: true });
+
+      // Força o Firebase a recarregar os dados do usuário
+      await user.reload();
+
+      // Pequeno delay para garantir que o AuthContext detecte a mudança
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       console.error("Erro ao salvar perfil:", err);
-      setError("Erro ao salvar dados. Tente novamente.");
+      setError(err.message || "Erro ao salvar perfil.");
     } finally {
       setLoading(false);
     }

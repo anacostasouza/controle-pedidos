@@ -66,7 +66,7 @@ export default function RelatoriosPage() {
         dataFimInclusao: dataFimInclusao ?? "",
         dataInicioRetirada: dataInicioRetirada ?? "",
         dataFimRetirada: dataFimRetirada ?? "",
-        itensPorPagina: "20", // Alterado para 20
+        itensPorPagina: "20", 
       };
       if (pagina > 1 && lastEntregas[pagina - 2] && lastIds[pagina - 2]) {
         params.lastEntrega = String(lastEntregas[pagina - 2]);

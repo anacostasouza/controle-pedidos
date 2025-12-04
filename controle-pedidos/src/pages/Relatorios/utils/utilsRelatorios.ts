@@ -10,9 +10,9 @@ import {
 import {
   fetchStatusSequence,
   mapStatusWithEquivalence,
-} from "../../../utils/firestoreUtils";
+} from "../../../utils/FirestoreUtils";
 import type { StatusPedido, Pedido } from "../../../types/Pedidos";
-import { capitalizeWords, formatDateTime, isStatusConcluido } from "../../../utils/formatUtils";
+import { formatDateTime, isStatusConcluido } from "../../../utils/FormatUtils";
 
 // Helpers
 
@@ -71,43 +71,63 @@ const toDateSafe = (val: any): Date | null => {
   }
 };
 
-// ---------------------- Gerar XLSX por serviço ----------------------
+// ---------------------- Gerar XLSX consolidado ----------------------
 
 export const gerarExcelPedidosPorServico = async (
   pedidos: Pedido[]
 ): Promise<Buffer> => {
   if (!pedidos || pedidos.length === 0) return Buffer.from("");
 
-  // Agrupa pedidos por serviço/subtipo
-  const grupos: Record<string, Pedido[]> = {};
-  for (const p of pedidos) {
-    const key = `${p.servico?.tipo || ""}|${p.servico?.subTipo || ""}`;
-    if (!grupos[key]) grupos[key] = [];
-    grupos[key].push(p);
-  }
-
   const workbook = XLSX.utils.book_new();
 
-  // Para cada grupo cria uma aba
-  for (const key of Object.keys(grupos)) {
-    const [tipo, subTipo] = key.split("|");
-    const statusSeq = await fetchStatusSequence(tipo, subTipo || undefined);
+  // Coletar todos os status únicos de todos os pedidos
+  const todosStatusSet = new Set<string>();
+  
+  // Map para cachear status por serviço
+  const statusCache = new Map<string, StatusPedido[]>();
 
-    const headers = [
-      "Nº Pedido",
-      "Cliente",
-      "Responsável",
-      "Serviço",
-      "Subtipo",
-      "Retrabalho", 
-      "Status Atual",
-      "Criado em",
-      "Prazo Entrega",
-      "Tempo Total",
-      ...statusSeq.map((status) => `Status: ${status}`),
-    ];
+  // Primeira passagem: coletar todos os status possíveis
+  for (const p of pedidos) {
+    const tipo = p.servico?.tipo || "";
+    const subTipo = p.servico?.subTipo || "";
+    const cacheKey = `${tipo}|${subTipo}`;
+    
+    let statusSeq: StatusPedido[];
+    if (statusCache.has(cacheKey)) {
+      statusSeq = statusCache.get(cacheKey)!;
+    } else {
+      statusSeq = await fetchStatusSequence(tipo, subTipo || undefined);
+      statusCache.set(cacheKey, statusSeq);
+    }
+    
+    statusSeq.forEach(s => todosStatusSet.add(s));
+  }
 
-    const rows = grupos[key].map((p) => {
+  const todosStatus = Array.from(todosStatusSet).sort();
+
+  // Montar headers
+  const headers = [
+    "Nº Pedido",
+    "Cliente",
+    "Responsável",
+    "Serviço",
+    "Subtipo",
+    "Retrabalho",
+    "Status Atual",
+    "Criado em",
+    "Prazo Entrega",
+    "Tempo Total (HH:MM)",
+    ...todosStatus.map((status) => `${status}`),
+  ];
+
+  // Processar cada pedido
+  const rows = await Promise.all(
+    pedidos.map(async (p) => {
+      const tipo = p.servico?.tipo || "";
+      const subTipo = p.servico?.subTipo || "";
+      const cacheKey = `${tipo}|${subTipo}`;
+      const statusSeq = statusCache.get(cacheKey)!;
+
       // Histórico ordenado
       const historico = (p.historicoStatus || [])
         .map((h) => ({
@@ -116,7 +136,7 @@ export const gerarExcelPedidosPorServico = async (
         }))
         .sort((a, b) => a.data.getTime() - b.data.getTime());
 
-      // ------------------ Calcular Tempo Total HH:MM ------------------
+      // Calcular Tempo Total HH:MM
       let tempoTotalStr = "00:00";
       const criadoEmDate = toDateSafe(p.criadoEm);
       if (criadoEmDate) {
@@ -138,10 +158,19 @@ export const gerarExcelPedidosPorServico = async (
 
       // Mapeia status para data/hora
       const statusToDate: Record<string, string> = {};
-      statusSeq.forEach((colStatus) => {
+      
+      // Para cada status possível no pedido, verificar se passou por ele
+      todosStatus.forEach((colStatus) => {
+        // Verifica se esse status pertence ao fluxo deste tipo de serviço
+        if (!statusSeq.includes(colStatus as StatusPedido)) {
+          statusToDate[colStatus] = "-"; // Status não aplicável a este serviço
+          return;
+        }
+
         const h = historico.find(
           (h) => mapStatusWithEquivalence(h.status, tipo, subTipo) === colStatus
         );
+        
         if (h) {
           statusToDate[colStatus] = `${h.data.toLocaleDateString(
             "pt-BR"
@@ -149,6 +178,8 @@ export const gerarExcelPedidosPorServico = async (
             hour: "2-digit",
             minute: "2-digit",
           })}`;
+        } else {
+          statusToDate[colStatus] = ""; // Status aplicável mas ainda não alcançado
         }
       });
 
@@ -165,18 +196,33 @@ export const gerarExcelPedidosPorServico = async (
         criadoEmDate ? formatDateTime(criadoEmDate) : "-",
         prazosEntregaDate ? formatDateTime(prazosEntregaDate) : "-",
         tempoTotalStr,
-        ...statusSeq.map((status) => statusToDate[status] || "-"),
+        ...todosStatus.map((status) => statusToDate[status] || ""),
       ];
-    });
+    })
+  );
 
-    const nomeAba =
-      capitalizeWords(tipo) + (subTipo ? ` - ${capitalizeWords(subTipo)}` : "");
+  // Criar worksheet consolidado
+  const worksheetData = [headers, ...rows];
+  const ws = XLSX.utils.aoa_to_sheet(worksheetData);
 
-    const worksheetData = [headers, ...rows];
-    const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+  // Ajustar largura das colunas
+  const colWidths = [
+    { wch: 10 },  // Nº Pedido
+    { wch: 30 },  // Cliente
+    { wch: 20 },  // Responsável
+    { wch: 20 },  // Serviço
+    { wch: 20 },  // Subtipo
+    { wch: 10 },  // Retrabalho
+    { wch: 15 },  // Status Atual
+    { wch: 18 },  // Criado em
+    { wch: 18 },  // Prazo Entrega
+    { wch: 12 },  // Tempo Total
+    ...todosStatus.map(() => ({ wch: 18 })), // Colunas de status
+  ];
+  ws['!cols'] = colWidths;
 
-    XLSX.utils.book_append_sheet(workbook, ws, nomeAba.substring(0, 31)); // aba Excel tem limite de 31 chars
-  }
+  // Adicionar ao workbook
+  XLSX.utils.book_append_sheet(workbook, ws, "Relatório Consolidado");
 
   // Retorna o buffer do arquivo Excel
   return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });

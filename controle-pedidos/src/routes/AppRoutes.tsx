@@ -113,11 +113,17 @@ export default function AppRoutes(): JSX.Element {
     return user ? <Navigate to="/dashboard" replace /> : <Login />;
   }
 
+  function ProfileNameRoute() {
+    if (!user) return <Navigate to="/" replace />;
+    if (profileComplete) return <Navigate to="/dashboard" replace />;
+    return <ProfileNamePage />;
+  }
+
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LoginRoute />} />
-        <Route path="/profile-name" element={<ProtectedRoute Component={renderProfileNameRoute} />} />
+        <Route path="/profile-name" element={<ProtectedRoute Component={ProfileNameRoute} />} />
         <Route path="/dashboard" element={<ProtectedRoute Component={Dashboard} />} />
         <Route path="/novo-pedido" element={<ProtectedRoute Component={NovoPedido} />} />
         <Route
