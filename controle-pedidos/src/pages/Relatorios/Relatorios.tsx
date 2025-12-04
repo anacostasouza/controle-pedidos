@@ -204,28 +204,48 @@ export default function RelatoriosPage() {
   // ------------- Exportar XLSX -----------------
   const exportarXLSX = async () => {
     setLoading(true);
-    // Busca todos os pedidos filtrados do backend (sem paginação)
     try {
+      // Validação: deve ter ao menos um par de datas definido
+      const inclusaoOK = dataInicioInclusao && dataFimInclusao;
+      const retiradaOK = dataInicioRetirada && dataFimRetirada;
+      
+      if (!inclusaoOK && !retiradaOK) {
+        alert("Selecione um período de datas antes de exportar!");
+        setLoading(false);
+        return;
+      }
+
       const token = await getAuth().currentUser?.getIdToken();
       if (!token) {
         console.error("Usuário não autenticado");
         setLoading(false);
         return;
       }
+
+      // Montar params apenas com valores definidos
       const params: Record<string, string> = {
-        filtroTipo,
-        filtroSubTipo,
-        filtroStatus,
-        filtroCliente,
-        filtroResponsavelUid,
-        dataInicioInclusao,
-        dataFimInclusao,
-        dataInicioRetirada,
-        dataFimRetirada,
-        itensPorPagina: "1000", 
+        itensPorPagina: "1000",
       };
+
+      // Adicionar apenas filtros não vazios
+      if (filtroTipo) params.filtroTipo = filtroTipo;
+      if (filtroSubTipo) params.filtroSubTipo = filtroSubTipo;
+      if (filtroStatus) params.filtroStatus = filtroStatus;
+      if (filtroCliente) params.filtroCliente = filtroCliente;
+      if (filtroResponsavelUid) params.filtroResponsavelUid = filtroResponsavelUid;
+      
+      // Adicionar datas apenas se estiverem preenchidas
+      if (dataInicioInclusao) params.dataInicioInclusao = dataInicioInclusao;
+      if (dataFimInclusao) params.dataFimInclusao = dataFimInclusao;
+      if (dataInicioRetirada) params.dataInicioRetirada = dataInicioRetirada;
+      if (dataFimRetirada) params.dataFimRetirada = dataFimRetirada;
+
       const resultado = await buscarPedidosRelatorio(params, token);
       const todosPedidos = resultado.pedidos || [];
+      
+      // Validação adicional: verificar se recebeu pedidos dentro do período esperado
+      console.log(`Exportando ${todosPedidos.length} pedidos com filtros:`, params);
+      
       const excelBuffer = await gerarExcelPedidosPorServico(todosPedidos);
 
       const arrayBuffer =
@@ -240,6 +260,7 @@ export default function RelatoriosPage() {
       saveAs(blob, "relatorio-pedidos.xlsx");
     } catch (err) {
       console.error("Erro ao exportar XLSX:", err);
+      alert("Erro ao exportar relatório. Verifique os filtros e tente novamente.");
     }
     setLoading(false);
   };
