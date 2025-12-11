@@ -10,6 +10,7 @@ interface PedidosTableProps {
   userDisplayName: string;
   userUid: string;
   podeEditarPedido: (pedido: Pedido) => boolean;
+  podeEditarPrazo: (pedido: Pedido) => boolean;
   handleMarcarComoEntregue: (pedidoId: string, status: StatusPedido) => void;
   shouldShowActionsColumn: boolean;
   navigate: any;
@@ -53,6 +54,7 @@ export function PedidosTable(props: Readonly<PedidosTableProps>) {
                     userDisplayName={props.userDisplayName}
                     userUid={props.userUid}
                     podeEditarPedido={props.podeEditarPedido}
+                    podeEditarPrazo={props.podeEditarPrazo}
                     handleMarcarComoEntregue={props.handleMarcarComoEntregue}
                     navigate={props.navigate}
                     showActions={props.shouldShowActionsColumn}

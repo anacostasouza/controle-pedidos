@@ -17,10 +17,22 @@ interface PedidoRowProps {
   navigate: any;
   showActions: boolean;
   podeEditarPedido: (pedido: Pedido) => boolean;
+  podeEditarPrazo: (pedido: Pedido) => boolean;
 }
 
 export function PedidoRow(props: Readonly<PedidoRowProps>) {
-  const { pedido, etapas, userSetor, userDisplayName, userUid, handleMarcarComoEntregue, navigate, showActions, podeEditarPedido } = props;
+  const { 
+    pedido, 
+    etapas, 
+    userSetor, 
+    userDisplayName, 
+    userUid, 
+    handleMarcarComoEntregue, 
+    navigate, 
+    showActions, 
+    podeEditarPedido,
+    podeEditarPrazo
+  } = props;
 
   const formatJustDate = (ts?: Timestamp) => ts ? ts.toDate().toLocaleDateString("pt-BR") : "";
 
@@ -90,7 +102,7 @@ export function PedidoRow(props: Readonly<PedidoRowProps>) {
           {podeMarcarComoEntregue && ["SUPORTE", "GESTAO"].includes(userSetor) ? (
             <>
               {pedido.statusAtual === "Concluído" && <button className="entregar-button" onClick={() => handleMarcarComoEntregue(pedido.id!, pedido.statusAtual)}>Marcar como entregue</button>}
-              {podeEditarPedido(pedido) && (
+              {(podeEditarPedido(pedido) || podeEditarPrazo(pedido)) && (
                 <button className="editar-button" onClick={() => navigate(`/editar-pedido/${pedido.id}`)}>Editar</button>
               )}
             </>
@@ -99,7 +111,7 @@ export function PedidoRow(props: Readonly<PedidoRowProps>) {
               {pedido.statusAtual === "Concluído" && podeMarcarComoEntregue && ["CAIXA", "BALCAO"].includes(userSetor) ? (
                 <button className="entregar-button" onClick={() => handleMarcarComoEntregue(pedido.id!, pedido.statusAtual)}>Marcar como entregue</button>
               ) : (
-                podeEditarPedido(pedido) && (
+                (podeEditarPedido(pedido) || podeEditarPrazo(pedido)) && (
                   <button className="editar-button" onClick={() => navigate(`/editar-pedido/${pedido.id}`)}>Editar</button>
                 )
               )}

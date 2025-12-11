@@ -26,8 +26,8 @@ import type { PedidoUpdateData, UserInfo } from "../../types/PedidoUpdates";
 import {
   fetchPedidoById,
   fetchStatusSequence,
-} from "../../utils/firestoreUtils";
-import { capitalizeWords } from "../../utils/formatUtils";
+} from "../../utils/FirestoreUtils";
+import { capitalizeWords } from "../../utils/FormatUtils";
 import { generateTimeOptions } from "../../utils/timeUtils.ts";
 
 import { db } from "../../services/firebase.ts";
@@ -203,7 +203,10 @@ export default function EditarPedido() {
   }, [id, navigate]);
 
   const validarDataHorarioEntrega = (): boolean => {
-    if (!dataEntrega || !horarioEntrega) return true;
+    if (!dataEntrega || !horarioEntrega) {
+      setError("Data e horário de entrega são obrigatórios.");
+      return false;
+    }
 
     const [year, month, day] = dataEntrega.split("-").map(Number);
     const [hours, minutes] = horarioEntrega.split(":").map(Number);
@@ -223,14 +226,18 @@ export default function EditarPedido() {
       return;
     }
 
-    if (
-      dataEntrega !== originalDataEntrega ||
-      horarioEntrega !== originalHorarioEntrega
-    ) {
+    const mudouDataOuHorario = 
+      dataEntrega !== originalDataEntrega || 
+      horarioEntrega !== originalHorarioEntrega;
+    
+    if (mudouDataOuHorario) {
+      if (!dataEntrega || !horarioEntrega) {
+        setError("Data e horário de entrega são obrigatórios.");
+        return;
+      }
+      
       if (!validarDataHorarioEntrega()) {
-        setError(
-          "A data e horário de entrega não podem ser anteriores ao momento atual."
-        );
+        setError("A data e horário de entrega não podem ser anteriores ao momento atual.");
         return;
       }
     }
@@ -259,12 +266,9 @@ export default function EditarPedido() {
           pedido.requerGalpao && novoStatusGalpao !== originalStatusGalpao
             ? novoStatusGalpao
             : undefined,
-        novaDataEntrega:
-          dataEntrega !== originalDataEntrega ? dataEntrega : undefined,
-        novoHorarioEntrega:
-          horarioEntrega !== originalHorarioEntrega
-            ? horarioEntrega
-            : undefined,
+        // Enviar ambos se qualquer um mudou
+        novaDataEntrega: mudouDataOuHorario ? dataEntrega : undefined,
+        novoHorarioEntrega: mudouDataOuHorario ? horarioEntrega : undefined,
       };
 
       const updates = await montarUpdatesParaBackend(userInfo, updateData);

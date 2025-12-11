@@ -30,7 +30,7 @@ import { tiposServico } from "../../types/tipoServicos";
 import { STATUS_SEQUENCE_DEFAULT } from "../../types/StatusPedidos";
 import { gerarOpcoesStatus, convertToTimestamp } from "./utils/dashboardUtils";
 import { getTodasEtapasDoPedido } from "../../utils/FirestoreUtils";
-import { podeEditarPedido as podeEditarPedidoUtils, podeMarcarEntregue } from "../../utils/PermissionUtils";
+import { podeEditarPedido as podeEditarPedidoUtils, podeMarcarEntregue, podeEditarPrazoEntrega } from "../../utils/PermissionUtils";
 
 import { PedidosTable } from "./components/PedidosTable";
 import { DashboardHeader } from "./components/DashboardHeader";
@@ -230,6 +230,16 @@ export default function Dashboard() {
     });
   };
 
+  const podeEditarPrazo = (pedido: Pedido): boolean => {
+    if (!userSetor || !userDisplayName) return false;
+    const auth = getAuth();
+    return podeEditarPrazoEntrega(pedido, {
+      setor: userSetor,
+      displayName: userDisplayName,
+      uid: auth.currentUser?.uid || ""
+    });
+  };
+
   const handleMarcarComoEntregue = async (
     pedidoId: string,
     currentStatus: StatusPedido
@@ -350,6 +360,7 @@ export default function Dashboard() {
         shouldShowActionsColumn={shouldShowActionsColumn}
         navigate={navigate}
         podeEditarPedido={podeEditarPedido}
+        podeEditarPrazo={podeEditarPrazo}
       />
 
       {totalPages > 1 && (

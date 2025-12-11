@@ -49,11 +49,31 @@ export function podeMarcarEntregue(pedido: Pedido, usuario: Usuario): boolean {
  * Verifica se o usuário pode editar prazo de entrega
  */
 export function podeEditarPrazoEntrega(pedido: Pedido, usuario: Usuario): boolean {
-  return (
-    usuario.uid === pedido.responsavelUid ||
-    usuario.displayName === pedido.responsavel ||
-    ["SUPORTE", "GESTAO"].includes(usuario.setor)
-  );
+
+  // 1️⃣ Se for responsável, PODE editar prazo
+  const isResponsavelPorUid = usuario.uid === pedido.responsavelUid;
+  const isResponsavelPorNome = usuario.displayName === pedido.responsavel;
+  const isResponsavel = isResponsavelPorUid || isResponsavelPorNome;
+
+  console.log("🔍 Verificando responsável:", {
+    isResponsavelPorUid,
+    isResponsavelPorNome,
+    isResponsavel
+  });
+
+  if (isResponsavel) {
+    return true;
+  }
+
+  // 2️⃣ Setores com permissão de editar prazo
+  const setoresPermitidos = ["SUPORTE", "GESTAO", "PRODUCAO_LOJA"];
+  const temSetorPermitido = setoresPermitidos.includes(usuario.setor);
+
+  if (temSetorPermitido) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
