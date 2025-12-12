@@ -11,17 +11,44 @@ import {
 
 const app = express();
 
-// Middleware para CORS
+// Whitelist de origens permitidas
+const ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+  "https://gestaopedidos-desenhar.web.app",
+  "https://gestaopedidos-desenhar.firebaseapp.com",
+  "https://atendimento-desenhardigital.web.app",
+  "https://atendimento-desenhardigital.firebaseapp.com"
+];
+
+// Middleware para CORS seguro
 app.use((req, res, next) => {
-  res.set("Access-Control-Allow-Origin", "*");
+  const origin = req.headers.origin;
+  
+  console.log("[CORS Atendimento] Origin recebida:", origin);
+  
+  // Valida se a origem está na whitelist
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    console.log("[CORS Atendimento] Origem permitida:", origin);
+    res.set("Access-Control-Allow-Origin", origin);
+    res.set("Access-Control-Allow-Credentials", "true");
+  } else {
+    console.warn("[CORS Atendimento] Origem não autorizada:", origin);
+  }
+  
   res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE");
   res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  
   if (req.method === "OPTIONS") {
-    res.status(204).send("");
+    res.status(204).end();
     return;
   }
   next();
 });
+
+app.use(express.json());
 
 // Rota pública (não exige autenticação)
 app.post("/criarAtendimentoFila", async (req, res) => {
@@ -62,18 +89,28 @@ app.post("/criarAtendimentoFila", async (req, res) => {
 
 // Middleware de autenticação (protege as rotas abaixo)
 app.use(async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    const idToken = authHeader.split("Bearer ")[1];
-    try {
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
-      (req as any).user = decodedToken;
-      return next();
-    } catch (err) {
-      return res.status(401).send("Token inválido");
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const idToken = authHeader.split("Bearer ")[1];
+      try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        (req as any).user = decodedToken;
+        next();
+        return;
+      } catch (err) {
+        res.status(401).send("Token inválido");
+        return;
+      }
+    }
+    res.status(401).send("Não autenticado");
+    return;
+  } catch (error) {
+    console.error("Erro no auth middleware:", error);
+    if (!res.headersSent) {
+      res.status(500).send("Erro de autenticação");
     }
   }
-  return res.status(401).send("Não autenticado");
 });
 
 // Rota para adicionar um novo status ao histórico

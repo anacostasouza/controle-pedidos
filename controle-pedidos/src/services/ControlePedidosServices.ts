@@ -6,7 +6,7 @@ import type { SetorValue } from "../types/Setores";
 
 import { fetchWithAuth } from "../utils/FetchWithAuth";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_EMULATOR_URL;
 
 export async function criarPedido({
   formData,

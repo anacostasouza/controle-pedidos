@@ -12,51 +12,63 @@ export async function authMiddleware(
   res: Response,
   next: NextFunction
 ) {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    const idToken = authHeader.split("Bearer ")[1];
-    try {
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
-      const email = decodedToken.email || "";
-      const isAllowed = allowedSuffixes.some((suffix) =>
-        email.endsWith(suffix)
-      );
-      if (!isAllowed) {
-        return res.status(403).json({ message: "Acesso negado" });
-      }
-
-      (req as any).user = decodedToken;
-
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const idToken = authHeader.split("Bearer ")[1];
       try {
-        const db = admin.firestore();
-        const userDoc = await db
-          .collection("usuarios")
-          .doc(decodedToken.uid)
-          .get();
-
-        if (userDoc.exists) {
-          const userData = userDoc.data();
-
-          (req as any).user = {
-            ...(req as any).user,
-            setor: userData?.setor,
-            setorName: userData?.setorName,
-            displayName: userData?.displayName || decodedToken.name,
-          };
-        }
-      } catch (error) {
-        console.warn(
-          "Erro ao buscar dados adicionais do usuário:",
-          error
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const email = decodedToken.email || "";
+        const isAllowed = allowedSuffixes.some((suffix) =>
+          email.endsWith(suffix)
         );
+        if (!isAllowed) {
+          res.status(403).json({ message: "Acesso negado" });
+          return;
+        }
+
+        (req as any).user = decodedToken;
+
+        try {
+          const db = admin.firestore();
+          const userDoc = await db
+            .collection("usuarios")
+            .doc(decodedToken.uid)
+            .get();
+
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+
+            (req as any).user = {
+              ...(req as any).user,
+              setor: userData?.setor,
+              setorName: userData?.setorName,
+              displayName: userData?.displayName || decodedToken.name,
+            };
+          }
+        } catch (error) {
+          console.warn(
+            "Erro ao buscar dados adicionais do usuário:",
+            error
+          );
+        }
+
+        Object.freeze((req as any).user);
+
+        next();
+        return;
+      } catch (err) {
+        res.status(401).json({ message: "Token inválido" });
+        return;
       }
-
-      Object.freeze((req as any).user);
-
-      return next();
-    } catch (err) {
-      return res.status(401).json({ message: "Token inválido" });
+    }
+    res.status(401).json({ message: "Não autenticado" });
+    return;
+  } catch (error) {
+    // Captura QUALQUER erro não tratado - CRÍTICO para firebase-admin 12.6.0+
+    console.error("Erro fatal no authMiddleware:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ message: "Erro interno de autenticação" });
     }
   }
-  return res.status(401).json({ message: "Não autenticado" });
 }

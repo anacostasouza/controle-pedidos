@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   getFirestore,
@@ -18,8 +18,8 @@ import { tiposServico } from "../types/tipoServicos";
 import { setores, type SetorValue } from "../types/Setores";
 import type { Pedido } from "../types/Pedidos";
 
-import { fetchStatusSequence } from "../utils/firestoreUtils";
-import { generateTimeOptions } from "../utils/timeUtils";
+import { fetchStatusSequence } from "../utils/FirestoreUtils";
+import { generateTimeOptions } from "../utils/TimeUtils";
 import HeaderPage from "../components/layout/headerPage";
 import {
   criarPedido,
@@ -93,9 +93,10 @@ export default function NovoPedido() {
     nomeCliente: "",
     servico: { tipo: "" as unknown as TipoServico, servicoID: 0 },
     responsavel: "",
+    responsavelUid: "",
     statusAtual: "Iniciado",
     prazos: { entrega: Timestamp.now(), arte: null },
-    tipoDeEntrega: "Entrega",
+    tipoDeEntrega: "" as Pedido["tipoDeEntrega"],
     horarioRetirada: "08:00",
     requerArte: false,
     requerGalpao: false,
@@ -138,6 +139,7 @@ export default function NovoPedido() {
           setFormData((prev) => ({
             ...prev,
             responsavel: currentUserName,
+            responsavelUid: currentUser.uid,
           }));
           setSelectedResponsavel(currentUser.uid);
         } else {
@@ -241,8 +243,8 @@ useEffect(() => {
   // Funções de busca de cliente
   // ------------------------------
   // Debounce para busca de cliente
-  const debouncedSearchCliente = useCallback(
-    debounce(async (searchTerm: string) => {
+  const debouncedSearchCliente = useMemo(
+    () => debounce(async (searchTerm: string) => {
       if (!searchTerm || searchTerm.length < 3) {
         setClientesEncontrados([]);
         setShowClientesList(false);
@@ -696,7 +698,18 @@ useEffect(() => {
               <select
                 id="responsavel-select"
                 value={selectedResponsavel}
-                onChange={(e) => setSelectedResponsavel(e.target.value)}
+                onChange={(e) => {
+                  const uid = e.target.value;
+                  setSelectedResponsavel(uid);
+                  const user = users.find(u => u.uid === uid);
+                  if (user) {
+                    setFormData(prev => ({
+                      ...prev,
+                      responsavel: user.displayName,
+                      responsavelUid: uid,
+                    }));
+                  }
+                }}
                 required
                 disabled={!clienteConfirmado}
               >
@@ -726,6 +739,9 @@ useEffect(() => {
                 required
                 disabled={!clienteConfirmado}
               >
+                <option value="" disabled>
+                  Selecione o tipo de entrega
+                </option>
                 <option value="Retirada">Retirada</option>
                 <option value="Entrega">Entrega</option>
                 <option value="Instalação">Instalação</option>

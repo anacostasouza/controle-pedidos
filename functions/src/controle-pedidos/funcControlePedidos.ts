@@ -1,6 +1,7 @@
 import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
 import express from "express";
+import axios from "axios";
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import { deepConvertTimestamps } from "../utils/deepConvertTimestamps";
 import { podeEditarPedidoBackend, podeEditarPrazoEntrega, podeEditarStatusArte, podeEditarStatusGalpao, podeMarcarEntregue } from "../utils/permissaoUtils";
@@ -8,13 +9,37 @@ import { authMiddleware } from "../utils/authMiddleware";
 import { aplicarFiltrosPedidos } from "./utils/filtrosUtils";
 
 const app = express();
-app.use(express.json());
 
-// Middleware para CORS
+// Whitelist de origens permitidas
+const ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+  "https://gestaopedidos-desenhar.web.app",
+  "https://gestaopedidos-desenhar.firebaseapp.com",
+  "https://atendimento-desenhardigital.web.app",
+  "https://atendimento-desenhardigital.firebaseapp.com"
+];
+
+// Middleware para CORS seguro
 app.use((req, res, next) => {
-  res.set("Access-Control-Allow-Origin", "*");
+  const origin = req.headers.origin;
+  
+  console.log("[CORS] Origin recebida:", origin);
+  
+  // Valida se a origem está na whitelist
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    console.log("[CORS] Origem permitida:", origin);
+    res.set("Access-Control-Allow-Origin", origin);
+    res.set("Access-Control-Allow-Credentials", "true");
+  } else {
+    console.warn("[CORS] Origem não autorizada:", origin);
+  }
+  
   res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE");
   res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  
   if (req.method === "OPTIONS") {
     res.status(204).end();
     return;
@@ -22,7 +47,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Middleware de autenticação
+app.use(express.json());
+
+// Middleware de autenticação (com error handling interno para firebase-admin 12.7.0+)
 app.use(authMiddleware);
 
 // Rota para criar pedido
@@ -660,7 +687,6 @@ async function buscarClienteOmie(nomeCliente: string, cnpj_cpf?: string) {
     throw new Error("OMIE_BASE_URL_CLIENTS environment variable is not set");
   }
   
-  const axios = require('axios');
   const { data } = await axios.post(omieApiUrl, payload, {
     headers: { "Content-Type": "application/json" },
   });

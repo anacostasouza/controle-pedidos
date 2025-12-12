@@ -28,11 +28,10 @@ import {
   fetchStatusSequence,
 } from "../../utils/FirestoreUtils";
 import { capitalizeWords } from "../../utils/FormatUtils";
-import { generateTimeOptions } from "../../utils/timeUtils.ts";
+import { generateTimeOptions } from "../../utils/TimeUtils.ts";
 
 import { db } from "../../services/firebase.ts";
 import "../../styles/EditarPedido.css";
-import { set } from "lodash";
 
 export default function EditarPedido() {
   const { id } = useParams();
