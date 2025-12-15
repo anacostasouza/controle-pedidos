@@ -89,7 +89,9 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
             });
             return response.status !== 403;
         } catch (e) {
-            console.error("Falha na verificação de autorização:", e);
+            if (import.meta.env.DEV) {
+                console.error("Falha na verificação de autorização:", e);
+            }
             return false;
         }
     }

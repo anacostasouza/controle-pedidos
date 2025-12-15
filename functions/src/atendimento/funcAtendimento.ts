@@ -2,6 +2,7 @@ import * as functions from "firebase-functions/v2";
 import * as admin from "firebase-admin";
 import express from "express";
 import axios from "axios";
+import rateLimit from "express-rate-limit";
 import { Timestamp, FieldValue } from "firebase-admin/firestore";
 import {
   buscarAtendimentosComFiltros,
@@ -23,19 +24,37 @@ const ALLOWED_ORIGINS = [
   "https://atendimento-desenhardigital.firebaseapp.com"
 ];
 
+// Rate Limiting - Proteção contra DDoS
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message: "Muitas requisições deste IP, tente novamente em 15 minutos."
+  },
+  skip: (req) => {
+    const origin = req.headers.origin || "";
+    return origin.includes("localhost") || origin.includes("127.0.0.1");
+  }
+});
+
+app.use(limiter);
+
 // Middleware para CORS seguro
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
-  console.log("[CORS Atendimento] Origin recebida:", origin);
+  // Se há origin header e não está na whitelist, bloqueia
+  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+    console.warn("[CORS] Origem bloqueada - Acesso negado");
+    return res.status(403).json({ message: "Origin not allowed" });
+  }
   
-  // Valida se a origem está na whitelist
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
-    console.log("[CORS Atendimento] Origem permitida:", origin);
+  // Se origin está na whitelist, adiciona headers CORS
+  if (origin) {
     res.set("Access-Control-Allow-Origin", origin);
     res.set("Access-Control-Allow-Credentials", "true");
-  } else {
-    console.warn("[CORS Atendimento] Origem não autorizada:", origin);
   }
   
   res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE");
@@ -45,6 +64,15 @@ app.use((req, res, next) => {
     res.status(204).end();
     return;
   }
+  next();
+});
+
+// Security Headers - Proteção contra ataques comuns
+app.use((req, res, next) => {
+  res.set("X-Content-Type-Options", "nosniff");
+  res.set("X-Frame-Options", "DENY");
+  res.set("X-XSS-Protection", "1; mode=block");
+  res.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   next();
 });
 
@@ -82,7 +110,7 @@ app.post("/criarAtendimentoFila", async (req, res) => {
 
     res.status(201).send({ id: docRef.id });
   } catch (error) {
-    console.error("Erro ao criar atendimento:", error);
+    console.error("Erro ao criar atendimento:", error instanceof Error ? error.message : "Erro desconhecido");
     res.status(500).send("Erro interno ao criar atendimento.");
   }
 });
@@ -106,7 +134,7 @@ app.use(async (req, res, next) => {
     res.status(401).send("Não autenticado");
     return;
   } catch (error) {
-    console.error("Erro no auth middleware:", error);
+    console.error("Erro no auth middleware:", error instanceof Error ? error.message : "Erro desconhecido");
     if (!res.headersSent) {
       res.status(500).send("Erro de autenticação");
     }
@@ -126,6 +154,16 @@ app.post("/atualizarHistorico/:id", async (req, res) => {
   if (!responsavel) {
     res.status(400).send("Responsável é obrigatório.");
     return;
+  }
+
+  // Valida atendenteUid se fornecido
+  if (status === "Em Atendimento" && atendenteUid) {
+    try {
+      await admin.auth().getUser(atendenteUid);
+    } catch (error) {
+      res.status(400).send("atendenteUid inválido ou usuário não existe");
+      return;
+    }
   }
 
   try {
@@ -187,7 +225,7 @@ app.post("/atualizarHistorico/:id", async (req, res) => {
 
     res.status(200).send({ message: "Histórico atualizado." });
   } catch (error) {
-    console.error("Erro ao atualizar histórico:", error);
+    console.error("Erro ao atualizar histórico:", error instanceof Error ? error.message : "Erro desconhecido");
     res.status(500).send("Erro interno ao atualizar histórico.");
   }
 });
@@ -289,7 +327,7 @@ app.post("/registrarAtendimento", async (req, res) => {
 
     res.status(201).send({ atendimentoId: docRef.id });
   } catch (error) {
-    console.error("Erro ao registrar atendimento direto:", error);
+    console.error("Erro ao registrar atendimento direto:", error instanceof Error ? error.message : "Erro desconhecido");
     res.status(500).send("Erro interno ao registrar atendimento direto.");
   }
 });
@@ -332,7 +370,7 @@ app.get("/historico", async (req, res) => {
       atendimentos: resultado.atendimentos,
     });
   } catch (error: any) {
-    console.error("Erro ao buscar histórico:", error);
+    console.error("Erro ao buscar histórico:", error instanceof Error ? error.message : "Erro desconhecido");
     res.status(500).send(error.message || "Erro ao buscar histórico.");
   }
 });
@@ -383,6 +421,7 @@ async function buscarClienteOmie(nomeCliente: string, cnpj_cpf?: string) {
   }
   const { data } = await axios.post(omieApiUrl, payload, {
     headers: { "Content-Type": "application/json" },
+    timeout: 20000 // 20 segundos
   });
   return data;
 }
@@ -439,7 +478,10 @@ app.post("/omie/buscarCliente", async (req, res) => {
       .status(404)
       .json({ message: "Cliente não encontrado.", criado: false });
   } catch (error) {
-    console.error("Erro ao buscar cliente Omie:", error);
+    if (axios.isAxiosError(error) && error.code === 'ECONNABORTED') {
+      return res.status(504).json({ message: "Tempo limite excedido ao buscar cliente na Omie" });
+    }
+    console.error("Erro ao buscar cliente Omie:", error instanceof Error ? error.message : "Erro desconhecido");
     return res.status(500).send("Erro interno ao buscar cliente Omie.");
   }
 });

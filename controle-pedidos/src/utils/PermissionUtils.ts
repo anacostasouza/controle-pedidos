@@ -42,6 +42,11 @@ export function podeEditarPedido(pedido: Pedido, usuario: Usuario): boolean {
  * Verifica se o usuário pode marcar pedido como entregue
  */
 export function podeMarcarEntregue(pedido: Pedido, usuario: Usuario): boolean {
+  // Só pode marcar como entregue se o pedido estiver concluído
+  if (pedido.statusAtual !== "Concluído") {
+    return false;
+  }
+  
   return ["BALCAO", "CAIXA", "SUPORTE", "GESTAO"].includes(usuario.setor);
 }
 
@@ -50,22 +55,24 @@ export function podeMarcarEntregue(pedido: Pedido, usuario: Usuario): boolean {
  */
 export function podeEditarPrazoEntrega(pedido: Pedido, usuario: Usuario): boolean {
 
-  // 1️⃣ Se for responsável, PODE editar prazo
+  // Se for responsável, PODE editar prazo
   const isResponsavelPorUid = usuario.uid === pedido.responsavelUid;
   const isResponsavelPorNome = usuario.displayName === pedido.responsavel;
   const isResponsavel = isResponsavelPorUid || isResponsavelPorNome;
 
-  console.log("🔍 Verificando responsável:", {
-    isResponsavelPorUid,
-    isResponsavelPorNome,
-    isResponsavel
-  });
+  if (import.meta.env.DEV) {
+    console.log("🔍 Verificando responsável:", {
+      isResponsavelPorUid,
+      isResponsavelPorNome,
+      isResponsavel
+    });
+  }
 
   if (isResponsavel) {
     return true;
   }
 
-  // 2️⃣ Setores com permissão de editar prazo
+  // Setores com permissão de editar prazo
   const setoresPermitidos = ["SUPORTE", "GESTAO", "PRODUCAO_LOJA"];
   const temSetorPermitido = setoresPermitidos.includes(usuario.setor);
 
@@ -92,6 +99,11 @@ export function podeEditarStatusGeral(pedido: Pedido, usuario: Usuario): boolean
  * Verifica se o usuário pode editar status de arte
  */
 export function podeEditarStatusArte(pedido: Pedido, usuario: Usuario): boolean {
+  // Só pode editar status de arte se o pedido requer arte
+  if (!pedido.requerArte) {
+    return false;
+  }
+  
   return ["ARTE", "SUPORTE", "GESTAO"].includes(usuario.setor);
 }
 
@@ -99,5 +111,10 @@ export function podeEditarStatusArte(pedido: Pedido, usuario: Usuario): boolean 
  * Verifica se o usuário pode editar status do galpão
  */
 export function podeEditarStatusGalpao(pedido: Pedido, usuario: Usuario): boolean {
+  // Só pode editar status de galpão se o pedido requer galpão
+  if (!pedido.requerGalpao) {
+    return false;
+  }
+  
   return ["GALPAO", "SUPORTE", "GESTAO"].includes(usuario.setor);
 }

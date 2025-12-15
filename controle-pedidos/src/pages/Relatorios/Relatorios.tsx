@@ -217,7 +217,9 @@ export default function RelatoriosPage() {
 
       const token = await getAuth().currentUser?.getIdToken();
       if (!token) {
-        console.error("Usuário não autenticado");
+        if (import.meta.env.DEV) {
+          console.error("Usuário não autenticado");
+        }
         setLoading(false);
         return;
       }
@@ -244,7 +246,9 @@ export default function RelatoriosPage() {
       const todosPedidos = resultado.pedidos || [];
       
       // Validação adicional: verificar se recebeu pedidos dentro do período esperado
-      console.log(`Exportando ${todosPedidos.length} pedidos com filtros:`, params);
+      if (import.meta.env.DEV) {
+        console.log(`Exportando ${todosPedidos.length} pedidos com filtros:`, params);
+      }
       
       const excelBuffer = await gerarExcelPedidosPorServico(todosPedidos);
 

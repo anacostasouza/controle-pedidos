@@ -14,16 +14,14 @@ export default function Login() {
     setLoginError(null);
 
     try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      localStorage.setItem("userId", user.uid);
-      localStorage.setItem("userEmail", user.email ?? "");
+      await signInWithPopup(auth, provider);
 
       const from = location.state?.from?.pathname || "/dashboard";
       navigate(from, { replace: true });
     } catch (error) {
-      console.error("Erro ao logar:", error);
+      if (import.meta.env.DEV) {
+        console.error("Erro ao logar:", error);
+      }
 
       let errorMessage = "Falha no login com Google. Tente novamente.";
       if (typeof error === "object" && error !== null && "code" in error) {

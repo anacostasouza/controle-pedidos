@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { useEffect, useState, useCallback } from "react";
-import debounce from "lodash/debounce";
+import debounce from "lodash.debounce";
 import { useNavigate } from "react-router-dom";
 import {
   getFirestore,
@@ -115,7 +115,9 @@ export default function Dashboard() {
           });
         }
       } catch (error) {
-        console.log("Erro ao buscar pedidos:", error);
+        if (import.meta.env.DEV) {
+          console.log("Erro ao buscar pedidos:", error);
+        }
       } finally {
         setLoading(false);
       }
