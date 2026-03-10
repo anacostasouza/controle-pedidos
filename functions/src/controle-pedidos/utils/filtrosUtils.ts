@@ -1,8 +1,5 @@
 import { Timestamp } from "firebase-admin/firestore";
 
-/**
- * Aplica todos os filtros recebidos do frontend em uma query do Firestore.
- */
 export function aplicarFiltrosPedidos(queryRef: FirebaseFirestore.Query, filtros: any): FirebaseFirestore.Query {
   if (filtros.filtroTipo)
     queryRef = queryRef.where("servico.tipo", "==", filtros.filtroTipo);

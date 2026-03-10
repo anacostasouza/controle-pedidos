@@ -8,6 +8,7 @@ import { deepConvertTimestamps } from "../utils/deepConvertTimestamps";
 import { podeEditarPedidoBackend, podeEditarPrazoEntrega, podeEditarStatusArte, podeEditarStatusGalpao, podeMarcarEntregue } from "../utils/permissaoUtils";
 import { authMiddleware } from "../utils/authMiddleware";
 import { aplicarFiltrosPedidos } from "./utils/filtrosUtils";
+import { processarWebhookOmie } from "./webhookOmie";
 
 const app = express();
 
@@ -77,6 +78,82 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
+
+// Endpoint de teste para verificar webhook (sem autenticação para testes)
+app.post("/omie/webhook/test", async (req, res) => {
+  try {
+    return res.status(200).json({
+      message: "Webhook endpoint está funcional",
+      timestamp: new Date().toISOString(),
+      endpoint: "POST /omie/webhook"
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Erro ao testar webhook" });
+  }
+});
+
+// Endpoint para receber webhooks do Omie (sem autenticação para permitir notificações externas)
+app.post("/omie/webhook", async (req, res) => {
+  try {
+    const db = admin.firestore();
+
+    // Extrai dados do webhook
+    const { event, data, timestamp } = req.body;
+
+    if (!event || !data) {
+      return res.status(400).json({ message: "Dados inválidos no webhook" });
+    }
+
+    console.log(`[WEBHOOK] Evento recebido: ${event}`, {
+      timestamp,
+      dataKeys: Object.keys(data)
+    });
+
+    // Armazena o evento no Firestore para processamento posterior
+    const webhookRef = await db.collection("webhook_events").add({
+      event,
+      data,
+      timestamp: Timestamp.now(),
+      receivedAt: new Date().toISOString(),
+      processed: false,
+      processedAt: null,
+      error: null,
+    });
+
+    // Processamento imediato baseado no tipo de evento
+    try {
+      await processarWebhookOmie(event, data, db);
+
+      // Marca como processado
+      await webhookRef.update({
+        processed: true,
+        processedAt: Timestamp.now(),
+      });
+    } catch (processError) {
+      console.error(`[WEBHOOK] Erro ao processar evento ${event}:`, processError);
+
+      // Armazena o erro mas não falha - o webhook já foi recebido
+      await webhookRef.update({
+        error: String(processError),
+        processedAt: Timestamp.now(),
+      });
+    }
+
+    // Retorna 200 OK rapidamente (conforme recomendação Omie)
+    return res.status(200).json({
+      message: "Webhook recebido com sucesso",
+      webhookId: webhookRef.id
+    });
+
+  } catch (error) {
+    console.error("[WEBHOOK] Erro ao receber webhook:", error);
+    // Ainda retorna 200 para evitar reprocessamento desnecessário
+    return res.status(200).json({
+      message: "Webhook processado",
+      error: String(error)
+    });
+  }
+});
 
 // Middleware de autenticação
 app.use(authMiddleware);
@@ -783,6 +860,7 @@ app.post("/omie/buscarClientes", async (req, res) => {
     return res.status(500).json({ message: "Erro ao buscar cliente Omie" });
   }
 });
+
 
 export const controlePedidosApi = functions.https.onRequest(
   { region: "southamerica-east1" },
