@@ -37,7 +37,9 @@ export default function ProfileNamePage(): JSX.Element {
           setSetor(data.setor ?? "");
         }
       } catch (error) {
-        console.error("Erro ao buscar dados do usuário:", error);
+        if (import.meta.env.DEV) {
+          console.error("Erro ao buscar dados do usuário:", error);
+        }
       }
     };
 
@@ -97,7 +99,9 @@ export default function ProfileNamePage(): JSX.Element {
 
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      console.error("Erro ao salvar perfil:", err);
+      if (import.meta.env.DEV) {
+        console.error("Erro ao salvar perfil:", err);
+      }
       setError(err.message || "Erro ao salvar perfil.");
     } finally {
       setLoading(false);

@@ -62,6 +62,7 @@ export default function Dashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [lastEntregas, setLastEntregas] = useState<number[]>([]);
+  const [lastIds, setLastIds] = useState<string[]>([]);
   const totalPages = Math.ceil(totalPedidosFiltrados / itemsPerPage);
 
   useEffect(() => {
@@ -114,6 +115,14 @@ export default function Dashboard() {
             return arr;
           });
         }
+
+        if (data.nextLastId) {
+          setLastIds((prev) => {
+            const arr = [...prev];
+            arr[currentPage - 1] = data.nextLastId;
+            return arr;
+          });
+        }
       } catch (error) {
         if (import.meta.env.DEV) {
           console.log("Erro ao buscar pedidos:", error);
@@ -141,6 +150,9 @@ export default function Dashboard() {
 
     if (currentPage > 1 && lastEntregas[currentPage - 2]) {
       params.lastEntrega = lastEntregas[currentPage - 2].toString();
+      if (lastIds[currentPage - 2]) {
+        params.lastId = lastIds[currentPage - 2];
+      }
     }
     
     debouncedFetchPedidos(params);
@@ -294,6 +306,7 @@ export default function Dashboard() {
   useEffect(() => {
     setCurrentPage(1);
     setLastEntregas([]);
+    setLastIds([]);
   }, [
     filtroServico,
     filtroSubTipo,

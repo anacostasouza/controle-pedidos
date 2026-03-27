@@ -9,12 +9,15 @@ interface FiltrosHistorico {
     tipo?: "direto" | "fila";
     consumidor?: boolean;
     tipoAtendimento?: string;
+    limit?: number;
+    offset?: number;
 }
 
 interface ResultadoFiltros {
     atendimentos: any[];
     total: number;
     filtrosAplicados: string[];
+    temMais: boolean;
 }
 
 export async function buscarAtendimentosComFiltros(
@@ -28,6 +31,8 @@ export async function buscarAtendimentosComFiltros(
         tipo,
         consumidor,
         tipoAtendimento,
+        limit = 50,
+        offset = 0,
     } = filtros;
 
     if (!dataInicio || !dataFim) {
@@ -49,51 +54,70 @@ export async function buscarAtendimentosComFiltros(
         `Período: ${dataInicio} a ${dataFim}`,
     ];
 
+    // ✅ FILTRO 1: Atendente
     if (atendenteUid) {
         query = query.where("atendenteUid", "==", atendenteUid);
         filtrosAplicados.push(`Atendente: ${atendenteUid}`);
     }
 
+    // ✅ FILTRO 2: Tipo de Atendimento
     if (tipoAtendimento) {
         query = query.where("tipoAtendimento", "==", tipoAtendimento);
         filtrosAplicados.push(`Serviço: ${tipoAtendimento}`);
     }
 
-    const snapshot = await query.get();
-    let atendimentos = snapshot.docs.map((doc) => ({
+    // ✅ FILTRO 3: Status (NO FIRESTORE, não em memória)
+    if (status) {
+        query = query.where("status", "==", status);
+        filtrosAplicados.push(`Status: ${status}`);
+    } else {
+        // Se nenhum status específico, filtrar os "finalizados"
+        query = query.where("status", "in", [
+            "Finalizado",
+            "Cancelado",
+            "Adicionado ao controle de pedidos"
+        ]);
+        filtrosAplicados.push(`Status: Finalizados`);
+    }
+
+    // ✅ FILTRO 4: Tipo de Atendimento (Direto/Fila) - NO FIRESTORE
+    if (tipo === "direto") {
+        query = query.where("atendimentoDireto", "==", true);
+        filtrosAplicados.push("Tipo: Direto");
+    } else if (tipo === "fila") {
+        query = query.where("atendimentoDireto", "==", false);
+        filtrosAplicados.push("Tipo: Fila");
+    }
+
+    // ✅ FILTRO 5: Consumidor - NO FIRESTORE
+    if (consumidor === true) {
+        query = query.where("isConsumidor", "==", true);
+        filtrosAplicados.push("Consumidor: Sim");
+    } else if (consumidor === false) {
+        query = query.where("isConsumidor", "==", false);
+        filtrosAplicados.push("Consumidor: Não");
+    }
+
+    const snapshotTotal = await query.get();
+    const total = snapshotTotal.size;
+
+    const snapshot = await query
+        .offset(offset)
+        .limit(limit)
+        .get();
+
+    const atendimentos = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
     }));
 
-    atendimentos = atendimentos.filter((a: any) =>
-        ["Finalizado", "Cancelado", "Adicionado ao controle de pedidos"].includes(a.status)
-    );
-
-    if (status) {
-        atendimentos = atendimentos.filter((a: any) => a.status === status);
-        filtrosAplicados.push(`Status: ${status}`);
-    }
-
-    if (tipo === "direto") {
-        atendimentos = atendimentos.filter((a: any) => a.atendimentoDireto === true);
-        filtrosAplicados.push("Tipo: Direto");
-    } else if (tipo === "fila") {
-        atendimentos = atendimentos.filter((a: any) => a.atendimentoDireto !== true);
-        filtrosAplicados.push("Tipo: Fila");
-    }
-
-    if (consumidor === true) {
-        atendimentos = atendimentos.filter((a: any) => a.isConsumidor === true);
-        filtrosAplicados.push("Consumidor: Sim");
-    } else if (consumidor === false) {
-        atendimentos = atendimentos.filter((a: any) => a.isConsumidor !== true);
-        filtrosAplicados.push("Consumidor: Não");
-    }
+    const temMais = (offset + limit) < total;
 
     return {
         atendimentos,
-        total: atendimentos.length,
+        total,
         filtrosAplicados,
+        temMais,
     };
 }
 
@@ -159,13 +183,25 @@ export function calcularEstatisticas(atendimentos: any[]): {
     totalConsumidor: number;
     totalRegistrado: number;
 } {
-    return {
-        totalFinalizados: atendimentos.filter((a: any) => a.status === "Finalizado").length,
-        totalCancelados: atendimentos.filter((a: any) => a.status === "Cancelado").length,
-        totalControlePedidos: atendimentos.filter((a: any) => a.status === "Adicionado ao controle de pedidos").length,
-        totalDireto: atendimentos.filter((a: any) => a.atendimentoDireto === true).length,
-        totalFila: atendimentos.filter((a: any) => a.atendimentoDireto !== true).length,
-        totalConsumidor: atendimentos.filter((a: any) => a.isConsumidor === true).length,
-        totalRegistrado: atendimentos.filter((a: any) => a.isConsumidor !== true).length,
+    const stats = {
+        totalFinalizados: 0,
+        totalCancelados: 0,
+        totalControlePedidos: 0,
+        totalDireto: 0,
+        totalFila: 0,
+        totalConsumidor: 0,
+        totalRegistrado: 0,
     };
+
+    atendimentos.forEach((a: any) => {
+        if (a.status === "Finalizado") stats.totalFinalizados++;
+        if (a.status === "Cancelado") stats.totalCancelados++;
+        if (a.status === "Adicionado ao controle de pedidos") stats.totalControlePedidos++;
+        if (a.atendimentoDireto === true) stats.totalDireto++;
+        if (a.atendimentoDireto !== true) stats.totalFila++;
+        if (a.isConsumidor === true) stats.totalConsumidor++;
+        if (a.isConsumidor !== true) stats.totalRegistrado++;
+    });
+
+    return stats;
 }

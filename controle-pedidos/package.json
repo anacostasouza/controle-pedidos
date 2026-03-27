@@ -8,23 +8,22 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "deploy": "npm run build && firebase deploy"
+    "deploy": "npm run build && npx firebase-tools@15.11.0 deploy --only hosting:gestaopedidos-desenhar"
   },
   "dependencies": {
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.2",
+    "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "firebase": "^11.10.0",
-    "firebase-admin": "^13.5.0",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.542.0",
     "node-fetch": "^3.3.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-icons": "^5.5.0",
-    "react-router-dom": "^7.6.0",
-    "recharts": "^3.1.2",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz"
+    "react-router-dom": "^7.12.0",
+    "recharts": "^3.1.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

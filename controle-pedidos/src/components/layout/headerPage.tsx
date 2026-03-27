@@ -72,7 +72,9 @@ const HeaderPage: React.FC = () => {
       await signOut(auth);
       navigate("/");
     } catch (error) {
-      console.error("Erro ao fazer logout:", error);
+      if (import.meta.env.DEV) {
+        console.error("Erro ao fazer logout:", error);
+      }
     }
   };
 

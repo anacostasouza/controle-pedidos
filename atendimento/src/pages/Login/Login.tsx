@@ -1,47 +1,91 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { signInWithPopup, signOut } from "firebase/auth";
+import { auth, provider } from "../../services/firebase";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { ATENDIMENTO_API_BASE_URL } from "../../config/functionsApi";
 import "../../styles/Login.css";
-import logoImage from '../../assets/logologin.png';
-
-import { useState } from 'react';
+import logoImage from "../../assets/logologin.png";
 
 function Login() {
-    const navigate = useNavigate();
-    const [loginError, setLoginError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { authDenialReason } = useAuth();
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-    const handleLogin = async () => {
-        const auth = getAuth();
-        const provider = new GoogleAuthProvider();
-        try {
-            const result = await signInWithPopup(auth, provider);
-            const user = result.user;
+  useEffect(() => {
+    const storedError = localStorage.getItem("authError");
+    if (storedError) {
+      setLoginError(storedError);
+      localStorage.removeItem("authError");
+    }
+  }, []);
 
-            const db = getFirestore();
-            const userRef = doc(db, "usuarios", user.uid);
-            const userSnap = await getDoc(userRef);
+  const displayMessage = loginError || authDenialReason;
 
-            if (userSnap.exists()) {
-                const userData = userSnap.data();
-                localStorage.setItem("setor", userData.setor || "");
-                localStorage.setItem("userId", user.uid);
-                localStorage.setItem("userEmail", user.email ?? "");
-                setLoginError(null);
-                navigate("/fila-atendimento"); 
-            } else {
-                setLoginError("Usuário não cadastrado no sistema.");
-                navigate("/"); 
-                await auth.signOut();
-            }
-        } catch (error: any) {
-            setLoginError("Erro ao fazer login. Tente novamente.");
+  const handleLogin = async () => {
+    setLoginError(null);
+    setIsLoading(true);
+
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      const token = await user.getIdToken();
+      const apiUrl = ATENDIMENTO_API_BASE_URL;
+
+      try {
+        const authResponse = await fetch(`${apiUrl}/filaAtendimento`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (authResponse.status === 403) {
+          const data = await authResponse.json().catch(() => ({}));
+          const message = data.message || "Acesso negado";
+
+          setLoginError(message);
+          setIsLoading(false);
+          await signOut(auth);
+          return;
         }
-    };
 
-    return (
-        <div className="login-page">
+        const from = location.state?.from?.pathname || "/fila-atendimento";
+        navigate(from, { replace: true });
+      } catch (error) {
+        setIsLoading(false);
+        if (import.meta.env.DEV) {
+          console.error("Erro ao verificar autorização:", error);
+        }
+
+        const from = location.state?.from?.pathname || "/fila-atendimento";
+        navigate(from, { replace: true });
+      }
+    } catch (error) {
+      setIsLoading(false);
+
+      if (import.meta.env.DEV) {
+        console.error("Erro ao logar:", error);
+      }
+
+      let errorMessage = "Falha no login com Google. Tente novamente.";
+      if (typeof error === "object" && error !== null && "code" in error) {
+        const errorCode = (error as { code: string }).code;
+        if (errorCode === "auth/popup-closed-by-user") {
+          errorMessage = "Login cancelado.";
+        } else if (errorCode === "auth/network-request-failed") {
+          errorMessage = "Erro de rede. Verifique sua conexão e tente novamente.";
+        }
+      }
+
+      setLoginError(errorMessage);
+    }
+  };
+
+  return (
+    <div className="login-page">
       <div className="login-leftside">
         <div className="container-subtitle">
           <h1 className="login-subtitle">Atendimento</h1>
@@ -56,10 +100,18 @@ function Login() {
       <div className="login-container">
         <div className="login-box">
           <h2 className="login-title">Entrar</h2>
-          {loginError && <p className="login-error-message">{loginError}</p>}
+
+          {displayMessage && (
+            <div className="login-error-message">
+              <h3>Acesso Bloqueado</h3>
+              <p>{displayMessage}</p>
+            </div>
+          )}
+
           <button
             onClick={handleLogin}
             className="login-button"
+            disabled={isLoading}
             aria-label="Entrar com sua conta Google"
           >
             <svg
@@ -85,7 +137,7 @@ function Login() {
                 fill="#EB4335"
               />
             </svg>
-            Entrar com Google
+            {isLoading ? "Verificando..." : "Entrar com Google"}
           </button>
         </div>
       </div>

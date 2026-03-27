@@ -192,7 +192,9 @@ export async function fetchStatusSequence(
     const seq = readSequenceField(data);
     return seq as StatusPedido[];
   } catch (err) {
-    console.error("Erro ao buscar sequência de status:", err);
+    if (import.meta.env.DEV) {
+      console.error("Erro ao buscar sequência de status:", err);
+    }
     return [];
   }
 }

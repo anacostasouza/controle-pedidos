@@ -1,9 +1,27 @@
 :root {
+  --primary-color: #8a2a2c;
+  --primary-hover-color: #681c1d;
+  --secondary-button-color: #ffffff;
+  --secondary-button-hover-color: #e9ecef;
+  --text-color-dark: #212529;
+  --text-color-medium: #343a40;
+  --text-color-light: #6c757d;
+  --border-color: #ccc;
+  --focus-border-color: #d68383;
+  --background-color-light: #f3f4f6;
+  --background-color-white: #ffffff;
+  --background-color-table-header: #f3f3f3;
+  --table-border-color: #ddd;
+  --atrasado-color: #e53e3e;
+  --box-shadow-light: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --box-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --success-color: #28a745;
+  --success-bg: #d4edda;
+  --success-border: #c3e6cb;
   --gray-light: #f5f5f5;
   --gray-medium: #e0e0e0;
   --gray-dark: #333;
   --text-color: #444;
-  --border-color: #ddd;
   --input-bg: #fff;
   --content-bg: #f9f9f9;
   --shadow-light: 0 2px 5px rgba(0, 0, 0, 0.05);
@@ -23,15 +41,15 @@ body {
 body {
   margin: 0;
   font-family: var(--font-family-comfortaa);
-  background-color: var(--gray-light);
-  color: var(--text-color);
+  background-color: var(--background-color-light);
+  color: var(--text-color-dark);
   overflow-y: auto;
 }
 
 .settings-page {
   display: block;
   min-height: 100vh;
-  background-color: var(--content-bg);
+  background-color: var(--background-color-light);
   padding: 20px;
   width: 100%;
   box-sizing: border-box;
@@ -41,18 +59,18 @@ body {
 .profile-content {
   flex-grow: 1;
   width: 85%;
-  background-color: #fff;
+  background-color: var(--background-color-white);
   padding: 0 30px;
   border-radius: var(--border-radius-large);
   margin: 0 auto;
-  box-shadow: var(--shadow-medium);
+  box-shadow: var(--box-shadow-light);
 }
 
 /* ================== CABEÇALHO ================== */
 .title-header {
   font-size: 2.2rem;
   font-weight: 600;
-  color: var(--gray-dark);
+  color: var(--text-color-dark);
   margin: 0;
   letter-spacing: 0.5px;
   padding: 10px 15px;
@@ -75,7 +93,7 @@ body {
   margin-bottom: 8px;
   font-size: 1.1rem;
   font-weight: 600;
-  color: var(--gray-dark);
+  color: var(--text-color-dark);
   letter-spacing: 0.5px;
   padding: 10px 15px;
   border-radius: 8px;
@@ -90,32 +108,34 @@ body {
   background-color: var(--input-bg);
   font-size: 1rem;
   font-family: var(--font-family-comfortaa);
-  color: var(--gray-dark);
+  color: var(--text-color-dark);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .form-group input:focus,
 .form-group select:focus {
-  border-color: #8a2a2c;
+  border-color: var(--focus-border-color);
   outline: none;
   box-shadow: 0 0 0 3px rgba(255, 106, 0, 0.2);
 }
 
 /* ================== ERROS ================== */
 .profile-error {
-  color: red;
-  background-color: #ffe0e0;
-  border: 1px solid red;
+  color: #721c24;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
   padding: 10px;
   border-radius: var(--border-radius-medium);
   margin-bottom: 15px;
   text-align: center;
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(114, 28, 36, 0.08);
 }
 
 /* ================== BOTÕES ================== */
 
 .profile-content button {
-  background-color: #8a2a2c;
+  background-color: var(--primary-color);
   color: #fff;
   font-weight: 700;
   font-family: Comfortaa, sans-serif;
@@ -129,7 +149,7 @@ body {
 }
 
 .profile-content button:hover {
-  background-color: #7c1a1c;
+  background-color: var(--primary-hover-color);
   transform: translateY(-1px);
 }
 
@@ -609,4 +629,304 @@ body {
   .user-edit-row {
     padding: 8px 2px;
   }
+}
+
+/* ================== SUCCESS MESSAGE ================== */
+.profile-success {
+  color: #155724;
+  background-color: var(--success-bg);
+  border: 1px solid var(--success-border);
+  padding: 14px 16px;
+  border-radius: var(--border-radius-medium);
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(40, 167, 69, 0.08);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ================== LISTA DE USUÁRIOS (atualizado) ================== */
+.users-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.users-information {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px 18px;
+  background-color: var(--content-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-medium);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  gap: 20px;
+}
+
+.users-information:hover {
+  background-color: #f0f0f0;
+  box-shadow: var(--shadow-light);
+}
+
+.user-info {
+  flex: 1;
+  min-width: 250px;
+  padding: 0;
+  margin: 0;
+}
+
+.user-info span {
+  color: var(--text-color);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  word-break: break-word;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.user-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+  justify-content: flex-start;
+  min-width: 150px;
+}
+
+/* -------- Botões de Ação -------- */
+.users-edit-button,
+.users-deactivate-button,
+.users-delete-button {
+  padding: 11px 20px;
+  border: none;
+  border-radius: var(--border-radius-medium);
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: var(--font-family-comfortaa);
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+  white-space: nowrap;
+  min-width: 140px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.users-edit-button {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.users-edit-button:hover:not(:disabled) {
+  background-color: var(--primary-hover-color);
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(138, 42, 44, 0.25);
+}
+
+.users-deactivate-button {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.users-deactivate-button:hover:not(:disabled) {
+  background-color: #e0a800;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(255, 193, 7, 0.25);
+}
+
+.users-delete-button {
+  background-color: var(--atrasado-color);
+  color: white;
+}
+
+.users-delete-button:hover:not(:disabled) {
+  background-color: #c82333;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(229, 62, 62, 0.25);
+}
+
+.users-edit-button:disabled,
+.users-deactivate-button:disabled,
+.users-delete-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ================== CRIAÇÃO DE USUÁRIO ================== */
+.create-user-toolbar {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.btn-create-user {
+  background-color: var(--primary-color);
+  color: #fff;
+  border: none;
+  border-radius: var(--border-radius-medium);
+  padding: 10px 20px;
+  font-family: var(--font-family-comfortaa);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.create-user-form {
+  background-color: var(--content-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-medium);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.create-user-form h3 {
+  margin: 0 0 12px;
+  color: var(--text-color-dark);
+  font-size: 1.1rem;
+}
+
+.create-user-form .form-group {
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.create-user-form .form-group label,
+.create-user-form .form-group input,
+.create-user-form .form-group select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.create-user-form .form-group input,
+.create-user-form .form-group select {
+  display: block;
+}
+
+/* ================== MODAIS DE CONFIRMAÇÃO ================== */
+.confirmation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.confirmation-modal {
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 400px;
+  width: 90%;
+  animation: slideDown 0.3s ease-out;
+}
+
+.confirmation-content {
+  padding: 24px;
+}
+
+.confirmation-header {
+  margin-bottom: 16px;
+}
+
+.confirmation-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.confirmation-message {
+  margin-bottom: 24px;
+  color: #555;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.confirmation-message p {
+  margin: 0;
+}
+
+.confirmation-message strong {
+  font-weight: 600;
+  color: #333;
+}
+
+.confirmation-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.confirmation-cancel-btn,
+.confirmation-confirm-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.confirmation-cancel-btn {
+  background-color: #f0f0f0;
+  color: #333;
+  border: 1px solid #d0d0d0;
+}
+
+.confirmation-cancel-btn:hover {
+  background-color: #e0e0e0;
+  border-color: #b0b0b0;
+}
+
+.confirmation-confirm-btn {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.confirmation-confirm-btn:hover {
+  background-color: var(--primary-hover-color);
+  box-shadow: 0 2px 8px rgba(138, 42, 44, 0.3);
+}
+
+.confirmation-confirm-btn.deactivate {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.confirmation-confirm-btn.deactivate:hover {
+  background-color: #e0a800;
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+}
+
+.confirmation-confirm-btn.delete {
+  background-color: var(--atrasado-color);
+  color: white;
+}
+
+.confirmation-confirm-btn.delete:hover {
+  background-color: #c82333;
+  box-shadow: 0 2px 8px rgba(229, 62, 62, 0.3);
 }

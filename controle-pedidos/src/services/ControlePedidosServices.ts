@@ -5,8 +5,27 @@ import type { Pedido } from "../types/Pedidos";
 import type { SetorValue } from "../types/Setores";
 
 import { fetchWithAuth } from "../utils/FetchWithAuth";
+import { CONTROLE_PEDIDOS_API_BASE_URL } from "../config/functionsApi";
 
-const API_URL = import.meta.env.VITE_API_EMULATOR_URL;
+const API_URL = CONTROLE_PEDIDOS_API_BASE_URL;
+
+async function getAuthenticatedSession() {
+  const auth = getAuth();
+  const currentUser = auth.currentUser;
+
+  if (!currentUser) {
+    globalThis.alert("Usuário não autenticado. Redirecionando para login...");
+    globalThis.location.href = "/";
+    throw new Error("Usuário não autenticado");
+  }
+
+  const userToken = await currentUser.getIdToken(true);
+  return { auth, userToken };
+}
+
+async function parseErrorData(response: Response): Promise<{ message?: string }> {
+  return response.json().catch(() => ({ message: "Erro desconhecido" }));
+}
 
 export async function criarPedido({
   formData,
@@ -65,16 +84,7 @@ export async function criarPedido({
     if (codigoClienteOmie) pedidoData.codigoClienteOmie = codigoClienteOmie;
     if (retrabalho !== undefined) pedidoData.retrabalho = retrabalho;
 
-    const auth = getAuth();
-    const currentUser = auth.currentUser;
-    
-    if (!currentUser) {
-      globalThis.alert("Usuário não autenticado. Redirecionando para login...");
-      globalThis.location.href = "/";
-      throw new Error("Usuário não autenticado");
-    }
-    
-    const userToken = await currentUser.getIdToken(true);
+    const { auth, userToken } = await getAuthenticatedSession();
 
     const response = await fetchWithAuth(`${API_URL}/dashboard/criarPedido`, {
       method: "POST",
@@ -86,7 +96,7 @@ export async function criarPedido({
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: "Erro desconhecido" }));
+      const errorData = await parseErrorData(response);
       
       if (response.status === 401) {
         globalThis.alert("Sessão expirada. Redirecionando para login...");
@@ -109,28 +119,19 @@ export async function criarPedido({
 
 export const atualizarPedidoBackend = async (id: string, updateData: any) => {
   try {
-    const auth = getAuth();
-    const user = auth.currentUser;
-    
-    if (!user) {
-      globalThis.alert("Usuário não autenticado. Redirecionando para login...");
-      globalThis.location.href = "/";
-      throw new Error("Usuário não autenticado");
-    }
-  
-    const token = await user.getIdToken(true);
+    const { auth, userToken } = await getAuthenticatedSession();
 
     const response = await fetch(`${API_URL}/dashboard/editarPedido`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${userToken}`,
       },
       body: JSON.stringify({ pedidoID: id, ...updateData }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: "Erro desconhecido" }));
+      const errorData = await parseErrorData(response);
       
       if (response.status === 401) {
         globalThis.alert("Sessão expirada. Redirecionando para login...");
@@ -153,16 +154,7 @@ export const atualizarPedidoBackend = async (id: string, updateData: any) => {
 
 export async function deletarPedidoBackend(pedidoID: string) {
   try {
-    const auth = getAuth();
-    const currentUser = auth.currentUser;
-    
-    if (!currentUser) {
-      globalThis.alert("Usuário não autenticado. Redirecionando para login...");
-      globalThis.location.href = "/";
-      throw new Error("Usuário não autenticado");
-    }
-    
-    const userToken = await currentUser.getIdToken(true);
+    const { auth, userToken } = await getAuthenticatedSession();
 
     const response = await fetchWithAuth(`${API_URL}/dashboard/deletarPedido`, {
       method: "DELETE",
@@ -174,7 +166,7 @@ export async function deletarPedidoBackend(pedidoID: string) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: "Erro desconhecido" }));
+      const errorData = await parseErrorData(response);
       
       if (response.status === 401) {
         globalThis.alert("Sessão expirada. Redirecionando para login...");
@@ -203,15 +195,8 @@ export async function buscarPedidos(
     let authToken = token;
     
     if (!authToken) {
-      const auth = getAuth();
-      const currentUser = auth.currentUser;
-      
-      if (!currentUser) {
-        globalThis.location.href = "/";
-        throw new Error("Usuário não autenticado");
-      }
-      
-      authToken = await currentUser.getIdToken(true);
+      const { userToken } = await getAuthenticatedSession();
+      authToken = userToken;
     }
 
     const queryString = new URLSearchParams(params).toString();
@@ -224,7 +209,7 @@ export async function buscarPedidos(
     );
     
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: "Erro desconhecido" }));
+      const errorData = await parseErrorData(response);
       
       if (response.status === 401) {
         globalThis.alert("Sessão expirada. Redirecionando para login...");
@@ -248,15 +233,7 @@ export async function buscarPedidos(
 
 export async function marcarComoEntregueBackend(pedidoID: string) {
   try {
-    const auth = getAuth();
-    const currentUser = auth.currentUser;
-    
-    if (!currentUser) {
-      globalThis.alert("Usuário não autenticado. Redirecionando para login...");
-      globalThis.location.href = "/";
-      throw new Error("Usuário não autenticado");
-    }
-    const userToken = await currentUser.getIdToken(true);
+    const { auth, userToken } = await getAuthenticatedSession();
 
     const response = await fetch(
       `${API_URL}/dashboard/marcarComoEntregue`,
@@ -271,9 +248,7 @@ export async function marcarComoEntregueBackend(pedidoID: string) {
     );
 
 
-    const responseData = await response.json().catch(() => ({ 
-      message: "Erro desconhecido" 
-    }));
+    const responseData = await parseErrorData(response);
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -305,15 +280,8 @@ export async function buscarPedidosRelatorio(
     let authToken = token;
     
     if (!authToken) {
-      const auth = getAuth();
-      const currentUser = auth.currentUser;
-      
-      if (!currentUser) {
-        globalThis.location.href = "/";
-        throw new Error("Usuário não autenticado");
-      }
-      
-      authToken = await currentUser.getIdToken(true);
+      const { userToken } = await getAuthenticatedSession();
+      authToken = userToken;
     }
 
     const queryString = new URLSearchParams(params).toString();
@@ -326,7 +294,7 @@ export async function buscarPedidosRelatorio(
     );
     
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: "Erro desconhecido" }));
+      const errorData = await parseErrorData(response);
       
       if (response.status === 401) {
         globalThis.alert("Sessão expirada. Redirecionando para login...");
@@ -351,16 +319,7 @@ export async function buscarPedidosRelatorio(
 
 export async function buscarClienteOmie(termo: string) {
   try {
-    const auth = getAuth();
-    const currentUser = auth.currentUser;
-
-    if (!currentUser) {
-      globalThis.alert("Usuário não autenticado. Redirecionando para login...");
-      globalThis.location.href = "/";
-      throw new Error("Usuário não autenticado");
-    }
-
-    const userToken = await currentUser.getIdToken(true);
+    const { auth, userToken } = await getAuthenticatedSession();
 
     // Verifica se o termo é um CPF/CNPJ (apenas números)
     const apenasNumeros = termo.replace(/\D/g, '');
@@ -386,7 +345,7 @@ export async function buscarClienteOmie(termo: string) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: "Erro desconhecido" }));
+      const errorData = await parseErrorData(response);
 
       if (response.status === 401) {
         globalThis.alert("Sessão expirada. Redirecionando para login...");

@@ -1,328 +1,273 @@
-Sistema de Gestão Ontegrada - Desenhar
+# Sistema Integrado Desenhar
 
-Sistema completo de gestão de atendimentos e controle de pedidos desenvolvido com React, TypeScript e Firebase.
+Plataforma interna para operar o ciclo completo de atendimento e produção de pedidos da Desenhar, com dois frontends especializados e backend serverless centralizado.
 
-Visão Geral
-    O projeto é composto por 3 módulos principais:
+## Objetivo do Sistema
 
-1. Sistema de Atendimento
-    Gerenciamento de fila de atendimento presencial com controle de tempo, prioridades e histórico completo.
+O sistema foi pensado para resolver 4 necessidades operacionais principais:
 
-2. Controle de Pedidos
-    Sistema completo para gestão de pedidos gráficos com acompanhamento de status, prazos e relatórios detalhados.
+1. Organizar o atendimento presencial e reduzir tempo de espera percebido.
+2. Transformar atendimentos em pedidos rastreáveis com status e responsável.
+3. Dar visibilidade de produção e entrega para equipes diferentes (balcão, arte, galpão, gestão).
+4. Garantir controle de acesso e auditoria das ações sensíveis.
 
-3. Firebase Functions
-    Backend serverless com autenticação, autorização e regras de negócio centralizadas.
+## Módulos e Papel de Cada Um
 
-Arquitetura do Sistema
+1. atendimento
+   1. Operação de fila e atendimento.
+   2. Histórico, indicadores e relatórios de atendimento.
+   3. Gestão de usuários no contexto de atendimento.
 
-    desenhar/
-    ├── atendimento/          # Sistema de Fila de Atendimento
-    ├── controle-pedidos/     # Sistema de Controle de Pedidos
-    └── functions/            # Firebase Cloud Functions (Backend)
+2. controle-pedidos
+   1. Cadastro, edição e acompanhamento do pedido.
+   2. Gestão de prazos, responsáveis e etapas de produção.
+   3. Relatórios operacionais e gerenciais.
 
-Sistema de Atendimento
+3. functions
+   1. API de domínio (atendimento, pedidos, usuários).
+   2. Middleware de autenticação/autorização.
+   3. Segurança HTTP, rate limiting e logs de segurança.
 
- Funcionalidades
-    Registro de atendimentos diretos ou por fila
-        Sistema de prioridades (normal/preferencial)
-        Controle de tempo de espera e atendimento em tempo real
-        Identificação de consumidor final
-        Múltiplos tipos de atendimento (Impressão, Criação, Edição, etc.)
-    
-    Gerenciamento
-         Chamar próximo da fila
-            Finalizar atendimentos com opções:
-            Adicionar ao controle de pedidos
-            Finalizar pedido realizado no momento
-            Cancelar pedido
-            Deletar atendimentos com justificativa obrigatória
+## Estrutura do Repositório
 
-    Dashboard e Relatórios
-        Histórico completo de atendimentos
-        Filtros avançados (data, atendente, status, tipo)
-        Estatísticas em tempo real
-        Exportação para Excel
-        Métricas de desempenho
+```text
+desenhar/
+├── atendimento/
+├── controle-pedidos/
+├── functions/
+└── README.md
+```
 
-    Gestão de Usuários
-        Log de ações (auditoria)
+## Como as Funcionalidades Foram Pensadas
 
-Tecnologias
-    React 18 + TypeScript
-    Firebase (Firestore, Authentication, Functions)
-    Vite (build tool)
-    React Router (navegação)
-    Context API (gerenciamento de estado)
+### 1) Atendimento como entrada do fluxo
 
-Estrutura do Projeto
-    atendimento/
-    ├── src/
-    │   ├── components/
-    │   │   └── layout/
-    │   │       └── headerPage.tsx          # Header padronizado
-    │   ├── context/
-    │   │   └── AuthContext.tsx             # Autenticação global
-    │   ├── pages/
-    │   │   ├── Atendimento/                # Fila de atendimento
-    │   │   │   ├── FilaAtendimento.tsx
-    │   │   │   └── components/
-    │   │   │       ├── FilaAtendimentoItem.tsx
-    │   │   │       ├── FinalizarOpcoes.tsx
-    │   │   │       ├── ModalSelecionarCliente.tsx
-    │   │   │       └── RegistroAtendimento.tsx
-    │   │   ├── Dashboard/                  # Histórico e relatórios
-    │   │   │   ├── Dashboard.tsx
-    │   │   │   └── components/
-    │   │   │       ├── HistoricoAtendimentos.tsx
-    │   │   │       └── RelatorioAtendimentos.tsx
-    │   │   ├── Profile/                    # Gestão de usuários
-    │   │   │   ├── ProfileEdit.tsx
-    │   │   │   └── components/
-    │   │   │       ├── ProfileForm.tsx
-    │   │   │       ├── UserList.tsx
-    │   │   │       └── LogAtendimentosList.tsx
-    │   │   ├── Welcome/                    # Tela inicial
-    │   │   │   └── Welcome.tsx
-    │   │   └── Login/
-    │   │       └── Login.tsx
-    │   ├── services/
-    │   │   ├── firebase.ts                 # Configuração Firebase
-    │   │   └── AtendimentoServices.ts      # Serviços de atendimento
-    │   ├── styles/                         # CSS padronizado
-    │   ├── types/                          # TypeScript types
-    │   └── utils/                          # Funções auxiliares
-    ├── .env                                # Variáveis de ambiente
-    └── package.json
+Racional:
 
-Padrões de Design
-    Fonte: Comfortaa (Google Fonts)
-    Cores principais:
-    Primário: #8a2a2c (vermelho vinho)
-    Hover: #681c1d
-    Background: #f8f9fa
-    Bordas: #e5e7eb
-    Componentes: Card-based design com bordas arredondadas
-    Responsividade: Mobile-first (breakpoints: 576px, 768px, 992px, 1200px)
+1. O ponto de contato inicial é o atendimento presencial.
+2. A equipe precisava separar fila convencional e preferencial sem perder histórico.
+3. O resultado do atendimento precisava ter desfechos claros (finaliza, cancela, vira pedido).
 
-Controle de Pedidos
+Decisões de produto:
 
-Funcionalidades
+1. Fila com prioridade e mudança de status por etapa.
+2. Registro de histórico por atendimento para análise posterior.
+3. Ação explícita de conversão para controle de pedidos.
 
-    Gestão de Pedidos
-        Cadastro completo de pedidos
-        Acompanhamento de status (Em produção, Aguardando, Pronto, Entregue)
-        Controle de prazos e entregas
-        Upload de arquivos
-        Múltiplos tipos de serviço (Impressão, Banner, Adesivo, etc.)
+### 2) Pedido como objeto central de operação
 
-    Dashboard
-        Visualização em tabela paginada
-        Ordenação por múltiplos critérios
-        Filtros avançados (status, tipo, setor, prazo)
-        Busca por código/cliente
-        Indicadores visuais de urgência
+Racional:
 
-    Relatórios
-        Estatísticas completas
-        Gráficos interativos:
-        Pedidos por status
-        Entregas no prazo
-        Pedidos por tipo
-        Filtros de data personalizados
-        Exportação para Excel
+1. Produção exige rastreabilidade por etapas e responsáveis.
+2. A gestão precisa saber gargalos por status, prazo e tipo de serviço.
 
-    Edição de Pedidos
-        Atualização de informações
-        Alteração de status
-        Upload de novos arquivos
-        Retrabalho com justificativa
-        Histórico de alterações
+Decisões de produto:
 
-Tecnologias
-    React 18 + TypeScript
-    Firebase (Firestore, Storage, Functions)
-    Recharts (gráficos)
-    XLSX (exportação Excel)
-    Vite (build tool)
+1. Pedido com histórico de status e datas de atualização.
+2. Filtros fortes no dashboard para operação diária.
+3. Relatórios com exportação para uso externo (Excel).
 
-Estrutura do Projeto
+### 3) Permissões por contexto de usuário
 
-    controle-pedidos/
-    ├── src/
-    │   ├── components/
-    │   │   └── layout/
-    │   │       └── headerPage.tsx
-    │   ├── context/
-    │   │   └── AuthContext.tsx
-    │   ├── pages/
-    │   │   ├── Dashboard/
-    │   │   │   ├── Dashboard.tsx
-    │   │   │   └── components/
-    │   │   │       ├── DashboardHeader.tsx
-    │   │   │       ├── PedidosTable.tsx
-    │   │   │       ├── PedidoRow.tsx
-    │   │   │       └── Pagination.tsx
-    │   │   ├── NovoPedido.tsx             # Cadastro de pedidos
-    │   │   ├── EditarPedidos/
-    │   │   │   └── EditarPedido.tsx
-    │   │   ├── Relatorios/
-    │   │   │   ├── Relatorios.tsx
-    │   │   │   └── components/
-    │   │   │       ├── GraficoPedidosPorStatus.tsx
-    │   │   │       ├── GraficoEntregasPrazo.tsx
-    │   │   │       └── GraficoPedidosPorTipo.tsx
-    │   │   ├── ProfileEdit.tsx
-    │   │   └── Login.tsx
-    │   ├── services/
-    │   │   ├── firebase.ts
-    │   │   └── ControlePedidosServices.ts
-    │   ├── styles/                        # CSS padronizado
-    │   ├── types/                         # TypeScript interfaces
-    │   │   ├── Pedidos.ts
-    │   │   ├── StatusPedidos.ts
-    │   │   ├── Servicos.ts
-    │   │   └── Setores.ts
-    │   └── utils/
-    │       ├── timeUtils.ts
-    │       ├── formatUtils.ts
-    │       └── firestoreUtils.ts
-    ├── firestore.rules                    # Regras de segurança
-    └── package.json
+Racional:
 
-Padrões de Design
-    Layout: Idêntico ao sistema de atendimento
-    Tabelas: Header com gradiente, bordas arredondadas, hover suave
-    Cards: Background branco, sombra suave, padding consistente
-    Gráficos: Recharts com cores customizadas
-    Badges: Status coloridos com bordas arredondadas
+1. Nem todo usuário deve alterar qualquer dado.
+2. A desativação de conta precisa refletir imediatamente no acesso.
 
-Firebase Functions (Backend)
+Decisões de produto:
 
-Funcionalidades
-    Atendimento
-        buscarAtendimentos - Lista atendimentos com filtros
-        buscarHistoricoAtendimentos - Histórico completo
-        Validação de permissões
-        Conversão de Timestamps
-    Controle de Pedidos
-        buscarPedidos - Lista pedidos com filtros avançados
-        buscarRelatorios - Dados para relatórios
-        Validação de permissões por função
-        Conversão de Timestamps
+1. Validação de token em backend para toda rota protegida.
+2. Verificação de usuário cadastrado e status da conta no Firestore.
+3. Bloqueio com mensagens claras de motivo para o login.
 
-    Autenticação e Autorização
-        Middleware de autenticação JWT
-        Validação de tokens Firebase
-        Controle de permissões por função (admin/atendente/operador)
-        Rate limiting e segurança
+### 4) Segurança e observabilidade embutidas
 
-Tecnologias
-    Node.js + TypeScript
-    Firebase Functions (2nd gen)
-    Firebase Admin SDK
-    Express.js (middleware)
+Racional:
 
-Estrutura
+1. O sistema opera dados de cliente e operação interna.
+2. Erros de autenticação/autorização precisam ser auditáveis.
 
-        functions/
-    ├── src/
-    │   ├── index.ts                       # Entry point
-    │   ├── atendimento/
-    │   │   ├── funcAtendimento.ts         # Functions de atendimento
-    │   │   └── utils/
-    │   │       └── filtrosUtils.ts        # Filtros customizados
-    │   ├── controle-pedidos/
-    │   │   ├── funcControlePedidos.ts     # Functions de pedidos
-    │   │   └── utils/
-    │   │       └── filtrosUtils.ts
-    │   └── utils/
-    │       ├── authMiddleware.ts          # Middleware JWT
-    │       ├── permissaoUtils.ts          # Validação de permissões
-    │       └── deepConvertTimestamps.ts   # Conversão de datas
-    ├── lib/                               # JavaScript compilado
-    ├── .env                               # Variáveis de ambiente
-    └── package.json
+Decisões de produto:
 
-Segurança
-    Autenticação obrigatória em todas as rotas
-        Validação de token Firebase
-        Rate limiting (1000 req/min por IP)
-        CORS configurado
-        Validação de permissões por função
-        Logs de auditoria
+1. CORS restritivo por origem conhecida.
+2. Rate limiting padrão para mitigar abuso.
+3. Eventos de segurança com mascaramento de dados sensíveis.
 
-Deploy
-  cd functions
-    npm run build
-    firebase deploy --only functions
+## Funcionalidades por Módulo
 
-Como Executar
-    Pré-requisitos
-        Node.js 18+
-        npm ou yarn
-        Conta Firebase configurada
-        Git
+### Atendimento
 
-Instalação
-    Clone o repositório
-        git clone https://github.com/anacostasouza/controle-pedidos.git
-        cd desenhar
+1. Registro de atendimento direto ou por fila.
+2. Priorização convencional/preferencial.
+3. Atualização de histórico de atendimento por status.
+4. Finalização com desfechos operacionais.
+5. Dashboard com filtros de período, tipo e status.
+6. Exportação de dados para Excel.
+7. Gestão de usuários e ações administrativas.
+8. Log de ações relevantes para auditoria interna.
 
-    Instalar dependências
-        # Atendimento
-            cd atendimento
-            npm install
+### Controle de Pedidos
 
-        # Controle de Pedidos
-            cd ../controle-pedidos
-            npm install
+1. Criação de pedido com dados de cliente e serviço.
+2. Edição de pedido com validação de permissão.
+3. Exclusão de pedido com controles administrativos.
+4. Busca paginada e filtrada para operação diária.
+5. Fluxo de marcação de pedido entregue.
+6. Relatórios com filtros avançados e visualização de desempenho.
+7. Gestão de usuários com ativação/desativação/exclusão conforme regra.
 
-        # Functions
-            cd ../functions
-            npm install
+### Backend Functions
 
-Configurar variáveis de ambiente
-    Crie arquivos .env em cada projeto:
-        VITE_FIREBASE_API_KEY=your_api_key
-        VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-        VITE_FIREBASE_PROJECT_ID=your_project_id
-        VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-        VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-        VITE_FIREBASE_APP_ID=your_app_id
-        VITE_API_URL=https://us-central1-your_project.cloudfunctions.net
+1. Rotas públicas e protegidas separadas por domínio.
+2. Middleware de autenticação JWT Firebase.
+3. Autorização por cadastro e status da conta.
+4. Middleware HTTP com CORS, security headers e rate limiter.
+5. Logging estruturado para erros e eventos de segurança.
 
-Boas Práticas Implementadas
-    Código
-        TypeScript strict mode
-        ESLint configurado
-        Componentes funcionais com hooks
-        Context API para estado global
-        Custom hooks reutilizáveis
-        Tratamento de erros centralizado
+## Arquitetura Técnica
 
-    Performance
-        Lazy loading de componentes
-        Paginação otimizada
-        Debounce em buscas
-        Memoização de cálculos pesados
-        Otimização de queries Firestore
+### Frontend
 
-    UI/UX
-        Design system consistente
-        Feedback visual em todas as ações
-        Loading states
-        Mensagens de erro amigáveis
-        Responsividade completa
-        Acessibilidade (ARIA labels, focus states)
+1. React + TypeScript + Vite.
+2. Context API para estado de autenticação e sessão.
+3. Services para comunicação com APIs.
+4. CSS por página/componente, mantendo padrão visual comum.
 
-    Segurança
-        Autenticação obrigatória
-        Validação de permissões
-        Regras de segurança Firestore
-        Sanitização de inputs
-        Rate limiting nas functions
+### Backend
 
-Licença
-    Este projeto é propriedade privada da empresa Desenhar Comunicação Visual
+1. Firebase Functions + Express.
+2. Firebase Admin SDK para Auth/Firestore.
+3. Organização por domínios (atendimento, controle-pedidos, usuarios).
+4. Testes unitários para utilitários e middlewares críticos.
+
+## Configuração de API Centralizada
+
+Cada frontend possui um resolvedor único de endpoint:
+
+1. atendimento/src/config/functionsApi.ts
+2. controle-pedidos/src/config/functionsApi.ts
+
+Regra de resolução:
+
+1. Se VITE_FUNCTIONS_TARGET estiver definido:
+   1. emulator -> usa Firebase Emulator.
+   2. production -> usa Cloud Functions.
+2. Se não estiver definido:
+   1. em desenvolvimento (DEV) -> emulator.
+   2. em build/produção -> cloud.
+
+Variáveis de ambiente recomendadas:
+
+1. VITE_FUNCTIONS_TARGET=emulator ou production
+2. VITE_FUNCTIONS_EMULATOR_HOST=127.0.0.1:9000
+3. VITE_FIREBASE_PROJECT_ID=gestaopedidos-desenhar
+
+## Segurança (Consolidada)
+
+### Controles implementados
+
+1. Autenticação obrigatória nas rotas protegidas.
+2. Validação de token e email permitido.
+3. Verificação de usuário cadastrado e conta ativa.
+4. CORS com allowlist controlada por ambiente.
+5. Security headers padrão.
+6. Rate limiting por janela de tempo.
+
+### Logging de segurança
+
+1. Uso de logSecurityEvent para eventos de negação e falha.
+2. Mascaramento automático de campos sensíveis:
+   1. email
+   2. uid/userId
+   3. token/authorization/secret/password/apiKey
+
+### Retenção e operação recomendadas
+
+1. Produção: retenção de 180 dias para logs de segurança.
+2. Desenvolvimento: retenção de 30 dias.
+3. Alertas para picos de:
+   1. auth.denied.invalid_token
+   2. auth.denied.user_not_registered
+   3. auth.denied.authorization_service_unavailable
+
+## Fluxos Críticos de Negócio
+
+### Fluxo A: Atendimento para Pedido
+
+1. Usuário registra/chama atendimento.
+2. Atendimento evolui por status.
+3. Atendimento pode ser convertido em pedido.
+4. Pedido segue ciclo de produção até entrega.
+
+### Fluxo B: Controle de Acesso
+
+1. Usuário autentica via Firebase.
+2. Backend valida token e cadastro no Firestore.
+3. Se conta desativada, acesso bloqueado e logout.
+4. Motivo de bloqueio é exibido na tela de login.
+
+### Fluxo C: Gestão de Usuários
+
+1. Admin lista usuários.
+2. Admin cria/edita/ativa/desativa/deleta usuário.
+3. Alterações refletem no controle de acesso em tempo real.
+
+## Como Rodar Localmente
+
+Pré-requisitos:
+
+1. Node.js 18+.
+2. Firebase CLI.
+
+Instalação:
+
+1. cd atendimento && npm install
+2. cd ../controle-pedidos && npm install
+3. cd ../functions && npm install
+
+Execução local sugerida:
+
+1. Backend (functions):
+   1. cd functions
+   2. npm run serve
+   3. manter este terminal aberto durante os testes locais
+2. Frontend atendimento:
+   1. cd atendimento
+   2. npm run dev
+3. Frontend controle-pedidos:
+   1. cd controle-pedidos
+   2. npm run dev
+
+## Deploy
+
+Backend:
+
+1. cd functions
+2. npm run build
+3. npm run deploy
+
+Padronização de CLI para Firebase Functions 7.x:
+
+1. O projeto usa `firebase-tools` local em `functions/package.json`.
+2. Execute sempre via scripts npm dentro de `functions` (ex.: `npm run serve`, `npm run deploy`, `npm run logs`).
+3. Os scripts de `functions` usam `--config ../firebase.json` para manter o mesmo `source` e portas do emulador em todos os ambientes.
+4. Evite usar `firebase` global para não ter diferença de comportamento entre máquinas.
+
+Frontends:
+
+1. Atendimento:
+   1. cd atendimento
+   2. npm run deploy
+2. Controle-pedidos:
+   1. cd controle-pedidos
+   2. npm run deploy
+3. Os scripts de frontend usam `npx firebase-tools@15.11.0 deploy --only hosting` para publicar apenas hosting.
+
+## Diretrizes de Evolução
+
+1. Toda regra de negócio nova deve ser validada no backend.
+2. Mudanças de autenticação/autorização exigem teste de regressão.
+3. Endpoints de frontend devem continuar consumindo apenas functionsApi centralizado.
+4. Eventos críticos devem ter log de segurança e mensagem amigável para usuário.
+
 

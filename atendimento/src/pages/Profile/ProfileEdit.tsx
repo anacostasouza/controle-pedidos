@@ -22,6 +22,19 @@ import ProfileForm from "./components/ProfileForm";
 import LogAtendimentosList from "./components/LogAtendimentosList";
 import UserList from "./components/UserList";
 import ProfileSidebar from "./components/ProfileSidebar";
+import {
+  criarUsuario,
+  desativarUsuario,
+  ativarUsuario,
+  deletarUsuario,
+  listarUsuarios,
+  atualizarUsuario,
+} from "../../services/UsuariosServices";
+import {
+  extractErrorMessage,
+  mapUsuarioFromApi,
+  mapUsuarioFromFirestore,
+} from "../../utils/userDataUtils";
 
 export default function ProfileEditPage(): JSX.Element {
   const navigate = useNavigate();
@@ -36,10 +49,19 @@ export default function ProfileEditPage(): JSX.Element {
   const [editingUserSetor, setEditingUserSetor] = useState<SetorValue | "">("");
   const [editingUserStatus, setEditingUserStatus] = useState<boolean>(true);
 
+  const [showCreateUserForm, setShowCreateUserForm] = useState<boolean>(false);
+  const [newUserEmail, setNewUserEmail] = useState<string>("");
+  const [newUserName, setNewUserName] = useState<string>("");
+  const [newUserSetor, setNewUserSetor] = useState<SetorValue | "">("");
+
   const [logs, setLogs] = useState<any[]>([]);
 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
+  const [successMessage, setSuccessMessage] = useState<string>("");
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [confirmationType, setConfirmationType] = useState<null | "delete" | "deactivate" | "activate">(null);
+  const [userToConfirm, setUserToConfirm] = useState<Usuario | null>(null);
 
   const [selected, setSelected] = useState<"profile" | "users" | "log">("profile");
 
@@ -69,58 +91,38 @@ export default function ProfileEditPage(): JSX.Element {
 
         if (userDocSnap.exists()) {
           const data = userDocSnap.data();
-          const currentSetorObj = setores.find((s) => s.value === data.setor);
-          const currentSetorLabel = currentSetorObj?.label ?? "";
 
-          const loadedLoggedUser: Usuario = {
-            usuarioID: currentUser.uid,
-            displayName: data.displayName ?? "",
-            email: data.email ?? currentUser.email ?? "",
-            setor: (data.setor as SetorValue) ?? "",
-            setorNome: currentSetorLabel,
-            createdAt:
-              data.createdAt instanceof Timestamp
-                ? data.createdAt.toDate()
-                : new Date(),
-            updatedAt:
-              data.updatedAt instanceof Timestamp
-                ? data.updatedAt.toDate()
-                : new Date(),
-            statusConta: data.statusConta ?? true,
-          };
+          const loadedLoggedUser: Usuario = mapUsuarioFromFirestore(
+            currentUser.uid,
+            data,
+            setores,
+            currentUser.email ?? ""
+          );
           setUsuarioLogado(loadedLoggedUser);
           setProfileName(loadedLoggedUser.displayName);
           setSetor(loadedLoggedUser.setor as SetorValue);
 
           if (setoresAdminLabels.includes(loadedLoggedUser.setorNome)) {
-            const usersCollectionRef = collection(db, "usuarios");
-            const q = query(usersCollectionRef);
-            const querySnapshot = await getDocs(q);
-            const loadedUsers: Usuario[] = [];
-            querySnapshot.forEach((docSnap) => {
-              const userData = docSnap.data();
-              const userSetorObj = setores.find(
-                (s) => s.value === userData.setor
+            try {
+              const usuarios = await listarUsuarios();
+              const loadedUsers: Usuario[] = usuarios.map((user) =>
+                mapUsuarioFromApi(user, setores)
               );
-              const userSetorLabel = userSetorObj?.label ?? "";
-              loadedUsers.push({
-                usuarioID: docSnap.id,
-                displayName: userData.displayName ?? "",
-                email: userData.email ?? "",
-                setor: (userData.setor as SetorValue) ?? "",
-                setorNome: userSetorLabel,
-                createdAt:
-                  userData.createdAt instanceof Timestamp
-                    ? userData.createdAt.toDate()
-                    : new Date(),
-                updatedAt:
-                  userData.updatedAt instanceof Timestamp
-                    ? userData.updatedAt.toDate()
-                    : new Date(),
-                statusConta: userData.statusConta ?? true,
+              setAllUsers(loadedUsers);
+            } catch (err) {
+              // Fallback para Firestore se API falhar
+              const usersCollectionRef = collection(db, "usuarios");
+              const q = query(usersCollectionRef);
+              const querySnapshot = await getDocs(q);
+              const loadedUsers: Usuario[] = [];
+              querySnapshot.forEach((docSnap) => {
+                const userData = docSnap.data();
+                loadedUsers.push(
+                  mapUsuarioFromFirestore(docSnap.id, userData, setores)
+                );
               });
-            });
-            setAllUsers(loadedUsers);
+              setAllUsers(loadedUsers);
+            }
           }
         } else {
           setError("Perfil não encontrado.");
@@ -128,7 +130,7 @@ export default function ProfileEditPage(): JSX.Element {
         }
       } catch (err) {
         console.error(err);
-        setError("Erro ao carregar dados.");
+        setError(extractErrorMessage(err, "Erro ao carregar dados."));
       } finally {
         setLoading(false);
       }
@@ -153,13 +155,10 @@ export default function ProfileEditPage(): JSX.Element {
       const userDocRef = doc(db, "usuarios", targetUserId);
 
       if (editingUserId) {
-        await updateDoc(userDocRef, {
+        await atualizarUsuario(editingUserId, {
           displayName: editingUserName,
-          setor: editingUserSetor,
-          setorNome:
-            setores.find((s) => s.value === editingUserSetor)?.label ?? "",
+          setor: editingUserSetor as SetorValue,
           statusConta: editingUserStatus,
-          updatedAt: Timestamp.now(),
         });
 
         setAllUsers((prev) =>
@@ -179,6 +178,7 @@ export default function ProfileEditPage(): JSX.Element {
           )
         );
 
+        setSuccessMessage("Usuário atualizado com sucesso!");
         setEditingUserId(null);
       } else {
         await updateDoc(userDocRef, {
@@ -208,9 +208,41 @@ export default function ProfileEditPage(): JSX.Element {
       }
     } catch (err) {
       console.error(err);
-      setError("Erro ao salvar dados.");
+      setError(extractErrorMessage(err, "Erro ao salvar dados."));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccessMessage("");
+
+    if (!newUserEmail || !newUserName || !newUserSetor) {
+      setError("Email, nome e setor são obrigatórios.");
+      return;
+    }
+
+    try {
+      const newUser = await criarUsuario({
+        email: newUserEmail,
+        displayName: newUserName,
+        setor: newUserSetor as SetorValue,
+      });
+
+      setAllUsers((prev) => [
+        ...prev,
+        mapUsuarioFromApi(newUser, setores),
+      ]);
+
+      setSuccessMessage(`Usuário ${newUserName} criado com sucesso!`);
+      setNewUserEmail("");
+      setNewUserName("");
+      setNewUserSetor("");
+      setShowCreateUserForm(false);
+    } catch (err) {
+      setError(extractErrorMessage(err, "Erro ao criar usuário"));
     }
   };
 
@@ -227,6 +259,105 @@ export default function ProfileEditPage(): JSX.Element {
     setEditingUserName("");
     setEditingUserSetor("");
     setEditingUserStatus(true);
+  };
+
+  const handleDeleteUser = async (uid: string) => {
+    const user = allUsers.find((u) => u.usuarioID === uid);
+    setUserToConfirm(user || null);
+    setConfirmationType("delete");
+    setConfirmationOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!userToConfirm) return;
+    try {
+      await deletarUsuario(userToConfirm.usuarioID);
+      setSuccessMessage("Usuário deletado com sucesso");
+      setConfirmationOpen(false);
+      setUserToConfirm(null);
+      setConfirmationType(null);
+      setTimeout(() => {
+        setSuccessMessage("");
+        setAllUsers((prev) => prev.filter((u) => u.usuarioID !== userToConfirm.usuarioID));
+      }, 2000);
+    } catch (err) {
+      setError(extractErrorMessage(err, "Erro ao deletar usuário"));
+      setConfirmationOpen(false);
+      setUserToConfirm(null);
+      setConfirmationType(null);
+    }
+  };
+
+  const handleDeactivateUser = async (uid: string) => {
+    const user = allUsers.find((u) => u.usuarioID === uid);
+    setUserToConfirm(user || null);
+    setConfirmationType("deactivate");
+    setConfirmationOpen(true);
+  };
+
+  const confirmDeactivate = async () => {
+    if (!userToConfirm) return;
+    try {
+      await desativarUsuario(userToConfirm.usuarioID);
+      setSuccessMessage("Usuário desativado com sucesso");
+      setConfirmationOpen(false);
+      setUserToConfirm(null);
+      setConfirmationType(null);
+      setTimeout(() => {
+        setSuccessMessage("");
+        setAllUsers((prev) =>
+          prev.map((u) =>
+            u.usuarioID === userToConfirm.usuarioID
+              ? { ...u, statusConta: false }
+              : u
+          )
+        );
+      }, 2000);
+    } catch (err) {
+      setError(extractErrorMessage(err, "Erro ao desativar usuário"));
+      setConfirmationOpen(false);
+      setUserToConfirm(null);
+      setConfirmationType(null);
+    }
+  };
+
+  const handleActivateUser = async (uid: string) => {
+    const user = allUsers.find((u) => u.usuarioID === uid);
+    setUserToConfirm(user || null);
+    setConfirmationType("activate");
+    setConfirmationOpen(true);
+  };
+
+  const confirmActivate = async () => {
+    if (!userToConfirm) return;
+    try {
+      await ativarUsuario(userToConfirm.usuarioID);
+      setSuccessMessage("Usuário ativado com sucesso");
+      setConfirmationOpen(false);
+      setUserToConfirm(null);
+      setConfirmationType(null);
+      setTimeout(() => {
+        setSuccessMessage("");
+        setAllUsers((prev) =>
+          prev.map((u) =>
+            u.usuarioID === userToConfirm.usuarioID
+              ? { ...u, statusConta: true }
+              : u
+          )
+        );
+      }, 2000);
+    } catch (err) {
+      setError(extractErrorMessage(err, "Erro ao ativar usuário"));
+      setConfirmationOpen(false);
+      setUserToConfirm(null);
+      setConfirmationType(null);
+    }
+  };
+
+  const handleCancelConfirmation = () => {
+    setConfirmationOpen(false);
+    setUserToConfirm(null);
+    setConfirmationType(null);
   };
 
   useEffect(() => {
@@ -258,6 +389,12 @@ export default function ProfileEditPage(): JSX.Element {
         className="settings-page"
       >
         <main className="profile-content">
+          {successMessage && (
+            <div className="profile-success">{successMessage}</div>
+          )}
+
+          {error && <div className="profile-error">{error}</div>}
+
           {selected === "profile" && (
             <ProfileForm
               profileName={profileName}
@@ -274,6 +411,9 @@ export default function ProfileEditPage(): JSX.Element {
               allUsers={allUsers}
               usuarioLogado={usuarioLogado}
               handleEditOtherUser={handleEditOtherUser}
+              handleDeleteUser={handleDeleteUser}
+              handleDeactivateUser={handleDeactivateUser}
+              handleActivateUser={handleActivateUser}
               editingUserId={editingUserId}
               editingUserName={editingUserName}
               setEditingUserName={setEditingUserName}
@@ -283,12 +423,89 @@ export default function ProfileEditPage(): JSX.Element {
               setEditingUserStatus={setEditingUserStatus}
               handleSubmit={handleSubmit}
               handleCancelEdit={handleCancelEdit}
+              showCreateUserForm={showCreateUserForm}
+              setShowCreateUserForm={setShowCreateUserForm}
+              newUserEmail={newUserEmail}
+              setNewUserEmail={setNewUserEmail}
+              newUserName={newUserName}
+              setNewUserName={setNewUserName}
+              newUserSetor={newUserSetor}
+              setNewUserSetor={setNewUserSetor}
+              handleCreateUser={handleCreateUser}
+              loading={loading}
               error={error}
             />
           )}
 
           {isCurrentUserAdmin && selected === "log" && (
             <LogAtendimentosList logs={logs} />
+          )}
+
+          {confirmationOpen && userToConfirm && (
+            <div className="confirmation-overlay">
+              <div className="confirmation-modal">
+                <div className="confirmation-content">
+                  <div className="confirmation-header">
+                    <h3>
+                      {confirmationType === "delete"
+                        ? "Deletar Usuário"
+                        : confirmationType === "deactivate"
+                          ? "Desativar Usuário"
+                          : "Ativar Usuário"}
+                    </h3>
+                  </div>
+                  <div className="confirmation-message">
+                    {confirmationType === "delete" && (
+                      <p>
+                        Tem certeza que deseja deletar o usuário{" "}
+                        <strong>{userToConfirm.displayName}</strong>? Esta ação não
+                        pode ser desfeita.
+                      </p>
+                    )}
+                    {confirmationType === "deactivate" && (
+                      <p>
+                        Tem certeza que deseja desativar o usuário{" "}
+                        <strong>{userToConfirm.displayName}</strong>? Ele não terá
+                        mais acesso ao sistema.
+                      </p>
+                    )}
+                    {confirmationType === "activate" && (
+                      <p>
+                        Tem certeza que deseja ativar o usuário{" "}
+                        <strong>{userToConfirm.displayName}</strong>? Ele terá
+                        acesso novamente ao sistema.
+                      </p>
+                    )}
+                  </div>
+                  <div className="confirmation-actions">
+                    <button
+                      className="confirmation-cancel-btn"
+                      onClick={handleCancelConfirmation}
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      className={`confirmation-confirm-btn ${
+                        confirmationType === "delete" ? "delete" : ""
+                      } ${confirmationType === "deactivate" ? "deactivate" : ""}`}
+                      onClick={
+                        confirmationType === "delete"
+                          ? confirmDelete
+                          : confirmationType === "deactivate"
+                            ? confirmDeactivate
+                            : confirmActivate
+                      }
+                    >
+                      {confirmationType === "delete"
+                        ? "Deletar"
+                        : confirmationType === "deactivate"
+                          ? "Desativar"
+                          : "Ativar"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           <div id="logo">

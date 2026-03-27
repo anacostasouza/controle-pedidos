@@ -86,12 +86,7 @@ body {
   background-image: linear-gradient(to right, transparent, #ccc, transparent);
 }
 
-.borda-users {
-  margin-top: 5px;
-  border: 0;
-  height: 2px;
-  background-image: linear-gradient(to right, transparent, #ccc, transparent);
-}
+
 
 .hr {
   margin-top: 5px;
@@ -102,20 +97,6 @@ body {
 
 .status-edit h2 {
   font-size: 2rem;
-}
-
-.status-title, .title-users {
-  font-size: 2.75rem;
-  font-weight: 600;
-  color: var(--gray-dark);
-  margin: 0;
-  letter-spacing: 0.5px;
-  padding: 10px 15px;
-  border-radius: 8px;
-  transition: background-color 0.3s ease;
-  cursor: auto;
-  display: flex;
-  justify-content: center;
 }
 
 .status-subtitle {
@@ -206,15 +187,41 @@ body {
   box-shadow: 0 0 0 3px rgba(255, 106, 0, 0.2);
 }
 
-/* ================== ERROS ================== */
+/* ================== ERROS E SUCESSOS ================== */
 .profile-error {
-  color: red;
+  color: #8a2a2c;
   background-color: #ffe0e0;
-  border: 1px solid red;
-  padding: 10px;
+  border: 1px solid #ffcccc;
+  padding: 14px 16px;
   border-radius: var(--border-radius-medium);
-  margin-bottom: 15px;
+  margin-bottom: 20px;
   text-align: center;
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(138, 42, 44, 0.08);
+}
+
+.profile-success {
+  color: #2d5016;
+  background-color: #e6f4d6;
+  border: 1px solid #c3e6a0;
+  padding: 14px 16px;
+  border-radius: var(--border-radius-medium);
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(45, 80, 22, 0.08);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ================== BOTÕES ================== */
@@ -319,30 +326,282 @@ body {
   cursor: not-allowed;
 }
 
-/* ================== LISTA DE USUÁRIOS ================== */
-
-.title-users {
-  font-size: 2rem;
-  display: flex;
-  justify-content: center;
-}
+/* ================== SEÇÃO DE GERENCIAMENTO DE USUÁRIOS ================== */
 
 .users-form-edit {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  margin-top: 40px;
+  padding-top: 30px;
+  border-top: 2px solid var(--gray-medium);
+}
+
+.header-users {
+  display: flex;
   align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.header-users hr {
+  flex: 1;
+  height: 2px;
+  border: none;
+  background-image: linear-gradient(to right, transparent, #ccc, transparent);
+  margin: 0;
+}
+
+.title-users {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--gray-dark);
+  margin: 0;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+/* -------- Criar Novo Usuário -------- */
+
+.btn-create-user {
+  align-self: center;
+  padding: 12px 30px;
+  margin-bottom: 25px;
+  background-color: #8a2a2c;
+  color: white;
+  border: none;
+  border-radius: var(--border-radius-medium);
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: var(--font-family-comfortaa);
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-create-user:hover:not(:disabled) {
+  background-color: #7c1a1c;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+
+.btn-create-user:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.create-user-form {
+  background-color: var(--content-bg);
+  padding: 25px;
+  border-radius: var(--border-radius-medium);
+  border: 1px solid var(--border-color);
+  margin-bottom: 25px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.create-user-form h3 {
+  margin: 0 0 20px 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--gray-dark);
+  text-align: center;
+}
+
+.create-user-form .form-group {
+  margin-bottom: 15px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.create-user-form .form-group label {
+  margin-bottom: 8px;
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+
+.create-user-form .form-group input,
+.create-user-form .form-group select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  display: block;
+}
+
+.create-user-form .action-button {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  justify-content: center;
+}
+
+.create-user-form .action-button button {
+  flex: 1;
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--border-radius-medium);
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: var(--font-family-comfortaa);
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.create-user-form .action-button button[type="submit"] {
+  background-color: #8a2a2c;
+  color: white;
+}
+
+.create-user-form .action-button button[type="submit"]:hover:not(:disabled) {
+  background-color: #7c1a1c;
+  transform: translateY(-1px);
+}
+
+.create-user-form .action-button button[type="button"] {
+  background-color: var(--gray-medium);
+  color: var(--gray-dark);
+}
+
+.create-user-form .action-button button[type="button"]:hover:not(:disabled) {
+  background-color: var(--gray-light);
+  transform: translateY(-1px);
+}
+
+.create-user-form .action-button button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* -------- Lista de Usuários -------- */
+
+.users-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .users-information {
-  margin-top: 15px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px 18px;
+  background-color: var(--content-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-medium);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  gap: 20px;
+}
+
+.users-information:hover {
+  background-color: #f0f0f0;
+  box-shadow: var(--shadow-light);
+}
+
+.user-info {
+  flex: 1;
+  min-width: 250px;
+  padding: 0;
+  margin: 0;
+}
+
+.user-info span {
+  color: var(--text-color);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  word-break: break-word;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.user-info span:last-child {
+  margin-bottom: 0;
+}
+
+.user-info strong {
+  font-weight: 700;
+  margin-left: 5px;
+}
+
+.user-actions {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 0.5em 0;
-  border-bottom: 3px solid transparent;
-  border-image: linear-gradient(to right, transparent, #ccc, transparent) 1;
+  gap: 10px;
+  align-items: stretch;
+  justify-content: flex-start;
+  min-width: 150px;
 }
+
+/* -------- Botões de Ação -------- */
+
+.users-edit-button,
+.users-deactivate-button,
+.users-delete-button {
+  padding: 11px 20px;
+  border: none;
+  border-radius: var(--border-radius-medium);
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: var(--font-family-comfortaa);
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+  white-space: nowrap;
+  min-width: 140px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  flex: 0 0 auto;
+}
+
+.users-edit-button {
+  background-color: #8a2a2c;
+  color: white;
+}
+
+.users-edit-button:hover:not(:disabled) {
+  background-color: #7c1a1c;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(138, 42, 44, 0.25);
+}
+
+.users-deactivate-button {
+  background-color: #f0ad4e;
+  color: #333;
+}
+
+.users-deactivate-button:hover:not(:disabled) {
+  background-color: #ec971f;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(240, 173, 78, 0.25);
+}
+
+.users-delete-button {
+  background-color: #d9534f;
+  color: white;
+}
+
+.users-delete-button:hover:not(:disabled) {
+  background-color: #c9302c;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(217, 83, 79, 0.25);
+}
+
+.users-edit-button:disabled,
+.users-deactivate-button:disabled,
+.users-delete-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* -------- Antigos Estilos de Compatibilidade (nunca mais usar) -------- */
 
 .users-list-card {
   background-color: #fff;
@@ -358,12 +617,6 @@ body {
   margin-bottom: 20px;
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 10px;
-}
-
-.users-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
 }
 
 .user-item {
@@ -417,6 +670,155 @@ body {
   height: auto;
 }
 
+/* ================== MODAIS DE CONFIRMAÇÃO ================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal {
+  background: #fff;
+  padding: 2.5rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  max-width: 450px;
+  width: 90%;
+  text-align: center;
+  animation: slideUp 0.3s ease-out;
+  font-family: "Comfortaa", sans-serif;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: bounce 0.5s ease-out;
+  display: flex;
+  justify-content: center;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.modal h2 {
+  color: #5f1919;
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  font-weight: 700;
+}
+
+.modal p {
+  color: #495057;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+}
+
+.modal-warning {
+  color: #dc3545;
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.modal-actions {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.btn-cancel,
+.btn-delete,
+.btn-activate {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 26px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+  font-family: "Comfortaa", sans-serif;
+  transition: all 0.25s ease;
+  min-width: 120px;
+}
+
+.btn-cancel {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background-color: #dee2e6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-delete {
+  background-color: #8f2f2f;
+  color: #fff;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background-color: #5f1919;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(143, 47, 47, 0.3);
+}
+
+.btn-activate {
+  background-color: #2d5016;
+  color: #fff;
+}
+
+.btn-activate:hover:not(:disabled) {
+  background-color: #1e3a0f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 80, 22, 0.3);
+}
+
+.btn-cancel:disabled,
+.btn-delete:disabled,
+.btn-activate:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* ================== RESPONSIVIDADE ================== */
 @media (max-width: 768px) {
   .settings-page {
@@ -437,5 +839,9 @@ body {
   .save-btn,
   .cancel-btn {
     width: 100%;
+  }
+  .modal {
+    width: 95%;
+    padding: 1.5rem;
   }
 }

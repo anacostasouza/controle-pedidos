@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
 import {
   TipoServicoLabels,
@@ -75,10 +75,10 @@ const toDateSafe = (val: any): Date | null => {
 
 export const gerarExcelPedidosPorServico = async (
   pedidos: Pedido[]
-): Promise<Buffer> => {
-  if (!pedidos || pedidos.length === 0) return Buffer.from("");
+): Promise<ArrayBuffer> => {
+  if (!pedidos || pedidos.length === 0) return new ArrayBuffer(0);
 
-  const workbook = XLSX.utils.book_new();
+  const workbook = new ExcelJS.Workbook();
 
   // Coletar todos os status únicos de todos os pedidos
   const todosStatusSet = new Set<string>();
@@ -201,31 +201,25 @@ export const gerarExcelPedidosPorServico = async (
     })
   );
 
-  // Criar worksheet consolidado
-  const worksheetData = [headers, ...rows];
-  const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+  const worksheet = workbook.addWorksheet("Relatório Consolidado");
+  worksheet.addRow(headers);
+  rows.forEach((row) => worksheet.addRow(row));
 
-  // Ajustar largura das colunas
-  const colWidths = [
-    { wch: 10 },  // Nº Pedido
-    { wch: 30 },  // Cliente
-    { wch: 20 },  // Responsável
-    { wch: 20 },  // Serviço
-    { wch: 20 },  // Subtipo
-    { wch: 10 },  // Retrabalho
-    { wch: 15 },  // Status Atual
-    { wch: 18 },  // Criado em
-    { wch: 18 },  // Prazo Entrega
-    { wch: 12 },  // Tempo Total
-    ...todosStatus.map(() => ({ wch: 18 })), // Colunas de status
+  worksheet.columns = [
+    { width: 10 },
+    { width: 30 },
+    { width: 20 },
+    { width: 20 },
+    { width: 20 },
+    { width: 10 },
+    { width: 15 },
+    { width: 18 },
+    { width: 18 },
+    { width: 12 },
+    ...todosStatus.map(() => ({ width: 18 })),
   ];
-  ws['!cols'] = colWidths;
 
-  // Adicionar ao workbook
-  XLSX.utils.book_append_sheet(workbook, ws, "Relatório Consolidado");
-
-  // Retorna o buffer do arquivo Excel
-  return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+  return workbook.xlsx.writeBuffer();
 };
 
 // ---------------------- Filtros dinâmicos ----------------------
@@ -281,7 +275,9 @@ export const fetchStatusPorServico = async (
     const status = await fetchStatusSequence(tipo, subTipo);
     return status;
   } catch (err) {
-    console.error("Erro ao buscar status por serviço:", err);
+    if (import.meta.env.DEV) {
+      console.error("Erro ao buscar status por serviço:", err);
+    }
     return [];
   }
 };

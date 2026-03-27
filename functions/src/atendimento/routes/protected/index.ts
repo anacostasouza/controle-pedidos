@@ -1,0 +1,1 @@
+export { createProtectedAtendimentoRouter } from "./protectedAtendimentoRoutes";

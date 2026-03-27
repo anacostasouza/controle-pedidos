@@ -7,3 +7,4 @@ if (!admin.apps.length) {
 
 export * from "./atendimento/funcAtendimento";
 export * from "./controle-pedidos/funcControlePedidos";
+export * from "./usuarios/funcUsuarios";

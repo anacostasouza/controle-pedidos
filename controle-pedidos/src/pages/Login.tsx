@@ -1,24 +1,82 @@
-import { useState } from "react";
-import { signInWithPopup } from "firebase/auth";
+import { useState, useEffect } from "react";
+import { signInWithPopup, signOut } from "firebase/auth";
 import { auth, provider } from "../services/firebase";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { CONTROLE_PEDIDOS_API_BASE_URL } from "../config/functionsApi";
 import "../styles/Login.css";
 import logoImage from "../assets/logologin.png";
 
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { authDenialReason } = useAuth();
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Carregar mensagem do localStorage se existir
+  useEffect(() => {
+    const storedError = localStorage.getItem("authError");
+    if (storedError) {
+      setLoginError(storedError);
+      localStorage.removeItem("authError");
+    }
+  }, []);
+
+  // Mostrar mensagem de erro do contexto (conta desativada/bloqueada)
+  const displayMessage = loginError || authDenialReason;
 
   const handleLogin = async () => {
     setLoginError(null);
+    setIsLoading(true);
 
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
 
-      const from = location.state?.from?.pathname || "/dashboard";
-      navigate(from, { replace: true });
+      // Verificar autorização ANTES de navegar
+      const token = await user.getIdToken();
+      const apiUrl = CONTROLE_PEDIDOS_API_BASE_URL;
+      
+      try {
+        const authResponse = await fetch(
+          `${apiUrl}/dashboard/buscarPedidos?porPagina=1`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (authResponse.status === 403) {
+          const data = await authResponse.json().catch(() => ({}));
+          const message = data.message || "Acesso negado";
+          
+          setLoginError(message);
+          setIsLoading(false);
+          
+          // Fazer logout imediatamente
+          await signOut(auth);
+          
+          return;
+        }
+
+        // Se autorizado, navegar
+        const from = location.state?.from?.pathname || "/dashboard";
+        navigate(from, { replace: true });
+      } catch (error) {
+        setIsLoading(false);
+        if (import.meta.env.DEV) {
+          console.error("Erro ao verificar autorização:", error);
+        }
+        // Se houver erro na verificação, permitir passar mesmo assim
+        const from = location.state?.from?.pathname || "/dashboard";
+        navigate(from, { replace: true });
+      }
     } catch (error) {
+      setIsLoading(false);
+      
       if (import.meta.env.DEV) {
         console.error("Erro ao logar:", error);
       }
@@ -54,14 +112,31 @@ export default function Login() {
       <div className="login-container">
         <div className="login-box">
           <h2 className="login-title">Entrar</h2>
-          {loginError && <p className="login-error-message">{loginError}</p>}
+          
+          {displayMessage && (
+            <div style={{
+              backgroundColor: "#ffe6e6",
+              border: "1px solid #ffcccc",
+              borderRadius: "8px",
+              padding: "16px",
+              marginBottom: "20px"
+            }}>
+              <h3>
+                Acesso Bloqueado
+              </h3>
+              <p>
+                {displayMessage}
+              </p>
+            </div>
+          )}
+          
           <button
             onClick={handleLogin}
             className="login-button"
+            disabled={isLoading}
             aria-label="Entrar com sua conta Google"
           >
-            {/* ...SVG do Google... */}
-            Entrar com Google
+            {isLoading ? "Verificando..." : "Entrar com Google"}
           </button>
         </div>
       </div>

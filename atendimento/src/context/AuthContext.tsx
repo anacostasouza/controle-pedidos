@@ -2,8 +2,9 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
-import { doc, getDoc, getFirestore, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, getFirestore, onSnapshot, Timestamp } from 'firebase/firestore';
 import { auth } from "../services/firebase";
+import { ATENDIMENTO_API_BASE_URL } from "../config/functionsApi";
 
 interface UserProfile { 
     createdAt: Timestamp;
@@ -22,6 +23,8 @@ interface AuthContextType {
     profileComplete: boolean;
     checkingProfile: boolean;
     authorized: boolean | null;
+    accountDisabled: boolean;
+    authDenialReason: string | null;
     loading: boolean;
     logout: () => Promise<void>;
     verifyAuthorization: () => Promise<boolean>;
@@ -35,6 +38,8 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
     const [profileComplete, setProfileComplete] = useState(false);
     const [checkingProfile, setCheckingProfile] = useState(true);
     const [authorized, setAuthorized] = useState<boolean | null>(null);
+    const [accountDisabled, setAccountDisabled] = useState(false);
+    const [authDenialReason, setAuthDenialReason] = useState<string | null>(null);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (usuario) => {
@@ -50,6 +55,7 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
             if (!user) {
                 setProfileComplete(false);
                 setCheckingProfile(false);
+                // Mantem motivo de bloqueio para exibir na tela de login apos logout.
                 return;
             }
             try {
@@ -57,8 +63,18 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
                 const userDocRef = doc(db, 'usuarios', user.uid);
                 const userDocSnap = await getDoc(userDocRef);
                 const data = userDocSnap.data() as UserProfile | undefined;
+
+                if (!data) {
+                    const message = "Seu email não foi cadastrado no sistema. Entre em contato com o administrador.";
+                    localStorage.setItem("authError", message);
+                    setAuthDenialReason(message);
+                    await signOut(auth);
+                    setProfileComplete(false);
+                    setCheckingProfile(false);
+                    return;
+                }
+
                 const isComplete =
-                    data &&
                     data.displayName &&
                     data.setor &&
                     (user.emailVerified || data.emailVerified);
@@ -79,15 +95,48 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
     async function verifyAuthorization(): Promise<boolean> {
         if (!user) return false;
         const token = await user.getIdToken();
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/criarPedido`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ teste: true }),
-        });
-        return response.status !== 403;
+        const apiUrl = ATENDIMENTO_API_BASE_URL;
+
+        try {
+            const response = await fetch(`${apiUrl}/filaAtendimento`, {
+                method: "GET",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (response.status === 403) {
+                const data = await response.json().catch(() => ({}));
+                const message = data.message || "Acesso negado";
+
+                if (import.meta.env.DEV) {
+                    console.warn("Acesso bloqueado - Motivo:", message);
+                }
+
+                localStorage.setItem("authError", message);
+
+                if (message.includes("desativada")) {
+                    setAccountDisabled(true);
+                    setAuthDenialReason(message);
+                } else {
+                    setAuthDenialReason(message);
+                }
+
+                return false;
+            }
+
+            if (response.status === 200) {
+                setAccountDisabled(false);
+                setAuthDenialReason(null);
+            }
+
+            return response.status === 200;
+        } catch (e) {
+            if (import.meta.env.DEV) {
+                console.error("Falha na verificação de autorização:", e);
+            }
+            return false;
+        }
     }
 
     useEffect(() => {
@@ -103,8 +152,59 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
         return () => { isMounted = false; };
     }, [user]);
 
+    useEffect(() => {
+        if (user) {
+            const db = getFirestore();
+            const userDocRef = doc(db, 'usuarios', user.uid);
+
+            // onSnapshot so gera nova leitura quando o documento do usuario muda.
+            const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+                const userData = docSnap.data() as UserProfile | undefined;
+
+                if (userData && userData.statusConta === false) {
+                    const message = "Sua conta foi desativada. Entre em contato com o administrador.";
+                    localStorage.setItem("authError", message);
+                    setAccountDisabled(true);
+                    setAuthDenialReason(message);
+                    setAuthorized(false);
+
+                    logout().catch((error) => {
+                        if (import.meta.env.DEV) {
+                            console.error("Erro ao fazer logout durante desativação:", error);
+                        }
+                    });
+                }
+            }, (error) => {
+                if (import.meta.env.DEV) {
+                    console.error("Erro ao monitorar status da conta:", error);
+                }
+            });
+
+            const tokenCheckInterval = setInterval(async () => {
+                try {
+                    await user.getIdToken(true);
+                } catch {
+                    clearInterval(tokenCheckInterval);
+                    logout();
+                }
+            }, 45 * 60 * 1000);
+
+            return () => {
+                unsubscribe();
+                clearInterval(tokenCheckInterval);
+            };
+        }
+    }, [user]);
+
     async function logout() {
-        await signOut(auth);
+        try {
+            await signOut(auth);
+        } catch (error) {
+            if (import.meta.env.DEV) {
+                console.error("Erro ao fazer logout:", error);
+            }
+        }
+
         setUser(null);
         setProfileComplete(false);
         setAuthorized(false);
@@ -115,10 +215,12 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
         profileComplete,
         checkingProfile,
         authorized,
+        accountDisabled,
+        authDenialReason,
         loading,
         logout,
         verifyAuthorization,
-    }), [user, profileComplete, checkingProfile, authorized, loading, logout, verifyAuthorization]);
+    }), [user, profileComplete, checkingProfile, authorized, accountDisabled, authDenialReason, loading]);
 
     return (
         <AuthContext.Provider value={contextValue}>

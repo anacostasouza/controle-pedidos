@@ -18,10 +18,29 @@
   ],
   "emulators": {
     "functions": {
-      "port": 5001
+      "port": 9000,
+      "host": "127.0.0.1"
     },
     "ui": {
-      "enabled": true
+      "enabled": true,
+      "host": "127.0.0.1",
+      "port": 4101
+    },
+    "hub": {
+      "host": "127.0.0.1",
+      "port": 4402
+    },
+    "logging": {
+      "host": "127.0.0.1",
+      "port": 4502
+    },
+    "eventarc": {
+      "host": "127.0.0.1",
+      "port": 9301
+    },
+    "tasks": {
+      "host": "127.0.0.1",
+      "port": 9501
     },
     "singleProjectMode": true
   }

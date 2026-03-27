@@ -1,11 +1,44 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { Dispatch, FormEvent, SetStateAction } from "react";
 import type { Usuario } from "../../../types/Usuario";
+import { setores, type SetorValue } from "../../../types/Setores";
 import UserEditForm from "./UserEditForm";
+
+interface UserListProps {
+  allUsers: Usuario[];
+  usuarioLogado: Usuario | null;
+  handleEditOtherUser: (user: Usuario) => void;
+  handleDeleteUser: (uid: string) => void;
+  handleDeactivateUser: (uid: string) => void;
+  handleActivateUser: (uid: string) => void;
+  editingUserId: string | null;
+  editingUserName: string;
+  setEditingUserName: Dispatch<SetStateAction<string>>;
+  editingUserSetor: SetorValue | "";
+  setEditingUserSetor: Dispatch<SetStateAction<SetorValue | "">>;
+  editingUserStatus: boolean;
+  setEditingUserStatus: Dispatch<SetStateAction<boolean>>;
+  handleSubmit: (e: FormEvent) => void;
+  handleCancelEdit: () => void;
+  showCreateUserForm: boolean;
+  setShowCreateUserForm: Dispatch<SetStateAction<boolean>>;
+  newUserEmail: string;
+  setNewUserEmail: Dispatch<SetStateAction<string>>;
+  newUserName: string;
+  setNewUserName: Dispatch<SetStateAction<string>>;
+  newUserSetor: SetorValue | "";
+  setNewUserSetor: Dispatch<SetStateAction<SetorValue | "">>;
+  handleCreateUser: (e: FormEvent) => void;
+  loading: boolean;
+  error: string;
+}
 
 export default function UserList({
   allUsers,
   usuarioLogado,
   handleEditOtherUser,
+  handleDeleteUser,
+  handleDeactivateUser,
+  handleActivateUser,
   editingUserId,
   editingUserName,
   setEditingUserName,
@@ -15,8 +48,18 @@ export default function UserList({
   setEditingUserStatus,
   handleSubmit,
   handleCancelEdit,
+  showCreateUserForm,
+  setShowCreateUserForm,
+  newUserEmail,
+  setNewUserEmail,
+  newUserName,
+  setNewUserName,
+  newUserSetor,
+  setNewUserSetor,
+  handleCreateUser,
+  loading,
   error,
-}: any) {
+}: UserListProps) {
   return (
     <div className="users-form-edit">
       <h1 className="title-header">Editar Perfil</h1>
@@ -25,9 +68,74 @@ export default function UserList({
         <h2 className="title-users">Usuários</h2>
         <hr className="borda-users"></hr>
       </div>
+
+      {!showCreateUserForm ? (
+        <div className="create-user-toolbar">
+          <button
+            className="btn-create-user"
+            onClick={() => setShowCreateUserForm(true)}
+            disabled={loading}
+          >
+            + Criar Novo Usuário
+          </button>
+        </div>
+      ) : (
+        <form className="create-user-form" onSubmit={handleCreateUser}>
+          <h3>Novo Usuário</h3>
+          <div className="form-group">
+            <label htmlFor="newUserEmail">Email</label>
+            <input
+              id="newUserEmail"
+              type="email"
+              value={newUserEmail}
+              onChange={(e) => setNewUserEmail(e.target.value)}
+              placeholder="usuario@empresa.com"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="newUserName">Nome</label>
+            <input
+              id="newUserName"
+              type="text"
+              value={newUserName}
+              onChange={(e) => setNewUserName(e.target.value)}
+              placeholder="Nome completo"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="newUserSetor">Setor</label>
+            <select
+              id="newUserSetor"
+              value={newUserSetor}
+              onChange={(e) => setNewUserSetor(e.target.value as SetorValue)}
+              required
+            >
+              <option value="">Selecione</option>
+              {setores.map((setor) => (
+                <option key={setor.value} value={setor.value}>
+                  {setor.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="action-button">
+            <button type="submit" disabled={loading}>Criar</button>
+            <button
+              type="button"
+              onClick={() => setShowCreateUserForm(false)}
+              disabled={loading}
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
+
       <ul className="users-list">
         {allUsers.map((u: Usuario) => (
-          <li className="users-row" key={u.usuarioID}>
+          <li className="users-information" key={u.usuarioID}>
             {editingUserId === u.usuarioID ? (
               <div className="user-edit-row">
                 <div className="user-cell user-edit-form-cell">
@@ -46,38 +154,46 @@ export default function UserList({
               </div>
             ) : (
               <>
-                <div className="user-cell user-name-cell">
-                  <span className="user-name" title="Nome do Usuario">
-                    {u.displayName}
+                <div className="user-info">
+                  <span>
+                    {u.displayName} - {u.setorNome} - {u.email} -{" "}
+                    <strong
+                      style={{
+                        color: u.statusConta ? "green" : "red",
+                      }}
+                    >
+                      {u.statusConta ? "Ativo" : "Inativo"}
+                    </strong>
                   </span>
                 </div>
-                <div className="user-cell user-email-cell">
-                  <span className="user-email" title="Email do Usuario">
-                    {u.email}
-                  </span>
-                </div>
-                <div className="user-cell user-action-cell">
+                <div className="user-actions">
                   <button
-                    id="user-action-btn"
-                    title="Editar usuário"
+                    className="users-edit-button"
                     disabled={u.usuarioID === usuarioLogado?.usuarioID}
                     onClick={() => handleEditOtherUser(u)}
+                    title="Editar usuário"
                   >
-                    <svg
-                      width="15"
-                      height="15"
-                      viewBox="0 0 45 45"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M20 6.99996H6C4.93913 6.99996 3.92172 7.42139 3.17157 8.17154C2.42143 8.92168 2 9.9391 2 11V39C2 40.0608 2.42143 41.0782 3.17157 41.8284C3.92172 42.5785 4.93913 43 6 43H34C35.0609 43 36.0783 42.5785 36.8284 41.8284C37.5786 41.0782 38 40.0608 38 39V25M35 3.99996C35.7956 3.20432 36.8748 2.75732 38 2.75732C39.1252 2.75732 40.2044 3.20432 41 3.99996C41.7956 4.79561 42.2426 5.87475 42.2426 6.99996C42.2426 8.12518 41.7956 9.20432 41 9.99996L22 29L14 31L16 23L35 3.99996Z"
-                        stroke="#222"
-                        strokeWidth="4"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                    Editar
+                  </button>
+                  <button
+                    className="users-deactivate-button"
+                    disabled={u.usuarioID === usuarioLogado?.usuarioID}
+                    onClick={() =>
+                      u.statusConta
+                        ? handleDeactivateUser(u.usuarioID)
+                        : handleActivateUser(u.usuarioID)
+                    }
+                    title={u.statusConta ? "Desativar usuário" : "Ativar usuário"}
+                  >
+                    {u.statusConta ? "Desativar" : "Ativar"}
+                  </button>
+                  <button
+                    className="users-delete-button"
+                    disabled={u.usuarioID === usuarioLogado?.usuarioID}
+                    onClick={() => handleDeleteUser(u.usuarioID)}
+                    title="Deletar usuário"
+                  >
+                    Deletar
                   </button>
                 </div>
               </>

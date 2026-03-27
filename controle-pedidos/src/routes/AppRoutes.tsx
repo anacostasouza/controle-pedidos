@@ -10,6 +10,7 @@ import { doc, getDoc, getFirestore } from "firebase/firestore";
 import { useEffect, useState } from "react";
 
 import { auth } from "../services/firebase";
+import { useAuth } from "../context/AuthContext";
 
 import "../styles/AppRoutes.css";
 
@@ -82,7 +83,9 @@ export default function AppRoutes(): JSX.Element {
           (user.emailVerified || data.emailVerified);
         setProfileComplete(!!isComplete);
       } catch (error) {
-        console.error("Erro ao verificar perfil:", error);
+        if (import.meta.env.DEV) {
+          console.error("Erro ao verificar perfil:", error);
+        }
         await signOut(auth);
         setProfileComplete(false);
       } finally {
@@ -107,6 +110,13 @@ export default function AppRoutes(): JSX.Element {
 
   function LoginRoute() {
     const location = useLocation();
+    const { accountDisabled } = useAuth();
+    
+    // Se conta foi desativada, permitir mostrar login novamente
+    if (accountDisabled) {
+      return <Login />;
+    }
+    
     if (user && location.state?.fromNovoPedido) {
       return <Navigate to="/novo-pedido" replace />;
     }

@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "serve": "vite"
+    "serve": "vite",
+    "deploy": "npm run build && npx firebase-tools@15.11.0 deploy --only hosting:atendimento-desenhardigital"
   },
   "dependencies": {
     "@types/file-saver": "^2.0.7",
@@ -22,9 +23,8 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-icons": "^5.5.0",
-    "react-router": "^7.9.0",
-    "react-router-dom": "^7.9.0",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz"
+    "react-router": "^7.12.0",
+    "react-router-dom": "^7.12.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { formatarTempo } from "../../../utils/timeUtils";
 import { getAuth } from "firebase/auth";
+import { ATENDIMENTO_API_BASE_URL } from "../../../config/functionsApi";
 
 export interface Atendimento {
     codigoPedido: string;
@@ -31,8 +32,8 @@ function formatarDataParaExcel(data: any): string {
 
 export const gerarExcelAtendimentos = async (
     atendimentos: Atendimento[]
-): Promise<Buffer> => {
-    if (!atendimentos || atendimentos.length === 0) return Buffer.from("");
+): Promise<ArrayBuffer> => {
+    if (!atendimentos || atendimentos.length === 0) return new ArrayBuffer(0);
     
     const header = [
         "Código do Pedido",
@@ -74,33 +75,33 @@ export const gerarExcelAtendimentos = async (
         ];
     });
 
-    const worksheetData = [header, ...rows];
-    const ws = XLSX.utils.aoa_to_sheet(worksheetData);
-    
-    ws["!cols"] = [
-        { wch: 18 }, // Código do Pedido
-        { wch: 30 }, // Cliente
-        { wch: 25 }, // Tipo de Atendimento
-        { wch: 20 }, // Status
-        { wch: 20 }, // Atendente
-        { wch: 10 }, // Tipo
-        { wch: 12 }, // Consumidor
-        { wch: 18 }, // Tempo de Espera
-        { wch: 22 }, // Tempo de Atendimento
-        { wch: 20 }, // Criado em
-        { wch: 50 }, // Histórico
-    ];
-    
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Atendimentos");
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Atendimentos");
 
-    return XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+    worksheet.addRow(header);
+    rows.forEach((row) => worksheet.addRow(row));
+
+    worksheet.columns = [
+        { width: 18 },
+        { width: 30 },
+        { width: 25 },
+        { width: 20 },
+        { width: 20 },
+        { width: 10 },
+        { width: 12 },
+        { width: 18 },
+        { width: 22 },
+        { width: 20 },
+        { width: 50 },
+    ];
+
+    return workbook.xlsx.writeBuffer();
 };
 
 export async function buscarAtendimentosPorPeriodo(dataInicio: string, dataFim: string) {
   const token = await getAuth().currentUser?.getIdToken();
   const response = await fetch(
-    `${import.meta.env.VITE_API_URL}/atendimentosPorPeriodo?inicio=${dataInicio}&fim=${dataFim}`,
+        `${ATENDIMENTO_API_BASE_URL}/atendimentosPorPeriodo?inicio=${dataInicio}&fim=${dataFim}`,
     {
       headers: { Authorization: `Bearer ${token}` },
     }

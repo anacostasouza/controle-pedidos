@@ -149,6 +149,40 @@ body {
   transform: translateY(0);
 }
 
+.login-button:disabled {
+  background-color: #e9ecef;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.login-button:disabled:hover {
+  background-color: #e9ecef;
+  box-shadow: none;
+  transform: none;
+}
+
+.login-block-message {
+  background-color: #fef3f3;
+  border: 2px solid #f5c6cb;
+  border-radius: 8px;
+  padding: 1.2rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  animation: slideIn 0.3s ease-in-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Ícone do Google */
 .google-icon {
   width: 20px;

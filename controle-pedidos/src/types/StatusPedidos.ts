@@ -146,17 +146,21 @@ export function getStatusSequenceForPedido(
     if (subTipo && serviceStatuses[subTipo]) {
       return serviceStatuses[subTipo];
     } else {
-      console.warn(
-        `[StatusPedidos] SubTipo "${subTipo}" não encontrado para TipoServico "${tipo}". Retornando sequência padrão.`
-      );
+      if (import.meta.env.DEV) {
+        console.warn(
+          `[StatusPedidos] SubTipo "${subTipo}" não encontrado para TipoServico "${tipo}". Retornando sequência padrão.`
+        );
+      }
       return STATUS_SEQUENCE_DEFAULT;
     }
   } else if (Array.isArray(serviceStatuses)) {
     return serviceStatuses;
   } else {
-    console.warn(
-      `[StatusPedidos] TipoServico "${tipo}" não encontrado ou mal formatado em statusPorServico. Retornando sequência padrão.`
-    );
+    if (import.meta.env.DEV) {
+      console.warn(
+        `[StatusPedidos] TipoServico "${tipo}" não encontrado ou mal formatado em statusPorServico. Retornando sequência padrão.`
+      );
+    }
     return STATUS_SEQUENCE_DEFAULT;
   }
 }

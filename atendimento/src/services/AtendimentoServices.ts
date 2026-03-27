@@ -1,9 +1,39 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getFirestore, collection, getDocs, doc, onSnapshot, query, getDoc, addDoc, Timestamp } from "firebase/firestore";
 import { app, db } from "./firebase"; 
+import { fetchWithAuth } from "../utils/FetchWithAuth";
 import { getAuth } from "firebase/auth";
+import { ATENDIMENTO_API_BASE_URL } from "../config/functionsApi";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = ATENDIMENTO_API_BASE_URL;
+
+async function readErrorMessage(response: Response, fallback: string): Promise<string> {
+  const text = await response.text();
+  if (!text) return fallback;
+
+  try {
+    const parsed = JSON.parse(text) as { message?: string };
+    return parsed.message || text;
+  } catch {
+    return text;
+  }
+}
+
+async function requestPublicJson(endpoint: string, init: RequestInit = {}) {
+  const response = await fetch(`${API_URL}${endpoint}`, init);
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response, "Erro na requisição"));
+  }
+  return response.json();
+}
+
+async function requestAuthJson(endpoint: string, init: RequestInit = {}) {
+  const response = await fetchWithAuth(`${API_URL}${endpoint}`, init);
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response, "Erro na requisição autenticada"));
+  }
+  return response.json();
+}
 
 export interface ServicoAtendimento {
   tipo: string;
@@ -20,49 +50,23 @@ export async function criarAtendimentoFila(data: {
   nomeCliente: string;
   tipoAtendimento: string;
 }) {
-  const response = await fetch(
-    `${API_URL}/criarAtendimentoFila`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    }
-  );
-  if (!response.ok) throw new Error(await response.text());
-  return response.json();
+  return requestPublicJson("/criarAtendimentoFila", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
 }
 
 export async function filaAtendimento() {
-  const auth = getAuth();
-  const user = auth.currentUser;
-  if (!user) throw new Error("Usuário não autenticado");
-  const token = await user.getIdToken();
-
-  const response = await fetch(
-    `${API_URL}/filaAtendimento`,
-    {
-      headers: { "Authorization": `Bearer ${token}` }
-    }
-  );
-  if (!response.ok) throw new Error(await response.text());
-  return response.json();
+  return requestAuthJson("/filaAtendimento", {
+    method: "GET",
+  });
 }
 
 export async function deletarAtendimento(id: string) {
-  const auth = getAuth();
-  const user = auth.currentUser;
-  if (!user) throw new Error("Usuário não autenticado");
-  const token = await user.getIdToken();
-
-  const response = await fetch(
-    `${API_URL}/deletarAtendimento/${id}`,
-    {
-      method: "DELETE",
-      headers: { "Authorization": `Bearer ${token}` }
-    }
-  );
-  if (!response.ok) throw new Error(await response.text());
-  return response.json();
+  return requestAuthJson(`/deletarAtendimento/${id}`, {
+    method: "DELETE",
+  });
 }
 
 // Atualizar historico do atendimento
@@ -73,12 +77,10 @@ export async function atualizarHistoricoAtendimento(
   atendente?: string, 
   atendenteUid?: string
 ) {
-  const auth = getAuth();
-  const user = auth.currentUser;
-  if (!user) throw new Error("Usuário não autenticado");
-  const token = await user.getIdToken();
+  const currentUser = getAuth().currentUser;
+  if (!currentUser) throw new Error("Usuário não autenticado");
 
-  const responsavelFinal = responsavel || user.displayName || user.email || "Desconhecido";
+  const responsavelFinal = responsavel || currentUser.displayName || currentUser.email || "Desconhecido";
 
   const body: any = { 
     status,
@@ -87,19 +89,13 @@ export async function atualizarHistoricoAtendimento(
   if (atendente) body.atendente = atendente;
   if (atendenteUid) body.atendenteUid = atendenteUid;
 
-  const response = await fetch(
-    `${API_URL}/atualizarHistorico/${id}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    }
-  );
-  if (!response.ok) throw new Error(await response.text());
-  return response.json();
+  return requestAuthJson(`/atualizarHistorico/${id}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
 }
 
 // Adicionar controle de pedidos
@@ -145,15 +141,9 @@ export async function getNomeAtendente(uid: string): Promise<string | undefined>
 
 // Buscar atendimentos para relatório
 export async function buscarTodosAtendimentos() {
-  const token = await getAuth().currentUser?.getIdToken();
-  const response = await fetch(
-    `${API_URL}/todosAtendimentos`,
-    {
-      headers: { "Authorization": `Bearer ${token}` }
-    }
-  );
-  if (!response.ok) throw new Error(await response.text());
-  return response.json();
+  return requestAuthJson("/todosAtendimentos", {
+    method: "GET",
+  });
 }
 
 export async function logDeleteAtendimento(log: {
@@ -172,51 +162,26 @@ export async function logDeleteAtendimento(log: {
 
 // Buscar ou criar cliente Omie pelo nome e telefone
 export async function buscarClienteOmie(clientesFiltro: any) {
-  const auth = getAuth();
-  const user = auth.currentUser;
-  if (!user) throw new Error("Usuário não autenticado");
-  const token = await user.getIdToken();
-
-  const response = await fetch(
-    `${API_URL}/omie/buscarCliente`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ clientesFiltro }),
-    }
-  );
-  if (!response.ok) throw new Error(await response.text());
-  return response.json();
+  return requestAuthJson("/omie/buscarCliente", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ clientesFiltro }),
+  });
 }
 
 
 // Registrar atendimento
 
 export async function registrarAtendimento(atendimentoData: any): Promise<string> {
-  const auth = getAuth();
-  const user = auth.currentUser;
-  if (!user) throw new Error("Usuario não autenticado");
-  const token = await user.getIdToken();
-
-  const response = await fetch(
-    `${API_URL}/registrarAtendimento`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(atendimentoData),
-    }
-  );
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Erro ao registrar atendimento: ${errorText}`);
-  }
-  const result = await response.json();
+  const result = await requestAuthJson("/registrarAtendimento", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(atendimentoData),
+  });
   return result.atendimentoId;
 }
 
@@ -237,11 +202,6 @@ export async function buscarHistoricoComFiltros(
   filtrosAplicados: string[];
   estatisticas: any;
 }> {
-  const auth = getAuth();
-  const user = auth.currentUser;
-  if (!user) throw new Error("Usuário não autenticado");
-  const token = await user.getIdToken();
-
   const params = new URLSearchParams({
     dataInicio,
     dataFim,
@@ -255,13 +215,10 @@ export async function buscarHistoricoComFiltros(
   }
   if (filtros?.tipoAtendimento) params.append("tipoAtendimento", filtros.tipoAtendimento);
 
-  const response = await fetch(`${API_URL}/historico?${params.toString()}`, {
+  const response = await fetchWithAuth(`${API_URL}/historico?${params.toString()}`, {
     method: "GET",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-    },
   });
 
-  if (!response.ok) throw new Error(await response.text());
+  if (!response.ok) throw new Error(await readErrorMessage(response, "Erro ao buscar histórico"));
   return response.json();
 }

@@ -263,7 +263,9 @@ export default function RelatoriosPage() {
 
       saveAs(blob, "relatorio-pedidos.xlsx");
     } catch (err) {
-      console.error("Erro ao exportar XLSX:", err);
+      if (import.meta.env.DEV) {
+        console.error("Erro ao exportar XLSX:", err);
+      }
       alert("Erro ao exportar relatório. Verifique os filtros e tente novamente.");
     }
     setLoading(false);

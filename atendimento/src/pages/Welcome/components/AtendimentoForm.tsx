@@ -3,8 +3,9 @@ import {
   buscarServicosAtendimento,
   type ServicoAtendimento,
 } from "../../../services/AtendimentoServices";
+import { ATENDIMENTO_API_BASE_URL } from "../../../config/functionsApi";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = ATENDIMENTO_API_BASE_URL;
 
 export const AtendimentoForm: React.FC = () => {
   const [servicos, setServicos] = useState<ServicoAtendimento[]>([]);

@@ -5,6 +5,7 @@
     "indexes": "firestore.indexes.json"
   },
   "hosting": {
+    "site": "gestaopedidos-desenhar",
     "public": "dist",
     "ignore": [
       "firebase.json",
