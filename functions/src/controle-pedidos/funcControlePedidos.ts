@@ -12,22 +12,22 @@ import {
   createProtectedOmieRouter,
 } from "./routes/protected";
 
-const app = express();
+export const appControlePedidos = express();
 
-applyStandardCors(app);
-applySecurityHeaders(app);
-app.use(createDefaultRateLimiter());
-app.use(express.json());
+applyStandardCors(appControlePedidos);
+applySecurityHeaders(appControlePedidos);
+appControlePedidos.use(createDefaultRateLimiter());
+appControlePedidos.use(express.json());
 
-app.use(createPublicWebhookRouter());
+appControlePedidos.use(createPublicWebhookRouter());
 
-app.use(authMiddleware);
-app.use(createProtectedDashboardRouter());
-app.use(createProtectedOmieRouter());
+appControlePedidos.use(authMiddleware);
+appControlePedidos.use(createProtectedDashboardRouter());
+appControlePedidos.use(createProtectedOmieRouter());
 
 export const apiControlePedidos = onRequest(
   {
     region: "southamerica-east1",
   },
-  app
+  appControlePedidos
 );

@@ -9,7 +9,7 @@ import {
 } from "../utils/httpMiddleware";
 import { logDev, logError } from "../utils/logger";
 
-const app = express();
+export const appUsuarios = express();
 const db = admin.firestore();
 const adminAuth = admin.auth();
 
@@ -31,12 +31,12 @@ const normalizeSetor = (value: unknown): string => {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 };
 
-applyStandardCors(app, { preflightMode: "send" });
-applySecurityHeaders(app);
+applyStandardCors(appUsuarios, { preflightMode: "send" });
+applySecurityHeaders(appUsuarios);
 
-app.use(createDefaultRateLimiter());
+appUsuarios.use(createDefaultRateLimiter());
 
-app.use(express.json());
+appUsuarios.use(express.json());
 
 const router = express.Router();
 
@@ -337,6 +337,6 @@ router.delete("/:uid", authMiddleware, isAdminMiddleware, async (req: express.Re
   }
 });
 
-app.use("/usuarios", router);
+appUsuarios.use("/usuarios", router);
 
-export const usuariosApi = onRequest(app);
+export const usuariosApi = onRequest(appUsuarios);

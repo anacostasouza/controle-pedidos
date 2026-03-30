@@ -9,20 +9,20 @@ import { authMiddleware } from "../utils/authMiddleware";
 import { createProtectedAtendimentoRouter } from "./routes/protected";
 import { createPublicAtendimentoRouter } from "./routes/public";
 
-const app = express();
+export const appAtendimento = express();
 
-applyStandardCors(app);
-applySecurityHeaders(app);
-app.use(createDefaultRateLimiter());
-app.use(express.json());
+applyStandardCors(appAtendimento);
+applySecurityHeaders(appAtendimento);
+appAtendimento.use(createDefaultRateLimiter());
+appAtendimento.use(express.json());
 
-app.use(createPublicAtendimentoRouter());
+appAtendimento.use(createPublicAtendimentoRouter());
 
-app.use(authMiddleware);
+appAtendimento.use(authMiddleware);
 
-app.use(createProtectedAtendimentoRouter());
+appAtendimento.use(createProtectedAtendimentoRouter());
 
 export const atendimentoApi = onRequest(
   { region: "southamerica-east1" },
-  app
+  appAtendimento
 );
