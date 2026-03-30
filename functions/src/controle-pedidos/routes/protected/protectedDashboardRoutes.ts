@@ -1,6 +1,6 @@
 import * as admin from "firebase-admin";
 import express from "express";
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { FieldPath, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { deepConvertTimestamps } from "../../../utils/deepConvertTimestamps";
 import {
   podeEditarPedidoBackend,
@@ -308,12 +308,18 @@ export function createProtectedDashboardRouter(): express.Router {
 
       let queryRef: FirebaseFirestore.Query = db.collection("pedidos");
       queryRef = aplicarFiltrosPedidos(queryRef, req.query);
-      queryRef = queryRef.orderBy("prazos.entrega", "asc");
+      queryRef = queryRef
+        .orderBy("prazos.entrega", "asc")
+        .orderBy(FieldPath.documentId(), "asc");
 
-      const { itensPorPagina = 20, lastEntrega } = req.query;
+      const { itensPorPagina = 20, lastEntrega, lastId } = req.query;
       if (lastEntrega && !Number.isNaN(Number(lastEntrega))) {
         const lastTimestamp = Timestamp.fromMillis(Number(lastEntrega));
-        queryRef = queryRef.startAfter(lastTimestamp);
+        if (typeof lastId === "string" && lastId.trim()) {
+          queryRef = queryRef.startAfter(lastTimestamp, lastId);
+        } else {
+          queryRef = queryRef.startAfter(lastTimestamp);
+        }
       }
       queryRef = queryRef.limit(Number(itensPorPagina));
 
@@ -443,14 +449,15 @@ export function createProtectedDashboardRouter(): express.Router {
 
       let nextLastEntrega: number | null = null;
       let nextLastId: string | null = null;
-      if (pedidos.length > 0 && pedidos[pedidos.length - 1].prazos?.entrega) {
-        const entrega = pedidos[pedidos.length - 1].prazos.entrega;
+      const ultimoDoc = snapshot.docs.at(-1);
+      if (ultimoDoc) {
+        const entrega = ultimoDoc.get("prazos.entrega");
         if (typeof entrega._seconds === "number") {
           nextLastEntrega = entrega._seconds * 1000;
         } else if (typeof entrega.seconds === "number") {
           nextLastEntrega = entrega.seconds * 1000;
         }
-        nextLastId = pedidos[pedidos.length - 1].id;
+        nextLastId = ultimoDoc.id;
       }
 
       let total: number | null = 0;
@@ -470,15 +477,11 @@ export function createProtectedDashboardRouter(): express.Router {
           countRef = countRef.where("criadoEm", "<=", Timestamp.fromDate(fim));
         }
         if (req.query.dataInicioRetirada) {
-          countRef = countRef.where(
-            "prazos.entrega",
-            ">=",
-            Timestamp.fromDate(new Date(String(req.query.dataInicioRetirada)))
-          );
+          const inicio = new Date(`${req.query.dataInicioRetirada}T00:00:00.000Z`);
+          countRef = countRef.where("prazos.entrega", ">=", Timestamp.fromDate(inicio));
         }
         if (req.query.dataFimRetirada) {
-          const fim = new Date(String(req.query.dataFimRetirada));
-          fim.setHours(23, 59, 59, 999);
+          const fim = new Date(`${req.query.dataFimRetirada}T23:59:59.999Z`);
           countRef = countRef.where("prazos.entrega", "<=", Timestamp.fromDate(fim));
         }
         // @ts-ignore

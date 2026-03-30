@@ -193,7 +193,7 @@ export async function buscarHistoricoComFiltros(
     status?: string;
     atendenteUid?: string;
     tipo?: string;
-    consumidor?: boolean; // ✅ MUDOU PARA BOOLEAN
+    consumidor?: boolean; 
     tipoAtendimento?: string;
     limit?: number;
     offset?: number;

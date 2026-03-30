@@ -22,6 +22,8 @@ import type { Pedido, StatusPedido } from "../../types/Pedidos";
 import "../../styles/Relatorios.css";
 
 export default function RelatoriosPage() {
+  const OPCOES_ITENS_POR_PAGINA = [25, 50, 100];
+
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,11 +47,22 @@ export default function RelatoriosPage() {
 
   // Paginação
   const [paginaAtual, setPaginaAtual] = useState(1);
-  const itensPorPagina = 20;
+  const [itensPorPagina, setItensPorPagina] = useState<number>(50);
   const [nextLastEntrega, setNextLastEntrega] = useState<number | null>(null);
   const [totalPedidos, setTotalPedidos] = useState<number>(0);
   const [lastEntregas, setLastEntregas] = useState<number[]>([]);
   const [lastIds, setLastIds] = useState<string[]>([]);
+
+  const totalPaginas = Math.max(1, Math.ceil(totalPedidos / itensPorPagina));
+
+  const atualizarPagina = (pagina: number) => {
+    setPaginaAtual(Math.max(1, pagina));
+  };
+
+  const atualizarFiltro = (setFiltro: (value: string) => void, value: string) => {
+    setFiltro(value);
+    setPaginaAtual(1);
+  };
 
   // Busca pedidos filtrados e paginados do backend
   const fetchPedidosBackend = async (pagina: number) => {
@@ -66,7 +79,7 @@ export default function RelatoriosPage() {
         dataFimInclusao: dataFimInclusao ?? "",
         dataInicioRetirada: dataInicioRetirada ?? "",
         dataFimRetirada: dataFimRetirada ?? "",
-        itensPorPagina: "20", 
+        itensPorPagina: String(itensPorPagina), 
       };
       if (pagina > 1 && lastEntregas[pagina - 2] && lastIds[pagina - 2]) {
         params.lastEntrega = String(lastEntregas[pagina - 2]);
@@ -125,27 +138,19 @@ export default function RelatoriosPage() {
     dataFimInclusao,
     dataInicioRetirada,
     dataFimRetirada,
+    itensPorPagina,
+    paginaAtual,
   ]);
 
-  // Paginação: próxima página
-  const handleProximaPagina = () => {
-    if (paginaAtual >= totalPaginas) return;
-    setPaginaAtual((p) => {
-      const nextPage = p + 1;
-      fetchPedidosBackend(nextPage);
-      return nextPage;
-    });
-  };
-
-  // Paginação: página anterior (recarrega do início)
-  const handlePaginaAnterior = () => {
-    if (paginaAtual === 1) return;
-    setPaginaAtual((p) => {
-      const prevPage = p - 1;
-      fetchPedidosBackend(prevPage);
-      return prevPage;
-    });
-  };
+  // Efeito para buscar quando página ou itens por página mudam
+  useEffect(() => {
+    const inclusaoOK = dataInicioInclusao && dataFimInclusao;
+    const retiradaOK = dataInicioRetirada && dataFimRetirada;
+    if ((inclusaoOK || retiradaOK) && paginaAtual > 0) {
+      fetchPedidosBackend(paginaAtual);
+    }
+    // eslint-disable-next-line
+  }, [paginaAtual, itensPorPagina]);
 
   // Efeito para buscar responsáveis (usuários) do Firestore
   useEffect(() => {
@@ -224,30 +229,62 @@ export default function RelatoriosPage() {
         return;
       }
 
-      // Montar params apenas com valores definidos
-      const params: Record<string, string> = {
-        itensPorPagina: "1000",
-      };
+      // Monta os filtros base e pagina em lotes para exportar todos os pedidos filtrados.
+      const paramsBase: Record<string, string> = {};
 
       // Adicionar apenas filtros não vazios
-      if (filtroTipo) params.filtroTipo = filtroTipo;
-      if (filtroSubTipo) params.filtroSubTipo = filtroSubTipo;
-      if (filtroStatus) params.filtroStatus = filtroStatus;
-      if (filtroCliente) params.filtroCliente = filtroCliente;
-      if (filtroResponsavelUid) params.filtroResponsavelUid = filtroResponsavelUid;
+      if (filtroTipo) paramsBase.filtroTipo = filtroTipo;
+      if (filtroSubTipo) paramsBase.filtroSubTipo = filtroSubTipo;
+      if (filtroStatus) paramsBase.filtroStatus = filtroStatus;
+      if (filtroCliente) paramsBase.filtroCliente = filtroCliente;
+      if (filtroResponsavelUid) paramsBase.filtroResponsavelUid = filtroResponsavelUid;
       
       // Adicionar datas apenas se estiverem preenchidas
-      if (dataInicioInclusao) params.dataInicioInclusao = dataInicioInclusao;
-      if (dataFimInclusao) params.dataFimInclusao = dataFimInclusao;
-      if (dataInicioRetirada) params.dataInicioRetirada = dataInicioRetirada;
-      if (dataFimRetirada) params.dataFimRetirada = dataFimRetirada;
+      if (dataInicioInclusao) paramsBase.dataInicioInclusao = dataInicioInclusao;
+      if (dataFimInclusao) paramsBase.dataFimInclusao = dataFimInclusao;
+      if (dataInicioRetirada) paramsBase.dataInicioRetirada = dataInicioRetirada;
+      if (dataFimRetirada) paramsBase.dataFimRetirada = dataFimRetirada;
 
-      const resultado = await buscarPedidosRelatorio(params, token);
-      const todosPedidos = resultado.pedidos || [];
+      const todosPedidos: Pedido[] = [];
+      const tamanhoLote = 200;
+      let lastEntregaCursor: number | null = null;
+      let lastIdCursor: string | null = null;
+
+      for (let i = 0; i < 200; i++) {
+        const paramsLote: Record<string, string> = {
+          ...paramsBase,
+          itensPorPagina: String(tamanhoLote),
+        };
+
+        if (lastEntregaCursor !== null && lastIdCursor) {
+          paramsLote.lastEntrega = String(lastEntregaCursor);
+          paramsLote.lastId = lastIdCursor;
+        }
+
+        const resultado = await buscarPedidosRelatorio(paramsLote, token);
+        const pedidosLote = (resultado.pedidos || []) as Pedido[];
+
+        if (pedidosLote.length === 0) {
+          break;
+        }
+
+        todosPedidos.push(...pedidosLote);
+
+        if (!resultado.nextLastEntrega || !resultado.nextLastId) {
+          break;
+        }
+
+        lastEntregaCursor = resultado.nextLastEntrega;
+        lastIdCursor = resultado.nextLastId;
+
+        if (pedidosLote.length < tamanhoLote) {
+          break;
+        }
+      }
       
       // Validação adicional: verificar se recebeu pedidos dentro do período esperado
       if (import.meta.env.DEV) {
-        console.log(`Exportando ${todosPedidos.length} pedidos com filtros:`, params);
+        console.log(`Exportando ${todosPedidos.length} pedidos com filtros:`, paramsBase);
       }
       
       const excelBuffer = await gerarExcelPedidosPorServico(todosPedidos);
@@ -270,8 +307,6 @@ export default function RelatoriosPage() {
     }
     setLoading(false);
   };
-
-  const totalPaginas = Math.ceil(totalPedidos / itensPorPagina);
 
   return (
     <div className="relatorios-page">
@@ -507,19 +542,46 @@ export default function RelatoriosPage() {
           </table>
 
           {/* Paginação */}
-          <div className="pagination">
-            <button disabled={paginaAtual === 1} onClick={handlePaginaAnterior}>
-              Anterior
-            </button>
-            <span>
-              Página {paginaAtual}
-            </span>
-            <button
-              disabled={paginaAtual === totalPaginas || pedidos.length < itensPorPagina}
-              onClick={handleProximaPagina}
-            >
-              Próxima
-            </button>
+          <div className="relatorios-paginacao">
+            <div className="relatorios-paginacao-info">
+              Mostrando {pedidos.length} de {totalPedidos} resultados
+            </div>
+            <div className="relatorios-paginacao-actions">
+              <label htmlFor="itens-por-pagina-relatorio">Itens por página:</label>
+              <select
+                id="itens-por-pagina-relatorio"
+                value={itensPorPagina}
+                onChange={(e) => {
+                  setItensPorPagina(Number(e.target.value));
+                  setPaginaAtual(1);
+                }}
+              >
+                {OPCOES_ITENS_POR_PAGINA.map((opcao) => (
+                  <option key={opcao} value={opcao}>
+                    {opcao}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="relatorios-paginacao-btn"
+                onClick={() => atualizarPagina(paginaAtual - 1)}
+                disabled={paginaAtual <= 1 || loading}
+              >
+                Anterior
+              </button>
+              <span className="relatorios-paginacao-pagina">
+                Página {paginaAtual} de {totalPaginas}
+              </span>
+              <button
+                type="button"
+                className="relatorios-paginacao-btn"
+                onClick={() => atualizarPagina(paginaAtual + 1)}
+                disabled={paginaAtual >= totalPaginas || loading}
+              >
+                Próxima
+              </button>
+            </div>
           </div>
         </>
       )}

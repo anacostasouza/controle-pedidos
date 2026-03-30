@@ -458,6 +458,99 @@
   box-shadow: 0 4px 8px rgba(192, 192, 192, 0.1);
 }
 
+/* ---------- Paginação Formatada ---------- */
+.relatorios-paginacao {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
+  padding: 24px;
+  background-color: var(--background-color-white);
+  border-radius: 12px;
+  box-shadow: var(--box-shadow-light);
+  border: 1px solid var(--border-color);
+  margin-top: 24px;
+}
+
+.relatorios-paginacao-info {
+  font-family: var(--font-family);
+  font-size: 0.95rem;
+  color: var(--text-color-medium);
+  font-weight: 500;
+}
+
+.relatorios-paginacao-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.relatorios-paginacao-actions label {
+  font-family: var(--font-family);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-color-medium);
+}
+
+#itens-por-pagina-relatorio {
+  font-family: var(--font-family);
+  padding: 8px 12px;
+  border: 1.5px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--background-color-white);
+  color: var(--text-color-medium);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+#itens-por-pagina-relatorio:focus {
+  border-color: var(--primary-color);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(138, 42, 44, 0.1);
+}
+
+.relatorios-paginacao-btn {
+  font-family: var(--font-family);
+  padding: 8px 16px;
+  background-color: var(--primary-color);
+  color: var(--secondary-button-color);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all var(--transition-speed) ease;
+  box-shadow: 0 2px 6px rgba(138, 42, 44, 0.3);
+}
+
+.relatorios-paginacao-btn:hover:not(:disabled) {
+  background-color: var(--primary-hover-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(138, 42, 44, 0.4);
+}
+
+.relatorios-paginacao-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: none;
+}
+
+.relatorios-paginacao-pagina {
+  font-family: var(--font-family);
+  font-weight: 600;
+  color: var(--primary-color);
+  font-size: 0.95rem;
+  min-width: 120px;
+  text-align: center;
+}
+
 @media (max-width: 768px) {
   .relatorios-graficos {
     gap: 16px;
