@@ -21,6 +21,8 @@ function toDate(ts: any): Date | null {
 }
 
 export function HistoricoAtendimento() {
+  const OPCOES_ITENS_POR_PAGINA = [25, 50, 100];
+
   const [dataInicio, setDataInicio] = useState<string>("");
   const [dataFim, setDataFim] = useState<string>("");
   const [atendimentos, setAtendimentos] = useState<any[]>([]);
@@ -35,6 +37,57 @@ export function HistoricoAtendimento() {
   const [servicosAtendimento, setServicosAtendimento] = useState<string[]>([]);
   const [estatisticas, setEstatisticas] = useState<any>(null);
   const [filtrosAplicados, setFiltrosAplicados] = useState<string[]>([]);
+  const [totalResultados, setTotalResultados] = useState<number>(0);
+  const [paginaAtual, setPaginaAtual] = useState<number>(1);
+  const [itensPorPagina, setItensPorPagina] = useState<number>(50);
+  const [temMais, setTemMais] = useState<boolean>(false);
+  const [exportandoRelatorio, setExportandoRelatorio] = useState(false);
+
+  const totalPaginas = Math.max(1, Math.ceil(totalResultados / itensPorPagina));
+
+  const atualizarPagina = (pagina: number) => {
+    setPaginaAtual(Math.max(1, pagina));
+  };
+
+  const atualizarFiltro = (setFiltro: (value: string) => void, value: string) => {
+    setFiltro(value);
+    setPaginaAtual(1);
+  };
+
+  const montarFiltrosAtuais = () => {
+    let consumidorBoolean: boolean | undefined = undefined;
+    if (filtroConsumidor === "sim") {
+      consumidorBoolean = true;
+    } else if (filtroConsumidor === "nao") {
+      consumidorBoolean = false;
+    }
+
+    return {
+      status: filtroStatus || undefined,
+      atendenteUid: filtroAtendente || undefined,
+      tipo: filtroTipo || undefined,
+      consumidor: consumidorBoolean,
+      tipoAtendimento: filtroTipoAtendimento || undefined,
+    };
+  };
+
+  const obterAtendimentosParaExportacao = async () => {
+    if (!dataInicio || !dataFim) {
+      return [];
+    }
+
+    setExportandoRelatorio(true);
+    try {
+      const resultado = await buscarHistoricoComFiltros(
+        dataInicio,
+        dataFim,
+        montarFiltrosAtuais()
+      );
+      return resultado.atendimentos;
+    } finally {
+      setExportandoRelatorio(false);
+    }
+  };
 
   const buscarHistorico = async () => {
     if (!dataInicio || !dataFim) return;
@@ -43,24 +96,17 @@ export function HistoricoAtendimento() {
     setCarregado(false);
 
     try {
-      let consumidorBoolean: boolean | undefined = undefined;
-      if (filtroConsumidor === "sim") {
-        consumidorBoolean = true;
-      } else if (filtroConsumidor === "nao") {
-        consumidorBoolean = false;
-      }
-
       const resultado = await buscarHistoricoComFiltros(dataInicio, dataFim, {
-        status: filtroStatus || undefined,
-        atendenteUid: filtroAtendente || undefined,
-        tipo: filtroTipo || undefined,
-        consumidor: consumidorBoolean,
-        tipoAtendimento: filtroTipoAtendimento || undefined,
+        ...montarFiltrosAtuais(),
+        limit: itensPorPagina,
+        offset: (paginaAtual - 1) * itensPorPagina,
       });
       
       setAtendimentos(resultado.atendimentos);
       setEstatisticas(resultado.estatisticas);
       setFiltrosAplicados(resultado.filtrosAplicados);
+      setTotalResultados(resultado.total ?? resultado.atendimentos.length);
+      setTemMais(Boolean(resultado.temMais));
       setCarregado(true);
     } catch (error) {
       console.error("Erro ao buscar histórico:", error);
@@ -75,7 +121,7 @@ export function HistoricoAtendimento() {
       buscarHistorico();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtroStatus, filtroAtendente, filtroTipo, filtroConsumidor, filtroTipoAtendimento]);
+  }, [filtroStatus, filtroAtendente, filtroTipo, filtroConsumidor, filtroTipoAtendimento, paginaAtual, itensPorPagina]);
 
   useEffect(() => {
     async function fetchAtendentes() {
@@ -114,6 +160,7 @@ export function HistoricoAtendimento() {
     setFiltroTipo("");
     setFiltroConsumidor("");
     setFiltroTipoAtendimento("");
+    setPaginaAtual(1);
   };
 
   return (
@@ -138,7 +185,13 @@ export function HistoricoAtendimento() {
               {carregando ? "Buscando..." : "Buscar"}
             </button>
           </div>
-          {carregado && <RelatorioAtendimentos atendimentos={atendimentos} />}
+          {carregado && (
+            <RelatorioAtendimentos
+              atendimentos={atendimentos}
+              onSolicitarDados={obterAtendimentosParaExportacao}
+              exportando={exportandoRelatorio}
+            />
+          )}
         </div>
       </div>
       
@@ -157,7 +210,7 @@ export function HistoricoAtendimento() {
           <div id="filtros-historico-secundario">
             <select
               value={filtroStatus}
-              onChange={(e) => setFiltroStatus(e.target.value)}
+              onChange={(e) => atualizarFiltro(setFiltroStatus, e.target.value)}
             >
               <option value="">Status: Todos</option>
               {statusDisponiveis.map((status) => (
@@ -168,7 +221,7 @@ export function HistoricoAtendimento() {
             </select>
             <select
               value={filtroAtendente}
-              onChange={(e) => setFiltroAtendente(e.target.value)}
+              onChange={(e) => atualizarFiltro(setFiltroAtendente, e.target.value)}
             >
               <option value="">Atendente: Todos</option>
               {atendentesUnicosUid.map((uid) => (
@@ -179,7 +232,7 @@ export function HistoricoAtendimento() {
             </select>
             <select
               value={filtroTipoAtendimento}
-              onChange={(e) => setFiltroTipoAtendimento(e.target.value)}
+              onChange={(e) => atualizarFiltro(setFiltroTipoAtendimento, e.target.value)}
             >
               <option value="">Serviço: Todos</option>
               {servicosAtendimento.map((servico) => (
@@ -190,7 +243,7 @@ export function HistoricoAtendimento() {
             </select>
             <select
               value={filtroTipo}
-              onChange={(e) => setFiltroTipo(e.target.value)}
+              onChange={(e) => atualizarFiltro(setFiltroTipo, e.target.value)}
             >
               <option value="">Tipo: Todos</option>
               <option value="direto">Direto</option>
@@ -198,7 +251,7 @@ export function HistoricoAtendimento() {
             </select>
             <select
               value={filtroConsumidor}
-              onChange={(e) => setFiltroConsumidor(e.target.value)}
+              onChange={(e) => atualizarFiltro(setFiltroConsumidor, e.target.value)}
             >
               <option value="">Consumidor: Todos</option>
               <option value="sim">Sim</option>
@@ -213,7 +266,7 @@ export function HistoricoAtendimento() {
             <div className="estatisticas-resumo">
               <div className="stat-card">
                 <span className="stat-label">Total</span>
-                <span className="stat-value">{atendimentos.length}</span>
+                <span className="stat-value">{totalResultados}</span>
               </div>
               <div className="stat-card">
                 <span className="stat-label">Finalizados</span>
@@ -222,6 +275,10 @@ export function HistoricoAtendimento() {
               <div className="stat-card">
                 <span className="stat-label">Cancelados</span>
                 <span className="stat-value">{estatisticas.totalCancelados}</span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-label">Controle Pedidos</span>
+                <span className="stat-value">{estatisticas.totalControlePedidos}</span>
               </div>
               <div className="stat-card">
                 <span className="stat-label">Direto</span>
@@ -316,6 +373,48 @@ export function HistoricoAtendimento() {
               })}
             </tbody>
           </table>
+
+          <div className="historico-paginacao">
+            <div className="historico-paginacao-info">
+              Mostrando {atendimentos.length} de {totalResultados} resultados
+            </div>
+            <div className="historico-paginacao-actions">
+              <label htmlFor="itens-por-pagina">Itens por página</label>
+              <select
+                id="itens-por-pagina"
+                value={itensPorPagina}
+                onChange={(e) => {
+                  setItensPorPagina(Number(e.target.value));
+                  setPaginaAtual(1);
+                }}
+              >
+                {OPCOES_ITENS_POR_PAGINA.map((opcao) => (
+                  <option key={opcao} value={opcao}>
+                    {opcao}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="paginacao-btn"
+                onClick={() => atualizarPagina(paginaAtual - 1)}
+                disabled={paginaAtual <= 1 || carregando}
+              >
+                Anterior
+              </button>
+              <span className="historico-paginacao-pagina">
+                Página {paginaAtual} de {totalPaginas}
+              </span>
+              <button
+                type="button"
+                className="paginacao-btn"
+                onClick={() => atualizarPagina(paginaAtual + 1)}
+                disabled={(!temMais && paginaAtual >= totalPaginas) || carregando}
+              >
+                Próxima
+              </button>
+            </div>
+          </div>
         </>
       )}
     </div>

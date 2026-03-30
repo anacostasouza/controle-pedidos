@@ -4,7 +4,6 @@ import express from "express";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import {
   buscarAtendimentosComFiltros,
-  calcularEstatisticas,
   validarFiltros,
 } from "../../utils/filtrosUtils";
 import { logError } from "../../../utils/logger";
@@ -279,6 +278,11 @@ export function createProtectedAtendimentoRouter(): express.Router {
         return;
       }
 
+      const limitParam = Number(req.query.limit);
+      const offsetParam = Number(req.query.offset);
+      const limit = Number.isFinite(limitParam) ? limitParam : undefined;
+      const offset = Number.isFinite(offsetParam) ? offsetParam : undefined;
+
       let consumidorBoolean: boolean | undefined = undefined;
       if (req.query.consumidor === "true") {
         consumidorBoolean = true;
@@ -294,15 +298,16 @@ export function createProtectedAtendimentoRouter(): express.Router {
         tipo: req.query.tipo as "direto" | "fila" | undefined,
         consumidor: consumidorBoolean,
         tipoAtendimento: req.query.tipoAtendimento as string | undefined,
+        limit,
+        offset,
       });
-
-      const estatisticas = calcularEstatisticas(resultado.atendimentos);
 
       res.status(200).json({
         total: resultado.total,
         filtrosAplicados: resultado.filtrosAplicados,
-        estatisticas,
+        estatisticas: resultado.estatisticas,
         atendimentos: resultado.atendimentos,
+        temMais: resultado.temMais,
       });
     } catch (error: any) {
       logError(

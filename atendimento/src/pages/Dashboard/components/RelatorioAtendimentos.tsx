@@ -4,22 +4,42 @@ import { saveAs } from "file-saver";
 
 export function RelatorioAtendimentos({
   atendimentos,
-}: Readonly<{ atendimentos: any[] }>) {
+  onSolicitarDados,
+  exportando = false,
+}: Readonly<{
+  atendimentos: any[];
+  onSolicitarDados?: () => Promise<any[]>;
+  exportando?: boolean;
+}>) {
   const exportarXLSX = async () => {
-    const excelBuffer = await gerarExcelAtendimentos(atendimentos);
-    const arrayBuffer =
-      excelBuffer instanceof ArrayBuffer
-        ? excelBuffer
-        : new Uint8Array(excelBuffer).buffer;
-    const blob = new Blob([arrayBuffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-    saveAs(blob, "relatorio-atendimentos.xlsx");
+    try {
+      const dados = onSolicitarDados
+        ? await onSolicitarDados()
+        : atendimentos;
+
+      if (!dados.length) {
+        alert("Nenhum atendimento encontrado para exportar com os filtros atuais.");
+        return;
+      }
+
+      const excelBuffer = await gerarExcelAtendimentos(dados);
+      const arrayBuffer =
+        excelBuffer instanceof ArrayBuffer
+          ? excelBuffer
+          : new Uint8Array(excelBuffer).buffer;
+      const blob = new Blob([arrayBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      saveAs(blob, "relatorio-atendimentos.xlsx");
+    } catch (error) {
+      console.error("Erro ao exportar relatório:", error);
+      alert("Erro ao exportar relatório. Tente novamente.");
+    }
   };
 
   return (
     <div id="relatorio-atendimentos">
-      <button className="export-btn" onClick={exportarXLSX}>
+      <button className="export-btn" onClick={exportarXLSX} disabled={exportando}>
         <svg
           width="15"
           height="17"
@@ -34,7 +54,7 @@ export function RelatorioAtendimentos({
             fill="#FFFF"
           ></path>
         </svg>
-        Exportar relatório
+        {exportando ? "Exportando..." : "Exportar relatório"}
       </button>
     </div>
   );

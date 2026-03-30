@@ -195,12 +195,15 @@ export async function buscarHistoricoComFiltros(
     tipo?: string;
     consumidor?: boolean; // ✅ MUDOU PARA BOOLEAN
     tipoAtendimento?: string;
+    limit?: number;
+    offset?: number;
   }
 ): Promise<{
   atendimentos: any[];
   total: number;
   filtrosAplicados: string[];
   estatisticas: any;
+  temMais?: boolean;
 }> {
   const params = new URLSearchParams({
     dataInicio,
@@ -214,6 +217,8 @@ export async function buscarHistoricoComFiltros(
     params.append("consumidor", filtros.consumidor.toString());
   }
   if (filtros?.tipoAtendimento) params.append("tipoAtendimento", filtros.tipoAtendimento);
+  if (filtros?.limit !== undefined) params.append("limit", String(filtros.limit));
+  if (filtros?.offset !== undefined) params.append("offset", String(filtros.offset));
 
   const response = await fetchWithAuth(`${API_URL}/historico?${params.toString()}`, {
     method: "GET",

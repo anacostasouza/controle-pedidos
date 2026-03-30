@@ -425,6 +425,86 @@
   box-shadow: 0 2px 8px rgba(138, 42, 44, 0.3);
 }
 
+.export-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+/* ---------- Paginacao ---------- */
+.historico-paginacao {
+  margin-top: 16px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.historico-paginacao-info {
+  color: var(--text-color-medium);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.historico-paginacao-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.historico-paginacao-actions label {
+  color: var(--text-color-medium);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.historico-paginacao-actions select {
+  font-family: var(--font-family);
+  font-size: 0.9rem;
+  padding: 8px 10px;
+  border: 1.5px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--background-color-white);
+  color: var(--text-color-medium);
+}
+
+.historico-paginacao-pagina {
+  color: var(--text-color-dark);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.paginacao-btn {
+  font-family: var(--font-family);
+  background-color: var(--primary-color);
+  color: var(--secondary-button-color);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 2px 6px rgba(138, 42, 44, 0.3);
+}
+
+.paginacao-btn:hover {
+  background-color: var(--primary-hover-color);
+  transform: translateY(-1px);
+}
+
+.paginacao-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 /* ---------- Responsividade ---------- */
 @media (max-width: 1200px) {
   .title-historico h2 {
@@ -507,6 +587,16 @@
 
   .table-historico {
     border-radius: 8px;
+  }
+
+  .historico-paginacao {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .historico-paginacao-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   #tabela-historico thead tr:first-child th:first-child {
