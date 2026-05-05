@@ -73,6 +73,6 @@ describe("E2E CORS - atendimentoApi", () => {
 
     expect(response.status).toBe(201);
     expect(response.headers["access-control-allow-origin"]).toBe("http://localhost:5173");
-    expect(response.body).toEqual({ id: "atendimento-1" });
+    expect(response.body).toEqual({ atendimentoId: "atendimento-1" });
   });
 });

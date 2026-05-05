@@ -49,6 +49,7 @@ export async function buscarServicosAtendimento(): Promise<ServicoAtendimento[]>
 export async function criarAtendimentoFila(data: {
   nomeCliente: string;
   tipoAtendimento: string;
+  prioridade?: "convencional" | "preferencial";
 }) {
   return requestPublicJson("/criarAtendimentoFila", {
     method: "POST",

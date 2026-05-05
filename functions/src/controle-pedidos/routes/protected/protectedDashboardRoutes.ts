@@ -9,7 +9,7 @@ import {
   podeEditarStatusGalpao,
   podeMarcarEntregue,
 } from "../../../utils/permissaoUtils";
-import { aplicarFiltrosPedidos } from "../../utils/filtrosUtils";
+import { aplicarFiltrosPedidos, normalizarTexto } from "../../utils/filtrosUtils";
 import { logError } from "../../../utils/logger";
 
 export function createProtectedDashboardRouter(): express.Router {
@@ -85,6 +85,8 @@ export function createProtectedDashboardRouter(): express.Router {
         requerArteFinal = true;
       }
 
+      const responsavelNomeNormalizado = normalizarTexto(responsavel);
+
       const pedidoData = deepConvertTimestamps({
         pedidoID: "",
         numeroPedido: Number(numeroPedido),
@@ -96,6 +98,7 @@ export function createProtectedDashboardRouter(): express.Router {
         },
         responsavel,
         responsavelUid,
+        responsavelNomeNormalizado,
         retrabalho: !!retrabalho,
         requerArte: requerArteFinal,
         StatusArte,
@@ -308,15 +311,27 @@ export function createProtectedDashboardRouter(): express.Router {
 
       let queryRef: FirebaseFirestore.Query = db.collection("pedidos");
       queryRef = aplicarFiltrosPedidos(queryRef, req.query);
-      queryRef = queryRef
-        .orderBy("prazos.entrega", "asc")
-        .orderBy(FieldPath.documentId(), "asc");
+      const responsavelPrefixoRaw = typeof req.query.filtroResponsavelNomePrefixo === "string"
+        ? req.query.filtroResponsavelNomePrefixo
+        : "";
+      const responsavelPrefixo = normalizarTexto(responsavelPrefixoRaw);
+      const usarPrefixoResponsavel = responsavelPrefixo.length >= 2;
 
-      const { itensPorPagina = 20, lastEntrega, lastId } = req.query;
+
+      if (usarPrefixoResponsavel) {
+        queryRef = queryRef
+          .orderBy("responsavelNomeNormalizado", "asc")
+          .orderBy("prazos.entrega", "asc");
+      } else {
+        queryRef = queryRef
+          .orderBy("prazos.entrega", "asc");
+      }
+
+      const { itensPorPagina = 20, lastEntrega, lastId, lastResponsavelNome } = req.query;
       if (lastEntrega && !Number.isNaN(Number(lastEntrega))) {
         const lastTimestamp = Timestamp.fromMillis(Number(lastEntrega));
-        if (typeof lastId === "string" && lastId.trim()) {
-          queryRef = queryRef.startAfter(lastTimestamp, lastId);
+        if (usarPrefixoResponsavel && typeof lastResponsavelNome === "string" && lastResponsavelNome.trim()) {
+          queryRef = queryRef.startAfter(lastResponsavelNome, lastTimestamp);
         } else {
           queryRef = queryRef.startAfter(lastTimestamp);
         }
@@ -332,14 +347,20 @@ export function createProtectedDashboardRouter(): express.Router {
 
         let nextLastEntrega: number | null = null;
         let nextLastId: string | null = null;
-        if (pedidos.length > 0 && pedidos.at(-1).prazos?.entrega) {
-          const entrega = pedidos.at(-1).prazos.entrega;
+        let nextLastResponsavelNome: string | null = null;
+        const ultimoPedido = pedidos.at(-1);
+        if (ultimoPedido?.prazos?.entrega) {
+          const entrega = ultimoPedido.prazos.entrega;
           if (typeof entrega._seconds === "number") {
             nextLastEntrega = entrega._seconds * 1000;
           } else if (typeof entrega.seconds === "number") {
             nextLastEntrega = entrega.seconds * 1000;
           }
-          nextLastId = pedidos.at(-1).id;
+          nextLastId = ultimoPedido.id;
+          const responsavelNome = ultimoPedido.responsavelNomeNormalizado
+            ? String(ultimoPedido.responsavelNomeNormalizado)
+            : normalizarTexto(String(ultimoPedido.responsavel || ""));
+          nextLastResponsavelNome = responsavelNome || null;
         }
 
         let total: number | null = 0;
@@ -355,7 +376,7 @@ export function createProtectedDashboardRouter(): express.Router {
           total = null;
         }
 
-        return res.json({ pedidos, nextLastEntrega, nextLastId, total });
+        return res.json({ pedidos, nextLastEntrega, nextLastId, nextLastResponsavelNome, total });
       } catch (error) {
         logError("Erro ao executar query Firestore:", error);
         return res.status(500).json({ message: "Erro ao buscar pedidos" });

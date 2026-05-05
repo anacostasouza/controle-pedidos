@@ -1,0 +1,1080 @@
+﻿{
+  "status": "success",
+  "result": {
+    "indexes": [
+      {
+        "collectionGroup": "atendimentos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "atendenteUid",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "criadoEm",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "atendimentos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "atendimentoDireto",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "status",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "criadoEm",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "atendimentos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "isConsumidor",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "status",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "criadoEm",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "atendimentos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "status",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "criadoEm",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "atendimentos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "tipoAtendimento",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "criadoEm",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "logAtendimentos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "usuarioId",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "data",
+            "order": "DESCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "DESCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "criadoEm",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "criadoEm",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "nomeCliente",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "numeroPedido",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "nomeCliente",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "nomeCliente",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "numeroPedido",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "numeroPedido",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "numeroPedido",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "criadoEm",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "criadoEm",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "requerArte",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "requerArte",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "requerArte",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "requerGalpao",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "requerGalpao",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "responsavel",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "responsavel",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "servico.subTipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "servico.tipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "responsavel",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "servico.subTipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "servico.tipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "responsavel",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "servico.subTipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "servico.tipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "responsavel",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "servico.tipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "responsavel",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "servico.tipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "responsavel",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "responsavel",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "responsavelUid",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "criadoEm",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "responsavelUid",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "responsavelUid",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "servico.subTipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "responsavelUid",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "servico.tipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "responsavelUid",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "servico.tipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "responsavelUid",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "servico.subTipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "criadoEm",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "servico.subTipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "servico.tipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "criadoEm",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "servico.subTipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "servico.tipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "servico.subTipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "servico.tipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "servico.subTipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "servico.tipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "servico.subTipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "servico.tipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "criadoEm",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "servico.tipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "criadoEm",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "servico.tipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "servico.tipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "servico.tipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "servico.tipo",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      },
+      {
+        "collectionGroup": "pedidos",
+        "queryScope": "COLLECTION",
+        "fields": [
+          {
+            "fieldPath": "statusAtual",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "prazos.entrega",
+            "order": "ASCENDING"
+          },
+          {
+            "fieldPath": "__name__",
+            "order": "ASCENDING"
+          }
+        ],
+        "density": "SPARSE_ALL"
+      }
+    ],
+    "fieldOverrides": []
+  }
+}

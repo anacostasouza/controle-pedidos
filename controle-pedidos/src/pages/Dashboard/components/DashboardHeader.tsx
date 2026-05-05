@@ -133,17 +133,18 @@ export function DashboardHeader(props: Readonly<DashboardHeaderProps>) {
           ))}
         </select>
 
-        <select
+        <input
+          type="text"
+          placeholder="Responsável (digite para buscar...)"
           value={props.filtroResponsavel}
           onChange={(e) => props.setFiltroResponsavel(e.target.value)}
-        >
-          <option value="">Todos os responsáveis</option>
+          list="responsavel-options"
+        />
+        <datalist id="responsavel-options">
           {props.responsaveisOptions.map((user) => (
-            <option key={user.uid} value={user.uid}>
-              {user.displayName}
-            </option>
+            <option key={user.uid} value={user.displayName} />
           ))}
-        </select>
+        </datalist>
 
         {props.userSetor === "ARTE" && (
             <select

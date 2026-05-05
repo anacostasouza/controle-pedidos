@@ -6,19 +6,17 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
-    // Coleção de pedidos (mantém controle normal)
+    // Coleção de pedidos (somente autenticado)
     match /pedidos/{pedidoId} {
-      allow create: if true;
-      allow read, update, delete: if isUsuarioInterno();
+      allow read, create, update, delete: if isUsuarioInterno();
     }
 
     match /servicos/{servicoId} {
-      allow read: if true;
-      allow write: if isUsuarioInterno();
+      allow read, write: if isUsuarioInterno();
     }
 
     match /servicosStatus/{docId} {
-      allow read, write: if true;
+      allow read, write: if isUsuarioInterno();
     }
 
     // Função que define o usuário interno
@@ -26,21 +24,18 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Coleção de atendimentos - totalmente aberta por enquanto
+    // Coleção de atendimentos: apenas create público
     match /atendimentos/{docId} {
-      allow read, write: if true;
+      allow create: if true;
+      allow read, update, delete: if isUsuarioInterno();
     }
 
-    // Coleção de serviços de atendimento - totalmente aberta
-   	match /servicosAtendimento/{docId} {
- 		 	allow read, write: if true;
-		}
+    match /servicosAtendimento/{docId} {
+      allow read, write: if isUsuarioInterno();
+    }
 
-    // Coleção de pedidos de atendimento (mantém regras anteriores)
     match /pedidosAtendimento/{pedidoId} {
-      allow create: if true;
-      allow read: if true;
-      allow update: if isUsuarioInterno();
+      allow read, create, update, delete: if isUsuarioInterno();
     }
   }
 }

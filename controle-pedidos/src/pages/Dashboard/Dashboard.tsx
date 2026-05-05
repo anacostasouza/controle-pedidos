@@ -14,6 +14,7 @@ import {
   getDoc,
   where,
   getDocs,
+  orderBy,
 } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
@@ -63,7 +64,15 @@ export default function Dashboard() {
   const itemsPerPage = 10;
   const [lastEntregas, setLastEntregas] = useState<number[]>([]);
   const [lastIds, setLastIds] = useState<string[]>([]);
+  const [lastResponsaveis, setLastResponsaveis] = useState<string[]>([]);
   const totalPages = Math.ceil(totalPedidosFiltrados / itemsPerPage);
+
+  const normalizeResponsavelTerm = (value: string): string =>
+    value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase()
+      .trim();
 
   useEffect(() => {
     const auth = getAuth();
@@ -123,6 +132,15 @@ export default function Dashboard() {
             return arr;
           });
         }
+
+        if (data.nextLastResponsavelNome) {
+          setLastResponsaveis((prev) => {
+            const arr = [...prev];
+            arr[currentPage - 1] = data.nextLastResponsavelNome;
+            return arr;
+          });
+        }
+
       } catch (error) {
         if (import.meta.env.DEV) {
           console.log("Erro ao buscar pedidos:", error);
@@ -135,23 +153,33 @@ export default function Dashboard() {
   );
 
   useEffect(() => {
+    const responsavelPrefixoRaw = filtroResponsavel.trim();
+    const responsavelPrefixoNormalizado = normalizeResponsavelTerm(responsavelPrefixoRaw);
+    const usarPrefixoResponsavel = responsavelPrefixoNormalizado.length >= 2;
+
     const params: Record<string, string> = {
-      filtroTipo: filtroServico, 
-      filtroSubTipo,             
+      filtroTipo: filtroServico,
+      filtroSubTipo,
       filtroStatus,
-      filtroResponsavelUid: filtroResponsavel,
-      filtroAtrasados: filtroAtrasados ? "true" : "",
+      filtroAtrasados: (!usarPrefixoResponsavel && filtroAtrasados) ? "true" : "",
       porPagina: itemsPerPage.toString(),
       filtroCliente: buscaCliente,
       filtroRequerArte: filtroRequerArte ?? "",
       filtroRequerGalpao: filtroRequerGalpao ?? "",
-      filtroOcultarEntregues: "true"
+      filtroOcultarEntregues: usarPrefixoResponsavel ? "" : "true",
     };
+
+    if (usarPrefixoResponsavel) {
+      params.filtroResponsavelNomePrefixo = responsavelPrefixoRaw;
+    }
 
     if (currentPage > 1 && lastEntregas[currentPage - 2]) {
       params.lastEntrega = lastEntregas[currentPage - 2].toString();
       if (lastIds[currentPage - 2]) {
         params.lastId = lastIds[currentPage - 2];
+      }
+      if (usarPrefixoResponsavel && lastResponsaveis[currentPage - 2]) {
+        params.lastResponsavelNome = lastResponsaveis[currentPage - 2];
       }
     }
     
@@ -171,24 +199,62 @@ export default function Dashboard() {
     itemsPerPage,
     filtroRequerArte,
     filtroRequerGalpao,
+    lastResponsaveis,
   ]);
 
-  useEffect(() => {
-    const db = getFirestore();
-    const pedidosCollectionRef = collection(db, "pedidos");
+  const debouncedCountPedidos = useCallback(
+    debounce(async (params: {
+      filtroServico: TipoServicoValue | "";
+      filtroSubTipo: SubTipoServicoValue | "";
+      filtroStatus: string;
+      responsavelPrefixoNormalizado: string;
+    }) => {
+      const db = getFirestore();
+      const pedidosCollectionRef = collection(db, "pedidos");
 
-    const filtros = [];
-    if (filtroServico) filtros.push(where("servico.tipo", "==", filtroServico));
-    if (filtroSubTipo) filtros.push(where("servico.subTipo", "==", filtroSubTipo));
-    if (filtroStatus) filtros.push(where("statusAtual", "==", filtroStatus));
-    if (filtroResponsavel) filtros.push(where("responsavel", "==", filtroResponsavel));
-    filtros.push(where("statusAtual", "!=", "Entregue"));
+      const filtros = [];
+      if (params.filtroServico) filtros.push(where("servico.tipo", "==", params.filtroServico));
+      if (params.filtroSubTipo) filtros.push(where("servico.subTipo", "==", params.filtroSubTipo));
+      if (params.filtroStatus) filtros.push(where("statusAtual", "==", params.filtroStatus));
 
-    const qContagem = query(pedidosCollectionRef, ...filtros);
-    getCountFromServer(qContagem).then((snapshot) => {
+      if (params.responsavelPrefixoNormalizado.length >= 2) {
+        filtros.push(where("responsavelNomeNormalizado", ">=", params.responsavelPrefixoNormalizado));
+        filtros.push(where("responsavelNomeNormalizado", "<=", `${params.responsavelPrefixoNormalizado}\uf8ff`));
+      }
+
+      if (params.responsavelPrefixoNormalizado.length < 2) {
+        filtros.push(where("statusAtual", "!=", "Entregue"));
+      }
+
+      const qContagem = params.responsavelPrefixoNormalizado.length >= 2
+        ? query(pedidosCollectionRef, ...filtros, orderBy("responsavelNomeNormalizado"))
+        : query(pedidosCollectionRef, ...filtros);
+
+      const snapshot = await getCountFromServer(qContagem);
       setTotalPedidosFiltrados(snapshot.data().count);
+    }, 400),
+    []
+  );
+
+  useEffect(() => {
+    const responsavelPrefixoNormalizado = normalizeResponsavelTerm(filtroResponsavel);
+    debouncedCountPedidos({
+      filtroServico,
+      filtroSubTipo,
+      filtroStatus,
+      responsavelPrefixoNormalizado,
     });
-  }, [filtroServico, filtroSubTipo, filtroStatus, filtroResponsavel]);
+
+    return () => {
+      debouncedCountPedidos.cancel();
+    };
+  }, [
+    filtroServico,
+    filtroSubTipo,
+    filtroStatus,
+    filtroResponsavel,
+    debouncedCountPedidos,
+  ]);
 
   useEffect(() => {
     async function atualizarOpcoes() {
@@ -307,6 +373,7 @@ export default function Dashboard() {
     setCurrentPage(1);
     setLastEntregas([]);
     setLastIds([]);
+    setLastResponsaveis([]);
   }, [
     filtroServico,
     filtroSubTipo,

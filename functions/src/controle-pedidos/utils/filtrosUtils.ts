@@ -1,5 +1,13 @@
 import { Timestamp } from "firebase-admin/firestore";
 
+export function normalizarTexto(valor: string): string {
+  return valor
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .trim();
+}
+
 export function aplicarFiltrosPedidos(queryRef: FirebaseFirestore.Query, filtros: any): FirebaseFirestore.Query {
   // ✅ FILTROS DE SERVIÇO
   if (filtros.filtroTipo)
@@ -11,6 +19,15 @@ export function aplicarFiltrosPedidos(queryRef: FirebaseFirestore.Query, filtros
   // ✅ FILTROS DE RESPONSÁVEL E CLIENTE
   if (filtros.filtroResponsavelUid)
     queryRef = queryRef.where("responsavelUid", "==", filtros.filtroResponsavelUid);
+
+  if (filtros.filtroResponsavelNomePrefixo) {
+    const prefixo = normalizarTexto(String(filtros.filtroResponsavelNomePrefixo));
+    if (prefixo.length >= 2) {
+      queryRef = queryRef
+        .where("responsavelNomeNormalizado", ">=", prefixo)
+        .where("responsavelNomeNormalizado", "<=", `${prefixo}\uf8ff`);
+    }
+  }
 
   if (filtros.filtroCliente) {
     if (/^\d+$/.test(filtros.filtroCliente)) {

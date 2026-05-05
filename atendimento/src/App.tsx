@@ -13,34 +13,36 @@ function App() {
   return (
     <AuthProvider> 
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Welcome />} />
-          <Route path="/login" element={<Login />} />
-          <Route
-            path="/fila-atendimento"
-            element={
-              <ProtectedRoute>
-                <FilaAtendimento />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile-edit"
-            element={
-              <ProtectedRoute>
-                <ProfileEditPage />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
+        <React.Suspense fallback={<div>Carregando...</div>}>
+          <Routes>
+            <Route path="/" element={<Welcome />} />
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/fila-atendimento"
+              element={
+                <ProtectedRoute>
+                  <FilaAtendimento />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile-edit"
+              element={
+                <ProtectedRoute>
+                  <ProfileEditPage />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </React.Suspense>
       </BrowserRouter>
     </AuthProvider>
   );

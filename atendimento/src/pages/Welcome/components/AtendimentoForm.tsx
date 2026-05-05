@@ -3,9 +3,7 @@ import {
   buscarServicosAtendimento,
   type ServicoAtendimento,
 } from "../../../services/AtendimentoServices";
-import { ATENDIMENTO_API_BASE_URL } from "../../../config/functionsApi";
-
-const API_URL = ATENDIMENTO_API_BASE_URL;
+import { criarAtendimentoFila } from "../../../services/AtendimentoServices";
 
 export const AtendimentoForm: React.FC = () => {
   const [servicos, setServicos] = useState<ServicoAtendimento[]>([]);
@@ -25,11 +23,7 @@ export const AtendimentoForm: React.FC = () => {
       return;
     }
     try {
-      await fetch(`${API_URL}/criarAtendimentoFila`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nomeCliente, tipoAtendimento, prioridade }),
-      });
+      await criarAtendimentoFila({ nomeCliente, tipoAtendimento, prioridade });
       setMensagem(
         "Atendimento criado com sucesso! Por favor aguarde, seu nome será chamado!"
       );
