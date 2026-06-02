@@ -5,8 +5,8 @@ import {
   type TipoServicoValue,
   type SubTipoServicoValue,
 } from "../../../types/Servicos";
-import { capitalizeWords } from "../../../utils/formatUtils";
-import { fetchAllServicosStatus } from "../../../utils/firestoreUtils";
+import { capitalizeWords } from "../../../utils/FormatUtils";
+import { fetchAllServicosStatus } from "../../../utils/FirestoreUtils";
 
 interface DashboardHeaderProps {
   pedidosFiltrados: Pedido[];

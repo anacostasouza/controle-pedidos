@@ -1,6 +1,6 @@
 import { getApps, initializeApp } from "firebase/app";
-import { getFirestore, Timestamp } from "firebase/firestore";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { connectFirestoreEmulator, getFirestore, Timestamp } from "firebase/firestore";
+import { connectAuthEmulator, getAuth, GoogleAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -16,6 +16,19 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
+
+const shouldUseEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === "true";
+let emulatorsConnected = false;
+
+if (shouldUseEmulators && !emulatorsConnected) {
+  const authHost = import.meta.env.VITE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
+  const firestoreHost = import.meta.env.VITE_FIRESTORE_EMULATOR_HOST || "127.0.0.1";
+  const firestorePort = Number(import.meta.env.VITE_FIRESTORE_EMULATOR_PORT || 8080);
+
+  connectAuthEmulator(auth, `http://${authHost}`, { disableWarnings: true });
+  connectFirestoreEmulator(db, firestoreHost, firestorePort);
+  emulatorsConnected = true;
+}
 
 export { app, db, auth, provider, Timestamp };
 

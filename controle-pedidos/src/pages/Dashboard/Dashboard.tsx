@@ -8,9 +8,7 @@ import { useNavigate } from "react-router-dom";
 import {
   getFirestore,
   collection,
-  query,
   doc,
-  getCountFromServer,
   getDoc,
   where,
   getDocs,
@@ -31,6 +29,7 @@ import { tiposServico } from "../../types/tipoServicos";
 import { STATUS_SEQUENCE_DEFAULT } from "../../types/StatusPedidos";
 import { gerarOpcoesStatus, convertToTimestamp } from "./utils/dashboardUtils";
 import { getTodasEtapasDoPedido } from "../../utils/FirestoreUtils";
+
 import { podeEditarPedido as podeEditarPedidoUtils, podeMarcarEntregue, podeEditarPrazoEntrega } from "../../utils/PermissionUtils";
 
 import { PedidosTable } from "./components/PedidosTable";
@@ -56,7 +55,7 @@ export default function Dashboard() {
   const [userDisplayName, setUserDisplayName] = useState("");
   const [statusOptions, setStatusOptions] = useState<StatusPedido[]>(STATUS_SEQUENCE_DEFAULT);
   const [subTipoOptions, setSubTipoOptions] = useState<{ value: SubTipoServicoValue; label: string }[]>([]);
-  const [etapasPorPedido, setEtapasPorPedido] = useState<Record<string, Awaited<ReturnType<typeof getTodasEtapasDoPedido>>>>({});
+  const [etapasPorPedido, setEtapasPorPedido] = useState<Record<string, any>>({});
   const [responsaveisOptions, setResponsaveisOptions] = useState<{ uid: string, displayName: string }[]>([]);
   const [totalPedidosFiltrados, setTotalPedidosFiltrados] = useState(0);
 
@@ -199,62 +198,9 @@ export default function Dashboard() {
     itemsPerPage,
     filtroRequerArte,
     filtroRequerGalpao,
-    lastResponsaveis,
   ]);
 
-  const debouncedCountPedidos = useCallback(
-    debounce(async (params: {
-      filtroServico: TipoServicoValue | "";
-      filtroSubTipo: SubTipoServicoValue | "";
-      filtroStatus: string;
-      responsavelPrefixoNormalizado: string;
-    }) => {
-      const db = getFirestore();
-      const pedidosCollectionRef = collection(db, "pedidos");
 
-      const filtros = [];
-      if (params.filtroServico) filtros.push(where("servico.tipo", "==", params.filtroServico));
-      if (params.filtroSubTipo) filtros.push(where("servico.subTipo", "==", params.filtroSubTipo));
-      if (params.filtroStatus) filtros.push(where("statusAtual", "==", params.filtroStatus));
-
-      if (params.responsavelPrefixoNormalizado.length >= 2) {
-        filtros.push(where("responsavelNomeNormalizado", ">=", params.responsavelPrefixoNormalizado));
-        filtros.push(where("responsavelNomeNormalizado", "<=", `${params.responsavelPrefixoNormalizado}\uf8ff`));
-      }
-
-      if (params.responsavelPrefixoNormalizado.length < 2) {
-        filtros.push(where("statusAtual", "!=", "Entregue"));
-      }
-
-      const qContagem = params.responsavelPrefixoNormalizado.length >= 2
-        ? query(pedidosCollectionRef, ...filtros, orderBy("responsavelNomeNormalizado"))
-        : query(pedidosCollectionRef, ...filtros);
-
-      const snapshot = await getCountFromServer(qContagem);
-      setTotalPedidosFiltrados(snapshot.data().count);
-    }, 400),
-    []
-  );
-
-  useEffect(() => {
-    const responsavelPrefixoNormalizado = normalizeResponsavelTerm(filtroResponsavel);
-    debouncedCountPedidos({
-      filtroServico,
-      filtroSubTipo,
-      filtroStatus,
-      responsavelPrefixoNormalizado,
-    });
-
-    return () => {
-      debouncedCountPedidos.cancel();
-    };
-  }, [
-    filtroServico,
-    filtroSubTipo,
-    filtroStatus,
-    filtroResponsavel,
-    debouncedCountPedidos,
-  ]);
 
   useEffect(() => {
     async function atualizarOpcoes() {
@@ -288,15 +234,21 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function carregarEtapas() {
-      if (!pedidosFiltrados.length) return setEtapasPorPedido({});
+      if (!pedidosFiltrados.length) {
+        setEtapasPorPedido({});
+        return;
+      }
+
       const resultados = await Promise.all(
-        pedidosFiltrados.map(
-          async (pedido) =>
-            [pedido.id!, await getTodasEtapasDoPedido(pedido)] as const
-        )
+        pedidosFiltrados.map(async (pedido) => {
+          const etapas = await getTodasEtapasDoPedido(pedido);
+          return [pedido.id!, etapas] as const;
+        })
       );
+
       setEtapasPorPedido(Object.fromEntries(resultados));
     }
+
     carregarEtapas();
   }, [pedidosFiltrados]);
 

@@ -10,7 +10,7 @@
     import type { Pedido } from "../../../types/Pedidos";
 
     // Formataçao dos dados para o gráfico
-    import { capitalizeWords } from "../../../utils/formatUtils";
+import { capitalizeWords } from "../../../utils/FormatUtils";
 
     interface Props {
         pedidos: Pedido[];

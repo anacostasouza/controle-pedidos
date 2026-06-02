@@ -2,7 +2,7 @@ type FunctionsTarget = "emulator" | "production";
 
 const DEFAULT_PROJECT_ID = "gestaopedidos-desenhar";
 const DEFAULT_FUNCTIONS_REGION = "southamerica-east1";
-const DEFAULT_USERS_REGION = "us-central1";
+const DEFAULT_USERS_REGION = "southamerica-east1";
 const DEFAULT_EMULATOR_HOST = "127.0.0.1:9000";
 const DEFAULT_ATENDIMENTO_FUNCTION_NAME = "atendimentoApi";
 const DEFAULT_USUARIOS_FUNCTION_NAME = "usuariosApi";

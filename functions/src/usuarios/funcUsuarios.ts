@@ -339,4 +339,7 @@ router.delete("/:uid", authMiddleware, isAdminMiddleware, async (req: express.Re
 
 appUsuarios.use("/usuarios", router);
 
-export const usuariosApi = onRequest(appUsuarios);
+export const usuariosApi = onRequest(
+  { region: "southamerica-east1" },
+  appUsuarios
+);

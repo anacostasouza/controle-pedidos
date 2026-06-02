@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { signInWithPopup, signOut } from "firebase/auth";
+import { signInWithEmailAndPassword, signInWithPopup, signOut } from "firebase/auth";
 import { auth, provider } from "../../services/firebase";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -13,6 +13,9 @@ function Login() {
   const { authDenialReason } = useAuth();
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const isE2E = import.meta.env.VITE_E2E === "true";
+  const e2eEmail = import.meta.env.VITE_E2E_EMAIL || "desenhar@gmail.com";
+  const e2ePassword = import.meta.env.VITE_E2E_PASSWORD || "Senha123!";
 
   useEffect(() => {
     const storedError = localStorage.getItem("authError");
@@ -24,6 +27,40 @@ function Login() {
 
   const displayMessage = loginError || authDenialReason;
 
+  const authorizeAndNavigate = async (token: string) => {
+    const apiUrl = ATENDIMENTO_API_BASE_URL;
+
+    try {
+      const authResponse = await fetch(`${apiUrl}/filaAtendimento`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (authResponse.status === 403) {
+        const data = await authResponse.json().catch(() => ({}));
+        const message = data.message || "Acesso negado";
+
+        setLoginError(message);
+        setIsLoading(false);
+        await signOut(auth);
+        return;
+      }
+
+      const from = location.state?.from?.pathname || "/fila-atendimento";
+      navigate(from, { replace: true });
+    } catch (error) {
+      setIsLoading(false);
+      if (import.meta.env.DEV) {
+        console.error("Erro ao verificar autorização:", error);
+      }
+
+      const from = location.state?.from?.pathname || "/fila-atendimento";
+      navigate(from, { replace: true });
+    }
+  };
+
   const handleLogin = async () => {
     setLoginError(null);
     setIsLoading(true);
@@ -32,37 +69,7 @@ function Login() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       const token = await user.getIdToken();
-      const apiUrl = ATENDIMENTO_API_BASE_URL;
-
-      try {
-        const authResponse = await fetch(`${apiUrl}/filaAtendimento`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (authResponse.status === 403) {
-          const data = await authResponse.json().catch(() => ({}));
-          const message = data.message || "Acesso negado";
-
-          setLoginError(message);
-          setIsLoading(false);
-          await signOut(auth);
-          return;
-        }
-
-        const from = location.state?.from?.pathname || "/fila-atendimento";
-        navigate(from, { replace: true });
-      } catch (error) {
-        setIsLoading(false);
-        if (import.meta.env.DEV) {
-          console.error("Erro ao verificar autorização:", error);
-        }
-
-        const from = location.state?.from?.pathname || "/fila-atendimento";
-        navigate(from, { replace: true });
-      }
+      await authorizeAndNavigate(token);
     } catch (error) {
       setIsLoading(false);
 
@@ -81,6 +88,23 @@ function Login() {
       }
 
       setLoginError(errorMessage);
+    }
+  };
+
+  const handleE2ELogin = async () => {
+    setLoginError(null);
+    setIsLoading(true);
+
+    try {
+      const result = await signInWithEmailAndPassword(auth, e2eEmail, e2ePassword);
+      const token = await result.user.getIdToken();
+      await authorizeAndNavigate(token);
+    } catch (error) {
+      setIsLoading(false);
+      if (import.meta.env.DEV) {
+        console.error("Erro ao logar no e2e:", error);
+      }
+      setLoginError("Falha no login de teste.");
     }
   };
 
@@ -139,6 +163,16 @@ function Login() {
             </svg>
             {isLoading ? "Verificando..." : "Entrar com Google"}
           </button>
+          {isE2E && (
+            <button
+              onClick={handleE2ELogin}
+              className="login-button"
+              disabled={isLoading}
+              data-testid="e2e-login"
+            >
+              Entrar com teste
+            </button>
+          )}
         </div>
       </div>
     </div>

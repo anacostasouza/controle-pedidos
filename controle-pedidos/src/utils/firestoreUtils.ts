@@ -169,16 +169,31 @@ export async function fetchPedidoById(
   return snap.exists() ? ({ id: snap.id, ...snap.data() } as Pedido) : null;
 }
 
+const statusSequenceCache = new Map<string, StatusPedido[]>();
+
+const getStatusSequenceCacheKey = (tipo: string, subTipo?: string): string =>
+  `${tipo}::${subTipo ?? ""}`;
+
 export async function fetchStatusSequence(
   tipo: string,
   subTipo?: string
 ): Promise<StatusPedido[]> {
+  const cacheKey = getStatusSequenceCacheKey(tipo, subTipo);
+  const cachedSequence = statusSequenceCache.get(cacheKey);
+  if (cachedSequence) {
+    return cachedSequence;
+  }
+
   try {
     const directRef = doc(db, "servicosStatus", tipo);
     const directSnap = await getDoc(directRef);
     if (directSnap.exists()) {
       const seq = readSequenceField(directSnap.data());
-      if (seq.length) return seq as StatusPedido[];
+      if (seq.length) {
+        const normalizedSequence = seq as StatusPedido[];
+        statusSequenceCache.set(cacheKey, normalizedSequence);
+        return normalizedSequence;
+      }
     }
 
     const servicosRef = collection(db, "servicosStatus");
@@ -187,14 +202,20 @@ export async function fetchStatusSequence(
     const q = query(servicosRef, ...constraints);
     const snap = await getDocs(q);
 
-    if (snap.empty) return [];
+    if (snap.empty) {
+      statusSequenceCache.set(cacheKey, []);
+      return [];
+    }
     const data = snap.docs[0].data();
     const seq = readSequenceField(data);
-    return seq as StatusPedido[];
+    const normalizedSequence = seq as StatusPedido[];
+    statusSequenceCache.set(cacheKey, normalizedSequence);
+    return normalizedSequence;
   } catch (err) {
     if (import.meta.env.DEV) {
       console.error("Erro ao buscar sequência de status:", err);
     }
+    statusSequenceCache.set(cacheKey, []);
     return [];
   }
 }

@@ -13,7 +13,13 @@ export const AtendimentoForm: React.FC = () => {
     "convencional"
   );
   const [mensagem, setMensagem] = useState("");
+  const isE2E = import.meta.env.VITE_E2E === "true";
   useEffect(() => {
+    if (isE2E) {
+      setServicos([{ tipo: "Consulta" }]);
+      return;
+    }
+
     buscarServicosAtendimento().then(setServicos);
   }, []);
   const handleSubmit = async (e: React.FormEvent) => {

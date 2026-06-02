@@ -162,12 +162,12 @@ export function applySecurityHeaders(app: express.Express): void {
 
 export function createDefaultRateLimiter() {
   return rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
+    windowMs: 5 * 60 * 1000,
+    max: 200,
     standardHeaders: true,
     legacyHeaders: false,
     message: {
-      message: "Muitas requisições deste IP, tente novamente em 15 minutos.",
+      message: "Muitas requisições deste IP, tente novamente em 5 minutos.",
     },
     keyGenerator: (req) => getRequestIp(req),
     skip: (req) => {

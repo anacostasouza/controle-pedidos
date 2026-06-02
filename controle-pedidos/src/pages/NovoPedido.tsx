@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   getFirestore,
@@ -11,7 +10,6 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import debounce from "lodash.debounce";
 
 import { TipoServico, SubTipoServico } from "../types/Servicos";
 import { tiposServico } from "../types/tipoServicos";
@@ -23,7 +21,6 @@ import { generateTimeOptions } from "../utils/TimeUtils";
 import HeaderPage from "../components/layout/headerPage";
 import {
   criarPedido,
-  buscarClienteOmie,
 } from "../services/ControlePedidosServices";
 
 import "../styles/NovoPedido.css";
@@ -58,10 +55,6 @@ export default function NovoPedido() {
   const atendimentoId = paramsURL.get("atendimentoId") || "";
   const origem = paramsURL.get("origem") || "";
   const numeroPedidoState = paramsURL.get("codigoPedido") || "";
-  const codigoClienteOmieParam = paramsURL.get("codigoClienteOmie");
-  const codigoClienteOmie = codigoClienteOmieParam
-    ? Number(codigoClienteOmieParam)
-    : undefined;
 
   // ------------------------------
   // Estados
@@ -78,12 +71,6 @@ export default function NovoPedido() {
   const [error, setError] = useState("");
   const [clienteConfirmado, setClienteConfirmado] = useState(false);
   
-  // Estados da busca de cliente
-  const [clientesEncontrados, setClientesEncontrados] = useState<any[]>([]);
-  const [buscandoCliente, setBuscandoCliente] = useState(false);
-  const [showClientesList, setShowClientesList] = useState(false);
-  const [errorBuscaCliente, setErrorBuscaCliente] = useState("");
-
   // Estado principal do formulário
   const [formData, setFormData] = useState<
     Omit<Pedido, "id" | "criadoEm" | "atualizadoEm" | "historicoStatus">
@@ -198,13 +185,13 @@ export default function NovoPedido() {
   }, [numeroPedidoState]);
 
 useEffect(() => {
-  if (origem === "atendimento" && nomeCliente && codigoClienteOmie) {
+  if (origem === "atendimento" && nomeCliente) {
     setClienteConfirmado(true);
     
     setFormData(prevData => ({
       ...prevData,
       nomeCliente: nomeCliente,
-      codigoClienteOmie: codigoClienteOmie
+      codigoClienteOmie: undefined,
     }));
     
     const timer = setTimeout(() => {
@@ -221,7 +208,7 @@ useEffect(() => {
     
     return () => clearTimeout(timer);
   }
-}, [origem, nomeCliente, codigoClienteOmie]);
+}, [origem, nomeCliente]);
 
   // Sincroniza prazo de arte com entrega para tipo de serviço Arte
   useEffect(() => {
@@ -240,79 +227,17 @@ useEffect(() => {
   }, [formData.servico.tipo, formData.prazos.entrega]);
 
   // ------------------------------
-  // Funções de busca de cliente
+  // Entrada manual de cliente
   // ------------------------------
-  // Debounce para busca de cliente
-  const debouncedSearchCliente = useMemo(
-    () => debounce(async (searchTerm: string) => {
-      if (!searchTerm || searchTerm.length < 3) {
-        setClientesEncontrados([]);
-        setShowClientesList(false);
-        return;
-      }
-
-      setBuscandoCliente(true);
-      setErrorBuscaCliente("");
-
-      try {
-        const result = await buscarClienteOmie(searchTerm);
-        setClientesEncontrados(result.clientes || []);
-        setShowClientesList(true);
-      } catch (error) {
-        setErrorBuscaCliente(String(error) || "Erro ao buscar clientes");
-        setClientesEncontrados([]);
-      } finally {
-        setBuscandoCliente(false);
-      }
-    }, 500),
-    []
-  );
-
-  // Função para tratar a mudança no input de cliente
   const handleClienteInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
 
-    // Se já havia um cliente confirmado e o valor mudou, desconfirme
-    if (clienteConfirmado) {
-      setClienteConfirmado(false);
-    }
-
-    setFormData({ ...formData, nomeCliente: value });
-    debouncedSearchCliente(value);
-  };
-
-  // Função para selecionar um cliente da lista
-  const selecionarCliente = (cliente: any) => {
-    // Verifica se o cliente tem CPF/CNPJ
-    if (
-      !cliente.cnpj_cpf ||
-      cliente.cnpj_cpf === "**.**.***.****-**" ||
-      cliente.cnpj_cpf === "***.***.***.***-**"
-    ) {
-      setErrorBuscaCliente(
-        "Este cliente não possui CPF/CNPJ cadastrado. Selecione outro cliente."
-      );
-      return;
-    }
-
-    setFormData({
-      ...formData,
-      nomeCliente: cliente.nome,
-      codigoClienteOmie: cliente.codigo_cliente_omie,
-    });
-    setShowClientesList(false);
-    setErrorBuscaCliente("");
-    setClienteConfirmado(true); // Cliente confirmado
-  };
-
-  // Função para cancelar a seleção do cliente
-  const cancelarSelecaoCliente = () => {
-    setClienteConfirmado(false);
-    setFormData({
-      ...formData,
-      nomeCliente: "",
+    setFormData((prev) => ({
+      ...prev,
+      nomeCliente: value,
       codigoClienteOmie: undefined,
-    });
+    }));
+    setClienteConfirmado(value.trim().length >= 3);
   };
 
   // ------------------------------
@@ -456,7 +381,7 @@ useEffect(() => {
         userSetorLabel,
         origem,
         atendimentoId,
-        codigoClienteOmie,
+        codigoClienteOmie: formData.codigoClienteOmie,
         retrabalho,
       });
 
@@ -482,14 +407,14 @@ useEffect(() => {
         
         {!clienteConfirmado && (
           <div className="instrucoes-cliente">
-            Primeiro, pesquise e selecione um cliente para continuar.
-            Os demais campos serão habilitados após a confirmação do cliente.
+            Preencha manualmente o nome do cliente para continuar.
+            Os demais campos serão habilitados após informar pelo menos 3 caracteres.
           </div>
         )}
 
         {clienteConfirmado && (
           <div className="instrucoes-cliente confirmado">
-            <strong>Cliente confirmado!</strong> Agora você pode preencher os detalhes do pedido.
+            <strong>Cliente informado!</strong> Agora você pode preencher os detalhes do pedido.
           </div>
         )}
         
@@ -525,95 +450,10 @@ useEffect(() => {
                   type="text"
                   value={formData.nomeCliente}
                   onChange={handleClienteInputChange}
-                  onFocus={() =>
-                    formData.nomeCliente &&
-                    formData.nomeCliente.length >= 3 &&
-                    !clienteConfirmado &&
-                    setShowClientesList(true)
-                  }
                   required
-                  placeholder="Digite nome do cliente ou CPF/CNPJ"
+                  placeholder="Digite manualmente o nome do cliente"
                   className="cliente-input"
-                  disabled={clienteConfirmado}
                 />
-
-                {clienteConfirmado && (
-                  <button
-                    type="button"
-                    className="cliente-cancelar-btn"
-                    onClick={cancelarSelecaoCliente}
-                    title="Trocar cliente"
-                  >
-                    ✕
-                  </button>
-                )}
-
-                {buscandoCliente && (
-                  <div className="loading-spinner">Buscando...</div>
-                )}
-
-                {/* Lista de clientes encontrados */}
-                {showClientesList && clientesEncontrados.length > 0 && (
-                  <div className="clientes-encontrados-lista">
-                    {clientesEncontrados.map((cliente) => {
-                      const semCpfCnpj =
-                        !cliente.cnpj_cpf ||
-                        cliente.cnpj_cpf === "**.**.***.****-**" ||
-                        cliente.cnpj_cpf === "***.***.***.***-**";
-
-                      return (
-                        <div
-                          key={cliente.codigo_cliente_omie}
-                          className={`cliente-item ${
-                            semCpfCnpj ? "cliente-sem-documento" : ""
-                          }`}
-                          onClick={() =>
-                            !semCpfCnpj && selecionarCliente(cliente)
-                          }
-                          title={
-                            semCpfCnpj
-                              ? "Este cliente não possui CPF/CNPJ cadastrado"
-                              : ""
-                          }
-                        >
-                          <div className="cliente-item-nome">
-                            {cliente.nome}
-                            {semCpfCnpj && (
-                              <span className="aviso-sem-documento">
-                                {" "}
-                                (Sem CPF/CNPJ)
-                              </span>
-                            )}
-                          </div>
-                          {cliente.cnpj_cpf && (
-                            <div className="cliente-item-cnpj">
-                              {cliente.cnpj_cpf}
-                            </div>
-                          )}
-                          {cliente.telefone && (
-                            <div className="cliente-item-telefone">
-                              {cliente.telefone}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {showClientesList &&
-                  clientesEncontrados.length === 0 &&
-                  !buscandoCliente && (
-                    <div className="clientes-encontrados-lista">
-                      <div className="nenhum-cliente">
-                        Nenhum cliente encontrado.
-                      </div>
-                    </div>
-                  )}
-
-                {errorBuscaCliente && (
-                  <div className="cliente-busca-erro">{errorBuscaCliente}</div>
-                )}
                 
               </div>
             </div>
