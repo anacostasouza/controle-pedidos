@@ -4,6 +4,7 @@ export enum TipoServico {
   IMPRESSAO_DIGITAL = "IMPRESSAO_DIGITAL",
   COMUNICACAO_VISUAL = "COMUNICACAO_VISUAL",
   TERCEIRIZADO = "TERCEIRIZADO",
+  PLOTAGEM = "PLOTAGEM",
 }
 
 export enum SubTipoServico {
@@ -27,6 +28,7 @@ export const TipoServicoLabels: Record<TipoServico, string> = {
   [TipoServico.IMPRESSAO_DIGITAL]: "Impressão Digital",
   [TipoServico.COMUNICACAO_VISUAL]: "Comunicação Visual",
   [TipoServico.TERCEIRIZADO]: "Terceirizado",
+  [TipoServico.PLOTAGEM]: "Plotagem",
 };
 
 export const SubTipoServicoLabels: Record<SubTipoServico, string> = {

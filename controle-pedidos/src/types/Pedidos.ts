@@ -102,5 +102,5 @@ export interface Pedido {
   criadoEm: Timestamp;
   atualizadoEm: Timestamp;
   entregueEm?: Timestamp;
-  codigoClienteOmie?: number;
+  codigoClienteTagPlus?: number;
 }

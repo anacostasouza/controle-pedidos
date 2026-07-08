@@ -36,6 +36,7 @@ export function createProtectedDashboardRouter(): express.Router {
         atendimentoId,
         origem,
         codigoClienteOmie,
+        codigoClienteTagPlus,
         retrabalho,
       } = req.body;
 
@@ -112,7 +113,7 @@ export function createProtectedDashboardRouter(): express.Router {
         tipoDeEntrega,
         atendimentoId: atendimentoId || null,
         origem: origem || null,
-        codigoClienteOmie: codigoClienteOmie ? Number(codigoClienteOmie) : null,
+        codigoClienteOmie: (codigoClienteTagPlus ?? codigoClienteOmie) ? Number(codigoClienteTagPlus ?? codigoClienteOmie) : null,
         criadoEm: Timestamp.now(),
         atualizadoEm: Timestamp.now(),
         entregueEm: null,

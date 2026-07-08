@@ -29,6 +29,7 @@ export function createPublicAtendimentoRouter(): express.Router {
         .collection("atendimentos")
         .add({
           ...atendimentoData,
+          status: atendimentoData.status || "Aguardando",
           criadoEm: Timestamp.now(),
         });
 
@@ -39,6 +40,35 @@ export function createPublicAtendimentoRouter(): express.Router {
         error instanceof Error ? error.message : "Erro desconhecido"
       );
       res.status(500).send("Erro interno ao criar atendimento na fila.");
+    }
+  });
+
+  router.post("/registrarAtendimento", publicLimiter, async (req, res) => {
+    try {
+      const atendimentoData = req.body;
+
+      if (!atendimentoData.nomeCliente || !atendimentoData.tipoAtendimento) {
+        res
+          .status(400)
+          .send("Nome do cliente e tipo de atendimento são obrigatórios.");
+        return;
+      }
+
+      const docRef = await admin
+        .firestore()
+        .collection("atendimentos")
+        .add({
+          ...atendimentoData,
+          criadoEm: Timestamp.now(),
+        });
+
+      res.status(201).send({ atendimentoId: docRef.id });
+    } catch (error) {
+      logError(
+        "Erro ao registrar atendimento público:",
+        error instanceof Error ? error.message : "Erro desconhecido"
+      );
+      res.status(500).send("Erro interno ao registrar atendimento público.");
     }
   });
 

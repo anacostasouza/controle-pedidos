@@ -6,10 +6,10 @@ import {
   createDefaultRateLimiter,
 } from "../utils/httpMiddleware";
 import { authMiddleware } from "../utils/authMiddleware";
-import { createPublicWebhookRouter } from "./routes/public";
 import {
   createProtectedDashboardRouter,
   createProtectedOmieRouter,
+  createProtectedTagPlusRouter,
 } from "./routes/protected";
 
 export const appControlePedidos = express();
@@ -19,13 +19,12 @@ applySecurityHeaders(appControlePedidos);
 appControlePedidos.use(createDefaultRateLimiter());
 appControlePedidos.use(express.json());
 
-appControlePedidos.use(createPublicWebhookRouter());
-
 appControlePedidos.use(authMiddleware);
 appControlePedidos.use(createProtectedDashboardRouter());
 appControlePedidos.use(createProtectedOmieRouter());
+appControlePedidos.use(createProtectedTagPlusRouter());
 
-export const apiControlePedidos = onRequest(
+export const controlePedidosApi = onRequest(
   {
     region: "southamerica-east1",
   },

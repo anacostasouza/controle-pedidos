@@ -517,6 +517,31 @@
   width: 100%;
 }
 
+.cliente-input {
+  padding-right: 14px;
+}
+
+.cliente-busca-status,
+.cliente-sem-resultados {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.cliente-busca-status {
+  background-color: #f8f4f4;
+  border: 1px solid rgba(138, 42, 44, 0.15);
+  color: #681c1d;
+}
+
+.cliente-sem-resultados {
+  background-color: #fff8e1;
+  border: 1px solid #ffc107;
+  color: #856404;
+}
+
 .loading-spinner {
   margin-left: 8px;
   font-size: 13px;
@@ -556,34 +581,61 @@
 
 /* ---------- Lista de Clientes Encontrados ---------- */
 .clientes-encontrados-lista {
-  margin-top: 8px;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin-top: 0;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--background-color-white);
   box-shadow: var(--box-shadow-light);
   max-height: 280px;
-  overflow: auto;
-  z-index: 60;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 100;
   padding: 4px 0;
   font-family: var(--font-family);
 }
 
-.cliente-item {
+.cliente-encontrado-item {
+  width: 100%;
   padding: 14px 16px;
   cursor: pointer;
+  border: 0;
   border-bottom: 1px solid var(--background-color-light);
+  background: transparent;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  transition: background 0.2s;
+  transition: background 0.2s, transform 0.12s;
+  text-align: left;
+  font-family: var(--font-family);
 }
 
-.cliente-item:last-child {
+.cliente-encontrado-item:last-child {
   border-bottom: none;
 }
 
-.cliente-item:hover {
+.cliente-encontrado-item:hover {
   background: var(--background-color-light);
+}
+
+.cliente-encontrado-item:active {
+  transform: scale(0.99);
+}
+
+.cliente-encontrado-item strong {
+  font-weight: 600;
+  color: var(--text-color-dark);
+  font-size: 14px;
+  word-break: break-word;
+}
+
+.cliente-encontrado-item span {
+  font-size: 12px;
+  color: var(--text-color-light);
+  margin-top: 2px;
 }
 
 .cliente-item-header {
@@ -919,11 +971,6 @@
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.erro-mensagem::before {
-  content: "⚠️";
-  font-size: 18px;
 }
 
 @keyframes slideDown {

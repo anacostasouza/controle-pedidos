@@ -103,7 +103,7 @@ export async function atualizarHistoricoAtendimento(
 export const handleAdicionarControlePedidos = (atendimento: any) => {
   const params = new URLSearchParams({
     nomeCliente: atendimento.nomeCliente || "",
-    codigoClienteOmie: atendimento.codigoClienteOmie?.toString() || "",
+    codigoClienteTagPlus: atendimento.codigoClienteTagPlus?.toString() || "",
     numeroPedido: atendimento.codigoPedido || "",
     atendimentoId: atendimento.id,
     origem: "atendimento"
@@ -161,22 +161,48 @@ export async function logDeleteAtendimento(log: {
   });
 }
 
-// Buscar ou criar cliente Omie pelo nome e telefone
-export async function buscarClienteOmie(clientesFiltro: any) {
-  return requestAuthJson("/omie/buscarCliente", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ clientesFiltro }),
-  });
-}
+export async function buscarClienteTagPlus(termo: string) {
 
+  try {
+
+    const apenasNumeros = termo.replace(/\D/g, '');
+    let razao_social = '';
+    let cnpj_cpf = '';
+
+    // CPF/CNPJ só quando for exatamente 11 ou 14 dígitos
+    if (/^(\d{11}|\d{14})$/.test(apenasNumeros)) {
+      cnpj_cpf = apenasNumeros;
+    } else {
+      razao_social = termo;
+    }
+
+    const clientesFiltro = [{ razao_social, cnpj_cpf }];
+
+    const response = await fetchWithAuth(`${API_URL}/tagplus/buscarCliente`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ clientesFiltro }),
+    });
+
+    if (!response.ok) {
+      const textoErro = await response.text();
+      console.error(`Erro HTTP ${response.status}:`, textoErro);
+      throw new Error(`Erro na API (${response.status}). Verifique o console do backend.`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Erro ao buscar cliente TagPlus:", error);
+    throw error;
+  }
+}
 
 // Registrar atendimento
 
 export async function registrarAtendimento(atendimentoData: any): Promise<string> {
-  const result = await requestAuthJson("/registrarAtendimento", {
+  const result = await requestPublicJson("/criarAtendimentoFila", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

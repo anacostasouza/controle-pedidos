@@ -6,6 +6,7 @@ import {
 } from "../types/Servicos";
 
 export const tiposServico = [
+  { value: TipoServico.PLOTAGEM, label: TipoServicoLabels[TipoServico.PLOTAGEM] },
   { value: TipoServico.ARTE, label: TipoServicoLabels[TipoServico.ARTE] },
   {
     value: TipoServico.GRAFICA_RAPIDA,

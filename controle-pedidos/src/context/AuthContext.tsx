@@ -98,7 +98,7 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
     async function verifyAuthorization(): Promise<boolean> {
         if (!user) return false;
         const token = await user.getIdToken();
-        const url = `${API_URL}/dashboard/buscarPedidos?porPagina=1`;
+        const url = `${API_URL}/dashboard/buscarPedidos?itensPorPagina=1`;
 
         try {
             const response = await fetch(url, {

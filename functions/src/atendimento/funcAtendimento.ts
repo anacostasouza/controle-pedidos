@@ -6,7 +6,7 @@ import {
   createDefaultRateLimiter,
 } from "../utils/httpMiddleware";
 import { authMiddleware } from "../utils/authMiddleware";
-import { createProtectedAtendimentoRouter } from "./routes/protected";
+import { createProtectedAtendimentoRouter, createProtectedTagPlusRouter } from "./routes/protected";
 import { createPublicAtendimentoRouter } from "./routes/public";
 
 export const appAtendimento = express();
@@ -21,6 +21,7 @@ appAtendimento.use(createPublicAtendimentoRouter());
 appAtendimento.use(authMiddleware);
 
 appAtendimento.use(createProtectedAtendimentoRouter());
+appAtendimento.use(createProtectedTagPlusRouter());
 
 export const atendimentoApi = onRequest(
   { region: "southamerica-east1" },

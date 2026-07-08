@@ -28,7 +28,9 @@ function parseOrigins(rawOrigins: string | undefined): string[] {
 }
 
 function getConfiguredAllowedOrigins(): Set<string> {
-  const currentEnv = (process.env.NODE_ENV || "development").toLowerCase();
+  const currentEnv = process.env.FUNCTIONS_EMULATOR === "true"
+    ? "development"
+    : ((process.env.NODE_ENV || "production").toLowerCase());
   const envVarName = ALLOWED_ORIGINS_BY_ENV[currentEnv];
 
   const scopedOrigins = parseOrigins(envVarName ? process.env[envVarName] : undefined);

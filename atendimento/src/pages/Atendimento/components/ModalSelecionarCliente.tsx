@@ -2,6 +2,25 @@
 import { useState, useEffect } from "react";
 import "../../../styles/ModalSelecionarCliente.css";
 
+const formatarCpfCnpj = (valor?: string): string => {
+  const numeros = String(valor ?? "").replace(/\D/g, "");
+  const ultimosQuatro = numeros.slice(-4);
+
+  if (!ultimosQuatro) {
+    return "";
+  }
+
+  if (numeros.length === 11) {
+    return `***.***.***-${ultimosQuatro}`;
+  }
+
+  if (numeros.length === 14) {
+    return `**.***.***/****-${ultimosQuatro}`;
+  }
+
+  return ultimosQuatro;
+};
+
 export function ModalSelecionarCliente({
   open,
   onClose,
@@ -18,6 +37,15 @@ export function ModalSelecionarCliente({
   const [buscou, setBuscou] = useState(false);
   const [loading, setLoading] = useState(false);
   const [clientesEncontrados, setClientesEncontrados] = useState<any[]>([]);
+
+  const getClienteKey = (cliente: any) =>
+    String(cliente.codigo_cliente ?? cliente.codigo ?? cliente.id ?? "");
+
+  const getClienteNome = (cliente: any) =>
+    cliente.nome || cliente.razao_social || cliente.nome_fantasia || cliente.fantasia || "";
+
+  const getClienteCpfCnpj = (cliente: any) =>
+    String(cliente.cnpj_cpf || cliente.cnpj || cliente.cpf || "").trim();
 
   useEffect(() => {
     setNome(dadosBusca?.nome || "");
@@ -82,16 +110,20 @@ export function ModalSelecionarCliente({
           {!loading && clientesEncontrados.length > 0 && (
             <ul>
               {clientesEncontrados.map((cliente: any) => {
-                const codigoPedido = codigoPedidoMap[cliente.codigo_cliente_omie] || "";
+                const clienteKey = getClienteKey(cliente);
+                const codigoPedido = codigoPedidoMap[clienteKey] || "";
+                const cpfCnpjOriginal = getClienteCpfCnpj(cliente);
+                const cpfCnpj = formatarCpfCnpj(cpfCnpjOriginal);
+                const temCpfCnpj = Boolean(cpfCnpjOriginal);
                 return (
-                  <li key={cliente.codigo_cliente_omie}>
+                  <li key={clienteKey}>
                     <span className="cliente-nome">
-                      {cliente.nome}
+                      {getClienteNome(cliente)}
                     </span>
-                    {cliente.cnpj_cpf && (
+                    {cpfCnpj && (
                       <span className="cliente-cnpj-cpf">
                         {" "}
-                        CPF/CNPJ: {cliente.cnpj_cpf}
+                        CPF/CNPJ: {cpfCnpj}
                       </span>
                     )}
                     {cliente.telefone && (
@@ -109,11 +141,17 @@ export function ModalSelecionarCliente({
                       onChange={(e) =>
                         setCodigoPedidoMap((prev) => ({
                           ...prev,
-                          [cliente.codigo_cliente_omie]: e.target.value,
+                          [clienteKey]: e.target.value,
                         }))
                       }
                     />
+                    {!temCpfCnpj && (
+                      <div style={{ color: "#b45309", marginTop: 4 }}>
+                        Cliente sem CPF/CNPJ não pode ser selecionado para pedido.
+                      </div>
+                    )}
                     <button
+                      disabled={!temCpfCnpj || !codigoPedido.trim()}
                       onClick={() => onConfirm(cliente, codigoPedido)}
                     >
                       Selecionar e Finalizar

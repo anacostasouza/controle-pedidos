@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   getFirestore,
@@ -21,6 +21,7 @@ import { generateTimeOptions } from "../utils/TimeUtils";
 import HeaderPage from "../components/layout/headerPage";
 import {
   criarPedido,
+  buscarClienteTagPlus,
 } from "../services/ControlePedidosServices";
 
 import "../styles/NovoPedido.css";
@@ -33,6 +34,39 @@ interface UserOption {
   displayName: string;
   setor: string;
 }
+
+interface ClienteTagPlus {
+  nome?: string;
+  razao_social?: string;
+  nome_fantasia?: string;
+  fantasia?: string;
+  cnpj_cpf?: string;
+  cnpj?: string;
+  cpf?: string;
+  codigo_cliente_omie?: number | string;
+  codigo_cliente?: number | string;
+  codigo?: number | string;
+  id?: number | string;
+}
+
+const formatarCpfCnpj = (valor?: string): string => {
+  const numeros = String(valor ?? "").replace(/\D/g, "");
+  const ultimosQuatro = numeros.slice(-4);
+
+  if (!ultimosQuatro) {
+    return "";
+  }
+
+  if (numeros.length === 11) {
+    return `***.***.***-${ultimosQuatro}`;
+  }
+
+  if (numeros.length === 14) {
+    return `**.***.***/****-${ultimosQuatro}`;
+  }
+
+  return ultimosQuatro;
+};
 
 // ------------------------------
 // Componente principal
@@ -55,6 +89,7 @@ export default function NovoPedido() {
   const atendimentoId = paramsURL.get("atendimentoId") || "";
   const origem = paramsURL.get("origem") || "";
   const numeroPedidoState = paramsURL.get("codigoPedido") || "";
+  const codigoClienteTagPlusParam = paramsURL.get("codigoClienteTagPlus") || "";
 
   // ------------------------------
   // Estados
@@ -70,14 +105,20 @@ export default function NovoPedido() {
   const [retrabalho, setRetrabalho] = useState(false);
   const [error, setError] = useState("");
   const [clienteConfirmado, setClienteConfirmado] = useState(false);
+  const [clientesEncontrados, setClientesEncontrados] = useState<ClienteTagPlus[]>([]);
+  const [buscandoCliente, setBuscandoCliente] = useState(false);
+  const clienteSelecionadoRef = useRef(false);
   
   // Estado principal do formulário
   const [formData, setFormData] = useState<
-    Omit<Pedido, "id" | "criadoEm" | "atualizadoEm" | "historicoStatus">
+    Omit<Pedido, "id" | "criadoEm" | "atualizadoEm" | "historicoStatus"> & {
+      codigoClienteTagPlus?: number;
+    }
   >({
     pedidoID: "",
     numeroPedido: numeroPedido || 0,
     nomeCliente: "",
+    codigoClienteTagPlus: undefined,
     servico: { tipo: "" as unknown as TipoServico, servicoID: 0 },
     responsavel: "",
     responsavelUid: "",
@@ -93,7 +134,6 @@ export default function NovoPedido() {
   // ------------------------------
   // Effects
   // ------------------------------
-  // Carrega usuário e lista de usuários
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoadingUser(true);
@@ -106,7 +146,6 @@ export default function NovoPedido() {
       }
 
       try {
-        // Dados do usuário logado
         const userDocRef = doc(db, "usuarios", currentUser.uid);
         const userDocSnap = await getDoc(userDocRef);
 
@@ -135,7 +174,6 @@ export default function NovoPedido() {
           return;
         }
 
-        // Lista de todos usuários
         const usersCollectionRef = collection(db, "usuarios");
         const usersSnapshot = await getDocs(usersCollectionRef);
 
@@ -184,31 +222,84 @@ export default function NovoPedido() {
     }
   }, [numeroPedidoState]);
 
-useEffect(() => {
-  if (origem === "atendimento" && nomeCliente) {
-    setClienteConfirmado(true);
-    
-    setFormData(prevData => ({
-      ...prevData,
-      nomeCliente: nomeCliente,
-      codigoClienteOmie: undefined,
+  useEffect(() => {
+    const termoBusca = formData.nomeCliente.trim();
+
+    if (clienteSelecionadoRef.current) {
+      return;
+    }
+
+    if (origem === "atendimento" && nomeCliente && codigoClienteTagPlusParam) {
+      setFormData((prev) => ({
+        ...prev,
+        nomeCliente,
+        codigoClienteTagPlus: Number(codigoClienteTagPlusParam),
+      }));
+      setClienteConfirmado(true);
+      setClientesEncontrados([]);
+      return;
+    }
+
+    if (termoBusca.length < 3) {
+      setClientesEncontrados([]);
+      setClienteConfirmado(false);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setBuscandoCliente(true);
+      try {
+        const resultadoBusca = await buscarClienteTagPlus(termoBusca);
+        const listaClientes = Array.isArray(resultadoBusca?.clientes)
+          ? resultadoBusca.clientes
+          : [];
+
+        setClientesEncontrados(
+          listaClientes.filter((cliente: ClienteTagPlus) => {
+            const documento = String(
+              cliente.cnpj_cpf || cliente.cnpj || cliente.cpf || ""
+            ).replace(/\D/g, "");
+            return Boolean(documento);
+          })
+        );
+        setClienteConfirmado(false);
+        setError("");
+      } catch {
+        setClientesEncontrados([]);
+        setClienteConfirmado(false);
+      } finally {
+        setBuscandoCliente(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.nomeCliente, origem, nomeCliente, codigoClienteTagPlusParam]);
+
+  const selecionarCliente = (cliente: ClienteTagPlus) => {
+    clienteSelecionadoRef.current = true;
+
+    const nomeSelecionado =
+      cliente.nome ||
+      cliente.razao_social ||
+      cliente.nome_fantasia ||
+      cliente.fantasia ||
+      formData.nomeCliente;
+    const codigoSelecionado = Number(
+      cliente.codigo_cliente_omie ?? cliente.codigo_cliente ?? cliente.codigo ?? cliente.id ?? 0
+    );
+
+    setFormData((prev) => ({
+      ...prev,
+      nomeCliente: nomeSelecionado,
+      codigoClienteTagPlus:
+        Number.isFinite(codigoSelecionado) && codigoSelecionado > 0
+          ? codigoSelecionado
+          : prev.codigoClienteTagPlus,
     }));
-    
-    const timer = setTimeout(() => {
-      const notificationDiv = document.createElement('div');
-      notificationDiv.className = 'notification success-notification';
-      notificationDiv.textContent = 'Cliente importado automaticamente do Atendimento';
-      document.querySelector('.novo-pedido-container')?.appendChild(notificationDiv);
-      
-      setTimeout(() => {
-        notificationDiv.style.opacity = '0';
-        setTimeout(() => notificationDiv.remove(), 500);
-      }, 5000);
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }
-}, [origem, nomeCliente]);
+    setClienteConfirmado(Boolean(String(cliente.cnpj_cpf || cliente.cnpj || cliente.cpf || "").replace(/\D/g, "")));
+    setClientesEncontrados([]);
+    setError("");
+  };
 
   // Sincroniza prazo de arte com entrega para tipo de serviço Arte
   useEffect(() => {
@@ -235,9 +326,10 @@ useEffect(() => {
     setFormData((prev) => ({
       ...prev,
       nomeCliente: value,
-      codigoClienteOmie: undefined,
+      codigoClienteTagPlus: undefined,
     }));
-    setClienteConfirmado(value.trim().length >= 3);
+    setClienteConfirmado(false);
+    setError("");
   };
 
   // ------------------------------
@@ -381,7 +473,7 @@ useEffect(() => {
         userSetorLabel,
         origem,
         atendimentoId,
-        codigoClienteOmie: formData.codigoClienteOmie,
+        codigoClienteTagPlus: formData.codigoClienteTagPlus,
         retrabalho,
       });
 
@@ -454,8 +546,53 @@ useEffect(() => {
                   placeholder="Digite manualmente o nome do cliente"
                   className="cliente-input"
                 />
-                
               </div>
+              {buscandoCliente && formData.nomeCliente.trim().length >= 3 && (
+                <div className="cliente-busca-status">
+                  Buscando clientes na TagPlus...
+                </div>
+              )}
+              {clientesEncontrados.length > 0 && (
+                <div className="clientes-encontrados-lista">
+                  {clientesEncontrados.map((cliente: ClienteTagPlus) => {
+                    const nomeClienteEncontrado =
+                      cliente.nome ||
+                      cliente.razao_social ||
+                      cliente.nome_fantasia ||
+                      cliente.fantasia ||
+                      "Cliente sem nome";
+                    const cpfCnpj = String(
+                      cliente.cnpj_cpf || cliente.cnpj || cliente.cpf || ""
+                    ).replace(/\D/g, "");
+
+                    return (
+                      <button
+                        key={String(
+                          cliente.codigo_cliente_omie ??
+                            cliente.codigo_cliente ??
+                            cliente.codigo ??
+                            cliente.id ??
+                            nomeClienteEncontrado
+                        )}
+                        type="button"
+                        className="cliente-encontrado-item"
+                        onClick={() => selecionarCliente(cliente)}
+                      >
+                        <strong>{nomeClienteEncontrado}</strong>
+                        {cpfCnpj && <span>CPF/CNPJ: {formatarCpfCnpj(cpfCnpj)}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {formData.nomeCliente.trim().length >= 3 &&
+                !buscandoCliente &&
+                clientesEncontrados.length === 0 &&
+                !clienteConfirmado && (
+                  <div className="cliente-sem-resultados">
+                    Nenhum cliente encontrado na TagPlus. Selecione um cliente válido para liberar o pedido.
+                  </div>
+                )}
             </div>
           </div>
 

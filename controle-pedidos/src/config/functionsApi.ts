@@ -4,7 +4,7 @@ const DEFAULT_PROJECT_ID = "gestaopedidos-desenhar";
 const DEFAULT_FUNCTIONS_REGION = "southamerica-east1";
 const DEFAULT_USERS_REGION = "southamerica-east1";
 const DEFAULT_EMULATOR_HOST = "127.0.0.1:9000";
-const DEFAULT_CONTROLE_FUNCTION_NAME = "apiControlePedidos";
+const DEFAULT_CONTROLE_FUNCTION_NAME = "controlePedidosApi";
 const DEFAULT_USUARIOS_FUNCTION_NAME = "usuariosApi";
 
 function resolveTarget(): FunctionsTarget {

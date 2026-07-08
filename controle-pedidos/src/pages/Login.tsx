@@ -34,7 +34,7 @@ export default function Login() {
 
     try {
       const authResponse = await fetch(
-        `${apiUrl}/dashboard/buscarPedidos?porPagina=1`,
+        `${apiUrl}/dashboard/buscarPedidos?itensPorPagina=1`,
         {
           method: "GET",
           headers: {

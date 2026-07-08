@@ -35,10 +35,10 @@ export async function criarPedido({
   servicoToSave,
   statusInicial,
   userDisplayName,
+   origem,
   userSetorLabel,
-  origem,
   atendimentoId,
-  codigoClienteOmie,
+  codigoClienteTagPlus,
   retrabalho,
 }: {
   formData: any;
@@ -47,41 +47,40 @@ export async function criarPedido({
   prazosToSave: Pedido["prazos"];
   servicoToSave: Pedido["servico"];
   statusInicial: string;
+   origem?: string;
   userDisplayName: string;
   userSetorLabel: string;
-  origem?: string;
   atendimentoId?: string;
-  codigoClienteOmie?: number;
+  codigoClienteTagPlus?: number;
   retrabalho?: boolean;
 }) {
   try {
-    const now = Timestamp.now();
-
     const pedidoData = {
       ...formData,
       responsavel: selectedResponsibleUser.displayName,
       setoresResponsaveis,
+      servico: servicoToSave,
       prazos: {
         entrega: prazosToSave.entrega,
         arte: prazosToSave.arte ?? null,
       },
-      servico: servicoToSave,
+      codigoClienteTagPlus: codigoClienteTagPlus,
       statusAtual: statusInicial,
       historicoStatus: [
         {
           status: statusInicial,
-          data: now,
+          data: Timestamp.now(),
           responsavel: userDisplayName,
           setor: userSetorLabel,
         },
       ],
-      criadoEm: now,
-      atualizadoEm: now,
+      criadoEm: Timestamp.now(),
+      atualizadoEm: Timestamp.now(),
     };
 
     if (origem) pedidoData.origem = origem;
     if (atendimentoId) pedidoData.atendimentoId = atendimentoId;
-    if (codigoClienteOmie) pedidoData.codigoClienteOmie = codigoClienteOmie;
+    if (codigoClienteTagPlus) pedidoData.codigoClienteTagPlus = codigoClienteTagPlus;
     if (retrabalho !== undefined) pedidoData.retrabalho = retrabalho;
 
     const { auth, userToken } = await getAuthenticatedSession();
@@ -317,17 +316,17 @@ export async function buscarPedidosRelatorio(
 }
 
 
-export async function buscarClienteOmie(termo: string) {
+export async function buscarClienteTagPlus(termo: string) {
   try {
     const { auth, userToken } = await getAuthenticatedSession();
 
-    // Verifica se o termo é um CPF/CNPJ (apenas números)
+    // Mantém a mesma lógica de busca, mas consultando TagPlus
     const apenasNumeros = termo.replace(/\D/g, '');
     let razao_social = '';
     let cnpj_cpf = '';
 
-    // Se tiver 11 ou mais dígitos, considera como CPF/CNPJ
-    if (apenasNumeros.length >= 11) {
+    // CPF/CNPJ só quando for exatamente 11 ou 14 dígitos
+    if (/^(\d{11}|\d{14})$/.test(apenasNumeros)) {
       cnpj_cpf = apenasNumeros;
     } else {
       razao_social = termo;
@@ -335,7 +334,7 @@ export async function buscarClienteOmie(termo: string) {
 
     const clientesFiltro = [{ razao_social, cnpj_cpf }];
 
-    const response = await fetchWithAuth(`${API_URL}/omie/buscarClientes`, {
+    const response = await fetchWithAuth(`${API_URL}/tagplus/buscarClientes`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -358,12 +357,12 @@ export async function buscarClienteOmie(termo: string) {
         return { clientes: [] };
       }
 
-      throw new Error(errorData.message || "Erro ao buscar cliente Omie");
+      throw new Error(errorData.message || "Erro ao buscar cliente TagPlus");
     }
 
     return await response.json();
   } catch (error) {
-    console.error("Erro ao buscar cliente Omie:", error);
+    console.error("Erro ao buscar cliente TagPlus:", error);
     throw error;
   }
 }
