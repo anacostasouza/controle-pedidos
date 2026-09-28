@@ -1,0 +1,50 @@
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // CRM writes and reads are authorized exclusively by the Node API.
+    // Explicit deny does not override a broader allow; do not add global allows.
+    match /crmOportunidades/{document=**} { allow read, write: if false; }
+    match /crmTarefas/{document=**} { allow read, write: if false; }
+    match /crmClientes/{document=**} { allow read, write: if false; }
+    match /crmEmpresas/{document=**} { allow read, write: if false; }
+    match /crmConfiguracoes/{document=**} { allow read, write: if false; }
+    match /crmAcessos/{document=**} { allow read, write: if false; }
+
+    // Coleção de usuários (mantém controle normal)
+    match /usuarios/{userId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Coleção de pedidos (somente autenticado)
+    match /pedidos/{pedidoId} {
+      allow read, create, update, delete: if isUsuarioInterno();
+    }
+
+    match /servicos/{servicoId} {
+      allow read, write: if isUsuarioInterno();
+    }
+
+    match /servicosStatus/{docId} {
+      allow read, write: if isUsuarioInterno();
+    }
+
+    // Função que define o usuário interno
+    function isUsuarioInterno() {
+      return request.auth != null;
+    }
+
+    // Coleção de atendimentos: apenas create público
+    match /atendimentos/{docId} {
+      allow create: if true;
+      allow read, update, delete: if isUsuarioInterno();
+    }
+
+    match /servicosAtendimento/{docId} {
+      allow read, write: if isUsuarioInterno();
+    }
+
+    match /pedidosAtendimento/{pedidoId} {
+      allow read, create, update, delete: if isUsuarioInterno();
+    }
+  }
+}

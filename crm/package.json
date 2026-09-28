@@ -1,0 +1,28 @@
+{
+  "name": "desenhar-crm",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host localhost --port 5175",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host localhost",
+    "test:browser": "node tests/browser-smoke.cjs",
+    "test": "npm run test:browser",
+    "deploy:hosting": "npm run build && npx firebase-tools@15.11.0 deploy --only hosting:crm --config ../firebase.crm.json --project gestaopedidos-desenhar",
+    "deploy": "npm run deploy:hosting"
+  },
+  "dependencies": {
+    "firebase": "11.10.0",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.12",
+    "@types/react-dom": "19.1.9",
+    "@vitejs/plugin-react": "5.0.2",
+    "typescript": "5.8.3",
+    "vite": "7.3.3",
+    "playwright": "1.62.1"
+  }
+}

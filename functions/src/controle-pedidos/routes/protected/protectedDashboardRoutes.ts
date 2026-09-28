@@ -337,7 +337,9 @@ export function createProtectedDashboardRouter(): express.Router {
           queryRef = queryRef.startAfter(lastTimestamp);
         }
       }
-      queryRef = queryRef.limit(Number(itensPorPagina));
+
+      const limiteBusca = Number(itensPorPagina) + 10;
+      queryRef = queryRef.limit(Number(limiteBusca));
 
       try {
         const snapshot = await queryRef.get();

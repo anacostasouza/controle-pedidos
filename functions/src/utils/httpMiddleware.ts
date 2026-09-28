@@ -7,6 +7,7 @@ const DEFAULT_PROD_ALLOWED_ORIGINS = new Set([
   "https://gestaopedidos-desenhar.firebaseapp.com",
   "https://atendimento-desenhardigital.web.app",
   "https://atendimento-desenhardigital.firebaseapp.com",
+  "https://crm-desenhar.web.app",
 ]);
 
 const ALLOWED_ORIGINS_BY_ENV: Record<string, string> = {

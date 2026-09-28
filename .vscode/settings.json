@@ -17,5 +17,6 @@
     "sonarlint.connectedMode.project": {
         "connectionId": "anacostasouza",
         "projectKey": "anacostasouza_controle-pedidos"
-    }
+    },
+    "postman.settings.dotenv-detection-notification-visibility": false
 }

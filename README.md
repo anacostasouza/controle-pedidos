@@ -1,5 +1,7 @@
 # Sistema Integrado Desenhar
 
+> **Novo: CRM independente.** A pasta `crm/` contém uma aplicação separada, com endereço e navegação próprios, reutilizando a base Firebase e usuários. Leia [README-CRM.md](README-CRM.md) para configuração, execução e publicação seletiva. Os frontends Atendimento e Controle de Pedidos foram preservados.
+
 Plataforma interna para operar o ciclo completo de atendimento e produção de pedidos da Desenhar, com dois frontends especializados e backend serverless centralizado.
 
 ## Objetivo do Sistema

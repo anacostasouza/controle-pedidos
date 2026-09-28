@@ -6,6 +6,7 @@
     "build:watch": "tsc --watch",
     "serve": "npm run build && npx firebase-tools@15.11.0 emulators:start --only functions --config ../firebase.json",
     "serve:functions": "npm run serve",
+    "serve:crm": "node scripts/serve-crm-emulator.cjs",
     "shell": "npm run build && npx firebase-tools@15.11.0 functions:shell --config ../firebase.json",
     "start": "npm run shell",
     "deploy": "npx firebase-tools@15.11.0 deploy --only functions --config ../firebase.json",

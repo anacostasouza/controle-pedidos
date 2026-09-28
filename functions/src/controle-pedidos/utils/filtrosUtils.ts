@@ -9,16 +9,19 @@ export function normalizarTexto(valor: string): string {
 }
 
 export function aplicarFiltrosPedidos(queryRef: FirebaseFirestore.Query, filtros: any): FirebaseFirestore.Query {
-  // ✅ FILTROS DE SERVIÇO
+
   if (filtros.filtroTipo)
     queryRef = queryRef.where("servico.tipo", "==", filtros.filtroTipo);
 
   if (filtros.filtroSubTipo)
     queryRef = queryRef.where("servico.subTipo", "==", filtros.filtroSubTipo);
 
-  // ✅ FILTROS DE RESPONSÁVEL E CLIENTE
   if (filtros.filtroResponsavelUid)
     queryRef = queryRef.where("responsavelUid", "==", filtros.filtroResponsavelUid);
+
+  if (filtros.filtroStatus) {
+    queryRef = queryRef.where("statusAtual", "==", filtros.filtroStatus);
+  }
 
   if (filtros.filtroResponsavelNomePrefixo) {
     const prefixo = normalizarTexto(String(filtros.filtroResponsavelNomePrefixo));
@@ -37,7 +40,7 @@ export function aplicarFiltrosPedidos(queryRef: FirebaseFirestore.Query, filtros
     }
   }
 
-  // ✅ FILTROS DE REQUERIMENTOS
+
   if (filtros.filtroRequerArte === "true") {
     queryRef = queryRef.where("requerArte", "==", true);
   } else if (filtros.filtroRequerArte === "false") {
@@ -50,7 +53,7 @@ export function aplicarFiltrosPedidos(queryRef: FirebaseFirestore.Query, filtros
     queryRef = queryRef.where("requerGalpao", "==", false);
   }
 
-  // ✅ FILTRO DE STATUS - Tratamento exclusivo (evita duplicatas)
+
   // Primeiridade: Atrasados > Status específico > Ocultar entregues
   if (filtros.filtroAtrasados === "true") {
     // Pedidos não entregues com prazo vencido

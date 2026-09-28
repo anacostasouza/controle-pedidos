@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "gestaopedidos-desenhar"
-  }
+  },
+  "targets": {
+    "gestaopedidos-desenhar": {
+      "hosting": {
+        "crm": [
+          "crm-desenhar"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

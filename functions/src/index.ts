@@ -9,3 +9,4 @@ export * from "./atendimento/funcAtendimento";
 export * from "./controle-pedidos/funcControlePedidos";
 export * from "./usuarios/funcUsuarios";
 export * from "./tagplus/funcTagPlus";
+export * from "./crm/funcCrm";
