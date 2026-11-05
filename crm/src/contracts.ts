@@ -54,6 +54,7 @@ export interface Opportunity {
     estimatorId: string;
     budgetStatus: 'A elaborar' | 'Em elaboração' | 'Recebido/concluído';
     approval: 'Não se aplica' | 'Pendente' | 'Aprovada' | 'Não aprovada';
+    proposalNumber: string;
     sentDate: string | null;
     cycle: number;
     version: number;

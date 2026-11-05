@@ -7,12 +7,24 @@ import type {
   DayData,
   Page,
   Row,
+  TaskRow,
 } from "./services/crmApi";
 import { Empty, Field, Stars } from "./components";
 import { OpportunityDetail } from "./OpportunityDetail";
 import { NewOpportunity } from "./components/workspace/NewOpportunity";
 import { WorkspaceHeader } from "./components/workspace/WorkspaceHeader";
 import { WorkspaceToolbar } from "./components/workspace/WorkspaceToolbar";
+
+function primaryContact(task: TaskRow) {
+  const phone = task.client?.phone?.trim();
+  const email = task.client?.email?.trim();
+  const channel = task.opportunity?.channel;
+  if (channel === "E-mail" && email) return { value: email, href: `mailto:${email}` };
+  if ((channel === "Telefone" || channel === "WhatsApp") && phone) return { value: phone, href: `tel:${phone.replace(/\D/g, "")}` };
+  if (phone) return { value: phone, href: `tel:${phone.replace(/\D/g, "")}` };
+  if (email) return { value: email, href: `mailto:${email}` };
+  return null;
+}
 export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
   const [owner, setOwner] = useState(boot.actor.uid),
     [query, setQuery] = useState(""),
@@ -41,6 +53,7 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
   const [draggedOpportunity, setDraggedOpportunity] = useState<string | null>(
     null,
   );
+  const kanbanItems = result.items.filter((opportunity) => opportunity.state !== "archived");
   const refresh = () => setRevision((r) => r + 1);
   useEffect(() => {
     let active = true;
@@ -321,13 +334,9 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
                   onClick={() => setTab(t)}
                 >
                   {t}
-                  {t === "Atrasadas" && (
+                  {(t === "Atrasadas" || t === "Hoje") && (
                     <span className="count">
-                      {
-                        day.tasks.filter(
-                          (x) => x.status === "pending" && x.dueDate < day.day,
-                        ).length
-                      }
+                      {day.tasks.filter((x) => x.status === "pending" && (t === "Hoje" ? x.dueDate === day.day : x.dueDate < day.day)).length}
                     </span>
                   )}
                 </button>
@@ -341,6 +350,7 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
                   <thead>
                     <tr>
                       <th>Cliente / Empresa</th>
+                      <th>Contato principal</th>
                       <th>Oportunidade</th>
                       <th>Vencimento</th>
                       <th>Avaliação</th>
@@ -353,6 +363,13 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
                         <td>
                           <strong>{t.client?.name || "Cliente"}</strong>
                           <small>{t.company?.name || "Pessoa física"}</small>
+                        </td>
+                        <td>
+                          {(() => {
+                            const contact = primaryContact(t);
+                            return contact ? <a href={contact.href}>{contact.value}</a> : "—";
+                          })()}
+                          <small>{t.opportunity?.channel || "Canal não informado"}</small>
                         </td>
                         <td>
                           {money(t.opportunity?.valueCents)}
@@ -481,7 +498,7 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
             !error &&
             (result.items.length ? (
               view === "Kanban" ? (
-                <div className="kanban">
+                kanbanItems.length ? <div className="kanban">
                   {STAGES.map((s, i) => (
                     <section className="kanban-column" key={s}>
                       <h3>
@@ -498,10 +515,10 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
                         />
                         {s}
                         <span>
-                          {result.items.filter((o) => o.stage === s).length}
+                          {kanbanItems.filter((o) => o.stage === s).length}
                         </span>
                       </h3>
-                      {result.items
+                      {kanbanItems
                         .filter((o) => o.stage === s)
                         .map((o) => (
                           <button
@@ -528,7 +545,7 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
                         ))}
                     </section>
                   ))}
-                </div>
+                </div> : <p className="empty-state">Nenhuma oportunidade ativa para exibir no Kanban.</p>
               ) : (
                 <section className="panel table-scroll">
                   <table>

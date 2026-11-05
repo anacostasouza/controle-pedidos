@@ -137,6 +137,19 @@ clientes são inativadas automaticamente para preservar os vínculos existentes.
 
 A oportunidade começa na etapa **Lead qualificado**.
 
+## 6.1 Número da proposta
+
+Quando uma proposta for criada no ERP, informe no CRM o identificador exibido
+no ERP no campo **Número da proposta** da oportunidade. Esse número é preenchido
+manualmente e pode conter zeros à esquerda, prefixos ou outros caracteres.
+
+O número pode ser incluído ao registrar o envio da proposta ou posteriormente na
+aba **Dados** da oportunidade. Para corrigir o valor, abra a oportunidade, altere
+o campo e clique em **Salvar dados**. A alteração fica registrada no histórico.
+
+O CRM não gera esse número nem o consulta automaticamente no ERP. Usuários sem
+permissão de edição podem visualizar o número, mas não podem alterá-lo.
+
 ## 7. Trabalhar no Kanban
 
 Os cartões podem ser arrastados entre as colunas permitidas.
@@ -201,6 +214,22 @@ Informe:
 - próxima data, quando o resultado for negociação.
 
 Registrar um contato sem resposta mantém o histórico e pode iniciar as regras de arquivamento.
+
+### Arquivamento e retomada
+
+Quando os acompanhamentos automáticos da proposta forem concluídos sem resposta,
+a oportunidade fica com arquivamento previsto para **3 dias corridos após o
+último follow-up final**. Se nenhuma resposta for registrada até essa data, o
+CRM altera a situação para **Em espera** e cria uma tarefa de **Retomada**.
+
+A retomada é agendada para **15 dias corridos após a data do último follow-up
+realizado**, e não a partir do dia em que o arquivamento automático foi executado.
+Por exemplo: se o último follow-up ocorreu em 10/09, a retomada será marcada para
+25/09; o arquivamento ocorre a partir de 13/09.
+
+Oportunidades **Em espera** não aparecem no Kanban, para não misturar o fluxo
+ativo com a carteira parada. Elas continuam disponíveis na visualização **Lista**
+e podem ser abertas para consultar o histórico ou tratar a retomada.
 
 ## 9. Reagendar
 

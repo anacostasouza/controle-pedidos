@@ -281,14 +281,15 @@ export function createCrmApp(authentication: express.RequestHandler = authMiddle
         const clients = related.clients;
         const companies = related.companies;
         const active = opps.filter(o => o.state === 'active'), won = opps.filter(o => o.outcome === 'Conquistado' && o.closedAt && today(new Date(o.closedAt)).slice(0, 7) === day.slice(0, 7));
-        const planned = tasks.filter(t => t.kind !== 'Coordenação' && (t.dueDate === day || t.reschedules.some(r => r.from === day && today(new Date(r.at)) === day)) && (t.status !== 'cancelled' || t.dueDate === day));
+        const todayTasks = tasks.filter(t => t.kind !== 'Coordenação' && t.status !== 'cancelled' && t.dueDate === day);
+        const planned = tasks.filter(t => t.kind !== 'Coordenação' && ((t.status === 'pending' && t.dueDate <= day) || (t.status === 'done' && t.completedDate === day)));
         const done = planned.filter(t => t.status === 'done' && t.completedDate === day).length;
         const sum = (rows: Opportunity[]) => rows.reduce((n, o) => n + (o.valueCents || 0), 0);
         const rows = tasks.filter(t => t.status === 'pending' || t.completedDate === day || t.reschedules.some(r => r.from === day && today(new Date(r.at)) === day)).map(t => {
             const o = allOpps.find(o => o.id === t.opportunityId), c = clients.find(c => c.id === o?.clientId);
             return { ...t, opportunity: o, client: c, company: companies.find(e => e.id === c?.companyId) };
         }).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-        res.json({ day, metrics: { portfolio: sum(active), activeCount: active.length, missingValue: active.filter(o => o.valueCents === null).length, wonValue: sum(won), wonCount: won.length, negotiationValue: sum(active.filter(o => o.stage === 'Em negociação')), contacts: tasks.filter(t => t.kind !== 'Coordenação' && t.status === 'done' && t.completedDate === day).length, planned: planned.length, done }, tasks: rows });
+        res.json({ day, metrics: { portfolio: sum(active), activeCount: active.length, missingValue: active.filter(o => o.valueCents === null).length, wonValue: sum(won), wonCount: won.length, negotiationValue: sum(active.filter(o => o.stage === 'Em negociação')), contacts: todayTasks.length, planned: planned.length, done }, tasks: rows });
     }));
     app.put('/settings', route(async (req, res) => { adminAccess(req.actor); const config = validateSettings(req.body); const refs = config.approverIds.map(uid => db().collection('usuarios').doc(id(uid))); if (refs.length) {
         const users = await db().getAll(...refs);

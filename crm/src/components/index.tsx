@@ -8,10 +8,10 @@ export function Field({ label, children, wide = false }: { label: string; childr
     return <div className={`field ${wide ? 'wide' : ''}`}><label htmlFor={control ? id : undefined}>{label}</label>{items.map(child => child === control ? cloneElement(child as ReactElement<{ id: string }>, { id }) : child)}</div>;
 }
 
-export function Modal({ title, children, close }: { title: string; children: ReactNode; close: () => void }) {
+export function Modal({ title, children, close, closeOnBackdrop = true }: { title: string; children: ReactNode; close: () => void; closeOnBackdrop?: boolean }) {
     const ref = useRef<HTMLDialogElement>(null);
     useEffect(() => { ref.current?.showModal(); }, []);
-    return <dialog ref={ref} className="modal" onCancel={close} onClick={event => { if (event.target === ref.current) close(); }}><div className="modal-head"><h2>{title}</h2><button type="button" className="icon-button" onClick={close} aria-label="Fechar">×</button></div>{children}</dialog>;
+    return <dialog ref={ref} className="modal" onCancel={close} onClick={event => { if (closeOnBackdrop && event.target === ref.current) close(); }}><div className="modal-head"><h2>{title}</h2><button type="button" className="icon-button" onClick={close} aria-label="Fechar">×</button></div>{children}</dialog>;
 }
 
 export function Stars({ value, onChange, disabled }: { value: number; onChange?: (value: number) => void; disabled?: boolean }) {

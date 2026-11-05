@@ -99,7 +99,7 @@ export function OpportunityDetail({
     c = clients.find((c) => c.id === o?.clientId),
     company = companies.find((e) => e.id === c?.companyId);
   return (
-    <Modal title={c?.name || "Oportunidade"} close={close}>
+    <Modal title={c?.name || "Oportunidade"} close={close} closeOnBackdrop={false}>
       {error && <p className="error">{error}</p>}
       {boot.actor.role === 'admin' && <button type="button" className="danger-button" onClick={() => void deleteOpportunity()}>Excluir oportunidade</button>}
       {!o || !data ? (
@@ -134,6 +134,7 @@ export function OpportunityDetail({
           <div className="meta-line">
             Criada em {displayDate(o.createdAt)} · Proposta enviada em{" "}
             {displayDate(o.sentDate)}
+            {" · Número da proposta: "}{o.proposalNumber || "Não informado"}
             {o.archiveDate && (
               <> · Arquivamento previsto: {displayDate(o.archiveDate)}</>
             )}
@@ -179,6 +180,7 @@ export function OpportunityDetail({
                     channel: str(f, "channel"),
                     serviceGroup: str(f, "serviceGroup"),
                     notes: str(f, "notes"),
+                    proposalNumber: str(f, "proposalNumber"),
                     valueCents:
                       str(f, "value") === ""
                         ? null
@@ -248,6 +250,14 @@ export function OpportunityDetail({
                           <option key={v}>{v}</option>
                         ))}
                       </select>
+                    </Field>
+                    <Field label="Número da proposta">
+                      <input
+                        name="proposalNumber"
+                        maxLength={100}
+                        defaultValue={o.proposalNumber || ""}
+                        placeholder="Informado pelo ERP"
+                      />
                     </Field>
                     <Field label="Probabilidade de fechamento">
                       <span>
@@ -399,6 +409,7 @@ export function OpportunityDetail({
                       save={async (f) => {
                         await action("send", {
                           sentDate: str(f, "sentDate"),
+                          proposalNumber: str(f, "proposalNumber"),
                           newCycle: !!o.sentDate,
                         });
                         setTab("Acompanhamentos");
@@ -411,6 +422,14 @@ export function OpportunityDetail({
                           required
                           max={today()}
                           defaultValue={today()}
+                        />
+                      </Field>
+                      <Field label="Número da proposta">
+                        <input
+                          name="proposalNumber"
+                          maxLength={100}
+                          defaultValue={o.proposalNumber || ""}
+                          placeholder="Informado pelo ERP"
                         />
                       </Field>
                     </AsyncForm>

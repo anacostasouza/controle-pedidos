@@ -50,6 +50,7 @@ export interface Opportunity {
     estimatorId: string;
     budgetStatus: 'A elaborar' | 'Em elaboração' | 'Recebido/concluído';
     approval: 'Não se aplica' | 'Pendente' | 'Aprovada' | 'Não aprovada';
+    proposalNumber: string;
     sentDate: string | null;
     cycle: number;
     version: number;
@@ -129,7 +130,7 @@ export function roleForSector(sector: string): Role {
 export function canEdit(actor: Actor, o: Opportunity): boolean { return ['admin', 'coordenacao'].includes(actor.role) || (actor.role === 'vendedor' && actor.uid === o.ownerId) || (actor.role === 'recepcao' && (!o.ownerId || o.createdBy === actor.uid)); }
 export function newOpportunity(id: string, clientId: string, actor: Actor, now: string): Opportunity {
     ensure(['admin', 'coordenacao', 'recepcao', 'vendedor'].includes(actor.role), 'Sem permissão para criar oportunidades.', 403);
-    return { id, clientId, ownerId: actor.role === 'vendedor' ? actor.uid : '', createdBy: actor.uid, createdAt: now, updatedAt: now, stage: STAGES[0], state: 'active', channel: '', serviceGroup: '', notes: '', valueCents: null, rating: 0, complexity: 'simple', estimatorId: '', budgetStatus: 'A elaborar', approval: 'Não se aplica', sentDate: null, cycle: 0, version: 0, archiveDate: null, responseReceived: false, outcome: '', lossReason: '', closingNotes: '', closedAt: null, objection: '' };
+    return { id, clientId, ownerId: actor.role === 'vendedor' ? actor.uid : '', createdBy: actor.uid, createdAt: now, updatedAt: now, stage: STAGES[0], state: 'active', channel: '', serviceGroup: '', notes: '', valueCents: null, rating: 0, complexity: 'simple', estimatorId: '', budgetStatus: 'A elaborar', approval: 'Não se aplica', proposalNumber: '', sentDate: null, cycle: 0, version: 0, archiveDate: null, responseReceived: false, outcome: '', lossReason: '', closingNotes: '', closedAt: null, objection: '' };
 }
 function pick<T extends string>(value: unknown, list: readonly T[], label: string): T { ensure(typeof value === 'string' && list.includes(value as T), `${label}: opção inválida.`); return value as T; }
 export function validateSettings(raw: Record<string, unknown>): Settings {
@@ -141,6 +142,8 @@ export function patchOpportunity(o: Opportunity, raw: Record<string, unknown>, s
     for (const key of ['channel', 'serviceGroup', 'notes', 'ownerId', 'estimatorId'] as const)
         if (raw[key] !== undefined)
             o[key] = text(raw[key], key, key === 'notes' ? 10000 : 150);
+    if (raw.proposalNumber !== undefined)
+        o.proposalNumber = text(raw.proposalNumber, 'Número da proposta', 100);
     // Retired classifications remain valid on existing opportunities.
     if (raw.channel !== undefined && o.channel)
         ensure(settings.channels.includes(o.channel) || o.channel === previousChannel, 'Canal não cadastrado.');
@@ -227,6 +230,8 @@ export function applyCommand(original: Opportunity, originalTasks: Task[], actor
         case 'send': {
             ensure(o.ownerId, 'Defina o vendedor responsável antes de enviar.');
             ensure(!o.sentDate || raw.newCycle === true, 'Envio já registrado. Para reenviar, inicie explicitamente um novo ciclo.');
+            if (raw.proposalNumber !== undefined)
+                o.proposalNumber = text(raw.proposalNumber, 'Número da proposta', 100);
             const sent = date(raw.sentDate);
             ensure(sent <= day, 'A data de envio não pode estar no futuro.');
             cancelPending('Substituída por novo ciclo de proposta.');
@@ -361,7 +366,8 @@ export function archiveOpportunity(original: Opportunity, tasks: Task[], now: st
     const o = { ...original, state: 'archived' as const, archiveDate: due, updatedAt: now, version: original.version + 1 };
     const result = [...tasks];
     const id = `${o.id}_${o.cycle}_retomada`;
+    const lastFollowUp = result.filter(t => t.cycle === o.cycle && t.finalFollowUp && t.status === 'done' && t.completedDate).sort((a, b) => b.completedDate!.localeCompare(a.completedDate!))[0];
     if (!result.some(t => t.id === id))
-        result.push(makeTask(o, 'Retomada', addDays(o.sentDate!, 30), now, 'retomada'));
+        result.push(makeTask(o, 'Retomada', addDays(lastFollowUp?.completedDate || o.sentDate!, 15), now, 'retomada'));
     return { opportunity: o, tasks: result };
 }

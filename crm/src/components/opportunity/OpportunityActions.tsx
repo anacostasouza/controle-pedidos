@@ -8,8 +8,21 @@ export type Action = (name: string, body: Record<string, unknown>) => Promise<vo
 export function StageForm({ opportunity, o, action }: { opportunity?: Opportunity; o?: Opportunity; action: Action }) {
     const current = opportunity || o;
     const [stage, setStage] = useState(current?.stage || STAGES[0]);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
     if (!current) return null;
-    return <details className="action-block"><summary>Mover no funil</summary><AsyncForm label="Mover oportunidade" save={async form => { await action('stage', { stage, nextDate: str(form, 'nextDate') }); }}><Field label="Etapa"><select value={stage} onChange={event => setStage(event.target.value as Opportunity['stage'])}>{STAGES.filter(value => value !== 'Conclusão').map(value => <option key={value}>{value}</option>)}</select></Field>{stage === 'Em negociação' && <Field label="Próxima ação (opcional)"><input type="date" name="nextDate" min={today()} /></Field>}</AsyncForm></details>;
+    async function saveStage(nextStage: Opportunity['stage'], nextDate = '') {
+        setSaving(true);
+        setError('');
+        try {
+            await action('stage', { stage: nextStage, nextDate });
+        } catch (cause) {
+            setError(cause instanceof Error ? cause.message : 'Não foi possível salvar a etapa.');
+        } finally {
+            setSaving(false);
+        }
+    }
+    return <details className="action-block"><summary>Mover no funil</summary><Field label="Etapa"><select value={stage} disabled={saving} onChange={event => { const nextStage = event.target.value as Opportunity['stage']; setStage(nextStage); void saveStage(nextStage); }}>{STAGES.filter(value => value !== 'Conclusão').map(value => <option key={value}>{value}</option>)}</select></Field>{stage === 'Em negociação' && <Field label="Próxima ação (opcional)"><input type="date" name="nextDate" min={today()} disabled={saving} onChange={event => void saveStage(stage, event.target.value)} /></Field>}{saving && <small className="muted">Salvando alteração…</small>}{error && <p className="error">{error}</p>}</details>;
 }
 
 export function CloseForm({ action }: { action: Action }) {
