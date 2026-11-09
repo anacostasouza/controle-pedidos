@@ -13,57 +13,76 @@ Entre com sua conta Google autorizada. O acesso depende de:
 
 Se a sessão expirar, entre novamente. O CRM encerra automaticamente sessões inválidas.
 
-## 2. Perfis de acesso
+## 2. Perfis de acesso e permissões
 
-### Consulta
+O CRM possui 5 perfis de acesso ativos. O antigo perfil de *Orçamentista* foi descontinuado e completamente removido do fluxo.
 
-Pode consultar clientes, empresas e oportunidades. Não pode criar ou editar registros.
+### Matriz de Permissões por Perfil
 
-### Recepção
+| Funcionalidade / Ação | Consulta (`leitura`) | Recepção (`recepcao`) | Vendedor (`vendedor`) | Coordenação (`coordenacao`) | Administrador (`admin`) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Consultar clientes, empresas e carteira** | Sim | Sim | Sim | Sim | Sim |
+| **Cadastrar clientes e empresas** | Não | Sim | Sim | Sim | Sim |
+| **Editar clientes e empresas** | Não | Sim | Sim | Sim | Sim |
+| **Excluir clientes e empresas (sem vínculos)** | Não | Não | Não | Não | Sim |
+| **Criar novas oportunidades** | Não | Sim | Sim | Sim | Sim |
+| **Editar qualquer oportunidade da equipe** | Não | Não | Não | Sim | Sim |
+| **Editar oportunidades próprias / sem vendedor** | Não | Sim | Sim | Sim | Sim |
+| **Distribuir / atribuir vendedor responsável** | Não | Sim | Não | Sim | Sim |
+| **Registrar envio de proposta e follow-ups** | Não | Não | Sim | Sim | Sim |
+| **Solicitar apoio à negociação** | Não | Não | Sim | Sim | Sim |
+| **Receber tarefa de apoio na agenda ("Meu Dia")** | Não | Não | Sim | Sim | Sim |
+| **Concluir oportunidade (ganha/perdida)** | Não | Não | Sim | Sim | Sim |
+| **Excluir oportunidades** | Não | **Sim** | **Sim** | **Sim** | **Sim** |
+| **Acessar relatórios de conversão e CSV** | Não | Não | Não | Não | Sim |
+| **Acessar configurações e gerenciar acessos** | Não | Não | Não | Não | Sim |
 
-Pode:
+---
 
-- cadastrar clientes;
-- cadastrar empresas;
-- criar oportunidades;
-- distribuir oportunidades para vendedores;
-- editar cadastros e oportunidades sob sua responsabilidade.
+### Detalhamento dos Perfis
 
-### Vendedor
+### Consulta (`leitura`)
+Perfil de visualização somente leitura. Pode pesquisar e consultar clientes, empresas, oportunidades e histórico de ações, sem permissão para criar, alterar, mover etapas ou excluir qualquer informação.
 
-Pode:
+### Recepção (`recepcao`)
+Perfil voltado à triagem inicial e cadastro de entrada de leads.
+- Pode cadastrar clientes e empresas (padronizados automaticamente em caixa alta).
+- Pode criar oportunidades e mantê-las em *Lead qualificado* aguardando distribuição, ou já atribuir a um vendedor.
+- Pode editar dados cadastrais de oportunidades que criou enquanto não houver vendedor responsável.
+- **Pode excluir oportunidades** quando necessário.
+- Não conduz acompanhamentos comerciais nem encerramento de propostas enviadas.
 
-- criar oportunidades;
-- editar oportunidades sob sua responsabilidade;
-- acompanhar tarefas;
-- registrar contatos;
-- reagendar follow-ups;
-- conduzir negociações e conclusões.
+### Vendedor (`vendedor`)
+Perfil operacional de vendas e condução comercial.
+- Pode cadastrar clientes, empresas e novas oportunidades.
+- Pode editar todos os dados, valores e notas das oportunidades sob sua titularidade.
+- Conduz o ciclo de propostas enviadas e acompanhamentos automáticos (D+1, D+2, D+3 e D+7 úteis).
+- Agenda próximos follow-ups manuais e registra retornos de contatos.
+- Na aba **Negociação**, pode registrar objeções e solicitar apoio de coordenadores, administradores ou colegas vendedores.
+- Pode ser designado para prestar apoio à negociação, recebendo a tarefa destacada em seu "Meu Dia".
+- Registra o fechamento comercial (Conquistado, Perdido com motivo ou Desistência).
+- **Pode excluir oportunidades**.
 
-### Orçamentista
+### Coordenação (`coordenacao`)
+Perfil de supervisão e apoio à equipe comercial.
+- Possui visão ampla e pode editar qualquer oportunidade da equipe.
+- Pode redistribuir vendedores responsáveis a qualquer momento.
+- Atua diretamente nas solicitações de **Apoio à Negociação** encaminhadas pelos vendedores, visualizando o histórico e objeções em sua agenda.
+- Pode reabrir oportunidades concluídas ou arquivadas.
+- **Pode excluir oportunidades**.
+- Não tem acesso às telas restritas de parametrização geral do sistema nem ao módulo de relatórios executivos.
 
-Pode atualizar o andamento de orçamentos atribuídos a ele.
-
-### Coordenação
-
-Pode acompanhar e alterar oportunidades da equipe, além de atuar em solicitações de apoio.
-
-### Administrador
-
-Pode operar o CRM e administrar:
-
-- perfis de usuários;
-- habilitação de contas;
-- canais de entrada;
-- grupos de serviços;
-- feriados;
-- validadores de propostas complexas;
-- relatórios da carteira.
-
-Um administrador não altera o próprio perfil pela tela de configurações.
-
-Administradores também podem excluir clientes e empresas sem vínculos. Cadastros
-com vínculos são inativados automaticamente para preservar o histórico comercial.
+### Administrador (`admin`)
+Acesso irrestrito a todas as rotinas e parametrizações do CRM:
+- Opera e edita qualquer oportunidade, cliente e empresa da base.
+- **Pode excluir oportunidades** de qualquer usuário.
+- Pode excluir clientes e empresas que não possuam vínculos comerciais (cadastros com vínculos são inativados com segurança).
+- Acesso exclusivo à página de **Relatórios** e exportação consolidada em CSV.
+- Acesso exclusivo à página de **Configurações Administrativas**:
+  - gerenciamento de perfis e habilitação/desabilitação de contas;
+  - canais de entrada e grupos de serviços;
+  - cadastro de feriados para o cálculo de dias úteis.
+- Um administrador não altera o próprio perfil para evitar perda acidental de acesso gestor.
 
 ## 3. Menu principal
 
@@ -100,7 +119,7 @@ Exibe a carteira em:
 ## 4. Cadastrar cliente
 
 1. Acesse **Clientes** ou clique em **Nova oportunidade**.
-2. Informe o nome.
+2. Informe o nome (o CRM padroniza e salva o nome automaticamente em **CAIXA ALTA**).
 3. Informe telefone ou e-mail. Pelo menos um contato é obrigatório.
 4. Opcionalmente, vincule uma empresa.
 5. Salve o cadastro.
@@ -112,7 +131,7 @@ com oportunidades são inativados automaticamente para preservar o histórico co
 
 1. Acesse **Empresas**.
 2. Clique em **Nova empresa**.
-3. Informe o nome.
+3. Informe a razão social ou nome fantasia (padronizado e salvo automaticamente em **CAIXA ALTA**).
 4. Informe o CNPJ com 14 dígitos. A máscara é aceita, por exemplo:
 
    `12.345.678/0001-90`
@@ -160,21 +179,25 @@ Use quando a demanda estiver sendo preparada.
 
 ### Proposta enviada
 
-Registre o envio pelo formulário da oportunidade. Informe a data de envio. O CRM criará automaticamente:
+Registre o envio pelo formulário da oportunidade. Informe a data de envio e, opcionalmente, o número da proposta gerado no ERP. O CRM criará automaticamente 4 follow-ups:
 
-- D+1 útil;
-- D+3 úteis;
-- D+7 úteis.
+- **D+1 útil**;
+- **D+2 úteis**;
+- **D+3 úteis**;
+- **D+7 úteis** (marcado como follow-up final do ciclo).
 
-### Em negociação
+### Em negociação e Solicitação de Apoio
 
 Mover para negociação:
 
-- cancela os acompanhamentos automáticos pendentes;
+- cancela os acompanhamentos automáticos pendentes da proposta;
 - marca que houve resposta do cliente;
-- não exige uma próxima data automática.
+- não exige uma próxima data automática (o vendedor pode agendar manualmente).
 
-Se necessário, o vendedor pode agendar manualmente um próximo follow-up.
+**Solicitar Apoio na Negociação:**
+Na aba **Negociação**, o vendedor pode registrar a objeção do cliente e selecionar um profissional para auxiliá-lo (administrador, coordenador ou colega vendedor), definindo a data do retorno.
+- Uma tarefa de acompanhamento com a tag visual **Apoio à Negociação** é gerada na agenda ("Meu Dia") do usuário solicitado.
+- O usuário solicitado vê a objeção, o vendedor responsável e a oportunidade diretamente em suas pendências do dia, sendo contabilizada nas suas metas diárias.
 
 ### Conclusão
 
@@ -187,6 +210,12 @@ Resultados disponíveis:
 - Desistência.
 
 Ao marcar como perdido, informe o motivo. Para o motivo **Outro**, a observação é obrigatória.
+
+### Exclusão de Oportunidades
+
+Todas as roles operacionais e administrativas (**Administrador**, **Coordenação**, **Vendedor** e **Recepção**) têm permissão para excluir oportunidades.
+- A exclusão pode ser realizada clicando no botão **Excluir oportunidade** dentro da janela de detalhes.
+- O sistema exibe um aviso de confirmação antes de remover definitivamente a oportunidade, suas tarefas e seu histórico de auditoria.
 
 ## 8. Follow-ups
 
@@ -269,11 +298,8 @@ Administradores podem configurar:
 - canais de entrada;
 - grupos de serviços;
 - feriados no formato `AAAA-MM-DD`;
-- validadores de propostas complexas;
 - perfil de cada usuário;
 - habilitação de acesso ao CRM.
-
-A aprovação de propostas complexas é informativa e não bloqueia o avanço da oportunidade.
 
 ## 12. Boas práticas
 

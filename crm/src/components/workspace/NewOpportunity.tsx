@@ -25,7 +25,7 @@ export function NewOpportunity({ boot, clients, companies, close, saved }: NewOp
 
     const clientOptions = activeClients.map(c => ({
         value: c.id,
-        label: c.name,
+        label: c.name.toUpperCase(),
     }));
 
     return (
@@ -34,7 +34,7 @@ export function NewOpportunity({ boot, clients, companies, close, saved }: NewOp
             <AsyncForm label="Criar oportunidade" save={async (f) => {
                 const cid = clientId || newId;
                 if (!clientId && !clientCreated) {
-                    await api(`/clients/${cid}`, 'PUT', { name: str(f, 'name'), phone: str(f, 'phone'), email: str(f, 'email'), companyId: str(f, 'companyId'), active: true });
+                    await api(`/clients/${cid}`, 'PUT', { name: str(f, 'name').toUpperCase(), phone: str(f, 'phone'), email: str(f, 'email'), companyId: str(f, 'companyId'), active: true });
                     setClientCreated(true);
                 }
                 await api('/opportunities', 'POST', { id: opportunityId, clientId: cid, ownerId: str(f, 'ownerId'), channel: str(f, 'channel'), notes: str(f, 'notes') });

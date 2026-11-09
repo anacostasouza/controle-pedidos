@@ -8,6 +8,9 @@ const DEFAULT_PROD_ALLOWED_ORIGINS = new Set([
   "https://atendimento-desenhardigital.web.app",
   "https://atendimento-desenhardigital.firebaseapp.com",
   "https://crm-desenhar.web.app",
+  "https://crm-desenhar.firebaseapp.com",
+  "https://financeiro-desenhar.firebaseapp.com",
+  "https://financeiro-desenhar.web.app",
 ]);
 
 const ALLOWED_ORIGINS_BY_ENV: Record<string, string> = {
@@ -36,19 +39,23 @@ function getConfiguredAllowedOrigins(): Set<string> {
 
   const scopedOrigins = parseOrigins(envVarName ? process.env[envVarName] : undefined);
   if (scopedOrigins.length > 0) {
-    return new Set(scopedOrigins);
+    const result = new Set(scopedOrigins);
+    for (const origin of DEFAULT_PROD_ALLOWED_ORIGINS) {
+      result.add(origin);
+    }
+    return result;
   }
 
   const fallbackOrigins = parseOrigins(process.env.ALLOWED_ORIGINS);
   if (fallbackOrigins.length > 0) {
-    return new Set(fallbackOrigins);
+    const result = new Set(fallbackOrigins);
+    for (const origin of DEFAULT_PROD_ALLOWED_ORIGINS) {
+      result.add(origin);
+    }
+    return result;
   }
 
-  if (currentEnv === "production") {
-    return DEFAULT_PROD_ALLOWED_ORIGINS;
-  }
-
-  return new Set();
+  return DEFAULT_PROD_ALLOWED_ORIGINS;
 }
 
 function isLoopbackIp(ip: string): boolean {

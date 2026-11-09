@@ -2,13 +2,11 @@ import { useState } from "react";
 import { api, roleLabels } from "./services/crmApi";
 import type { Bootstrap, Role } from "./services/crmApi";
 import { AsyncForm, Field, str } from "./components";
-import { ApproverPicker } from "./components/settings/ApproverPicker";
 
 const roles: Role[] = [
   "leitura",
   "recepcao",
   "vendedor",
-  "orcamentista",
   "coordenacao",
   "admin",
 ];
@@ -32,7 +30,7 @@ export function SettingsPage({
       channels: lines(form, "channels"),
       serviceGroups: lines(form, "serviceGroups"),
       holidays: lines(form, "holidays"),
-      approverIds: form.getAll("approvers"),
+      approverIds: [],
     });
     await reload();
     setNotice(
@@ -110,15 +108,6 @@ function CommercialSettings({
               defaultValue={boot.settings.holidays.join("\n")}
               placeholder="2026-12-25"
             />
-          </Field>
-          <Field label="Validadores de propostas complexas">
-            <ApproverPicker
-              users={boot.users}
-              defaultValue={boot.settings.approverIds}
-            />
-            <small>
-              Selecione usuários habilitados para validar propostas complexas.
-            </small>
           </Field>
         </div>
         <p className="muted">

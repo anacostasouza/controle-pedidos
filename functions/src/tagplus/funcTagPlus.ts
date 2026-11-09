@@ -33,7 +33,17 @@ appTagPlus.get("/auth/status", async (_req, res) => {
 // Inicia o fluxo de autorização (redireciona o usuário para a tela de autorização TagPlus)
 appTagPlus.get("/auth/start", (req, res) => {
   const clientId = process.env.TAGPLUS_CLIENT_ID;
-  const scope = (process.env.TAGPLUS_SCOPE as string) || "read:clientes read:pedidos";
+  const defaultScopes = [
+    "read:clientes",
+    "read:pedidos",
+    "read:financeiros",
+    "write:financeiros",
+    "read:contas",
+    "read:formas_pagamento",
+    "read:planos_orcamentarios",
+    "read:fornecedores",
+  ].join(" ");
+  const scope = (process.env.TAGPLUS_SCOPE as string) || defaultScopes;
   if (!clientId) {
     return res.status(500).json({ message: "TAGPLUS_CLIENT_ID not configured" });
   }

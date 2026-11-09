@@ -1,7 +1,7 @@
 /** Pure CRM rules. All dates are business dates in America/Sao_Paulo. */
 export const STAGES = ['Lead qualificado', 'Elaboração de proposta', 'Proposta enviada', 'Em negociação', 'Conclusão'] as const;
 export const LOSSES = ['Especificação', 'Preço', 'Prazo', 'Atraso no envio da proposta', 'Outro'] as const;
-export type Role = 'recepcao' | 'vendedor' | 'orcamentista' | 'coordenacao' | 'admin' | 'leitura';
+export type Role = 'recepcao' | 'vendedor' | 'coordenacao' | 'admin' | 'leitura';
 export interface Actor {
     uid: string;
     name: string;
@@ -46,10 +46,10 @@ export interface Opportunity {
     notes: string;
     valueCents: number | null;
     rating: number;
-    complexity: 'simple' | 'complex';
-    estimatorId: string;
-    budgetStatus: 'A elaborar' | 'Em elaboração' | 'Recebido/concluído';
-    approval: 'Não se aplica' | 'Pendente' | 'Aprovada' | 'Não aprovada';
+    complexity?: 'simple' | 'complex';
+    estimatorId?: string;
+    budgetStatus?: 'A elaborar' | 'Em elaboração' | 'Recebido/concluído';
+    approval?: 'Não se aplica' | 'Pendente' | 'Aprovada' | 'Não aprovada';
     proposalNumber: string;
     sentDate: string | null;
     cycle: number;
@@ -66,7 +66,7 @@ export interface Task {
     id: string;
     opportunityId: string;
     ownerId: string;
-    kind: 'D+1' | 'D+3' | 'D+7' | 'Retomada' | 'Manual' | 'Coordenação';
+    kind: 'D+1' | 'D+2' | 'D+3' | 'D+7' | 'Retomada' | 'Manual' | 'Coordenação';
     cycle: number;
     dueDate: string;
     originalDueDate: string;
@@ -124,22 +124,22 @@ export function roleForSector(sector: string): Role {
     if (sector === 'COMERCIAL')
         return 'vendedor';
     if (sector === 'ARTE')
-        return 'orcamentista';
+        return 'leitura';
     return 'leitura';
 }
 export function canEdit(actor: Actor, o: Opportunity): boolean { return ['admin', 'coordenacao'].includes(actor.role) || (actor.role === 'vendedor' && actor.uid === o.ownerId) || (actor.role === 'recepcao' && (!o.ownerId || o.createdBy === actor.uid)); }
 export function newOpportunity(id: string, clientId: string, actor: Actor, now: string): Opportunity {
     ensure(['admin', 'coordenacao', 'recepcao', 'vendedor'].includes(actor.role), 'Sem permissão para criar oportunidades.', 403);
-    return { id, clientId, ownerId: actor.role === 'vendedor' ? actor.uid : '', createdBy: actor.uid, createdAt: now, updatedAt: now, stage: STAGES[0], state: 'active', channel: '', serviceGroup: '', notes: '', valueCents: null, rating: 0, complexity: 'simple', estimatorId: '', budgetStatus: 'A elaborar', approval: 'Não se aplica', proposalNumber: '', sentDate: null, cycle: 0, version: 0, archiveDate: null, responseReceived: false, outcome: '', lossReason: '', closingNotes: '', closedAt: null, objection: '' };
+    return { id, clientId, ownerId: actor.role === 'vendedor' ? actor.uid : '', createdBy: actor.uid, createdAt: now, updatedAt: now, stage: STAGES[0], state: 'active', channel: '', serviceGroup: '', notes: '', valueCents: null, rating: 0, proposalNumber: '', sentDate: null, cycle: 0, version: 0, archiveDate: null, responseReceived: false, outcome: '', lossReason: '', closingNotes: '', closedAt: null, objection: '' };
 }
 function pick<T extends string>(value: unknown, list: readonly T[], label: string): T { ensure(typeof value === 'string' && list.includes(value as T), `${label}: opção inválida.`); return value as T; }
 export function validateSettings(raw: Record<string, unknown>): Settings {
     const list = (key: string, max: number) => { const values = raw[key]; ensure(Array.isArray(values) && values.length <= max, `${key}: lista inválida.`); return [...new Set(values.map(v => text(v, key, 150, true)))]; };
-    return { holidays: list('holidays', 3660).map(date), channels: list('channels', 100), serviceGroups: list('serviceGroups', 100), approverIds: list('approverIds', 100) };
+    return { holidays: list('holidays', 3660).map(date), channels: list('channels', 100), serviceGroups: list('serviceGroups', 100), approverIds: raw.approverIds ? list('approverIds', 100) : [] };
 }
 export function patchOpportunity(o: Opportunity, raw: Record<string, unknown>, settings: Settings): void {
     const previousChannel = o.channel, previousServiceGroup = o.serviceGroup;
-    for (const key of ['channel', 'serviceGroup', 'notes', 'ownerId', 'estimatorId'] as const)
+    for (const key of ['channel', 'serviceGroup', 'notes', 'ownerId'] as const)
         if (raw[key] !== undefined)
             o[key] = text(raw[key], key, key === 'notes' ? 10000 : 150);
     if (raw.proposalNumber !== undefined)
@@ -157,15 +157,6 @@ export function patchOpportunity(o: Opportunity, raw: Record<string, unknown>, s
         ensure(raw.valueCents === null || (Number.isSafeInteger(raw.valueCents) && Number(raw.valueCents) >= 0), 'Valor inválido.');
         o.valueCents = raw.valueCents as number | null;
     }
-    if (raw.complexity !== undefined) {
-        o.complexity = pick(raw.complexity, ['simple', 'complex'], 'Complexidade');
-        if (o.complexity === 'simple')
-            o.approval = 'Não se aplica';
-        else if (o.approval === 'Não se aplica')
-            o.approval = 'Pendente';
-    }
-    if (raw.budgetStatus !== undefined)
-        o.budgetStatus = pick(raw.budgetStatus, ['A elaborar', 'Em elaboração', 'Recebido/concluído'], 'Orçamento');
 }
 function makeTask(o: Opportunity, kind: Task['kind'], due: string, now: string, suffix: string, final = false): Task {
     return { id: `${o.id}_${o.cycle}_${suffix}`, opportunityId: o.id, ownerId: o.ownerId, kind, cycle: o.cycle, dueDate: due, originalDueDate: due, source: kind === 'Manual' || kind === 'Coordenação' ? 'manual' : 'automatic', status: 'pending', result: '', notes: '', completedDate: null, completedAt: null, finalFollowUp: final, createdAt: now, reschedules: [] };
@@ -186,10 +177,8 @@ export function applyCommand(original: Opportunity, originalTasks: Task[], actor
     const o: Opportunity = JSON.parse(JSON.stringify(original));
     const tasks: Task[] = JSON.parse(JSON.stringify(originalTasks));
     const day = today(new Date(now));
-    const approvalOnly = command === 'approve' && settings.approverIds.includes(actor.uid);
-    const estimatorOnly = command === 'budget' && o.estimatorId === actor.uid && actor.role === 'orcamentista';
     const taskOnly = ['contact', 'reschedule'].includes(command) && tasks.some(t => t.id === raw.taskId && t.kind === 'Coordenação' && t.ownerId === actor.uid);
-    ensure(canEdit(actor, o) || approvalOnly || estimatorOnly || taskOnly, 'Sem permissão para alterar esta oportunidade.', 403);
+    ensure(canEdit(actor, o) || taskOnly, 'Sem permissão para alterar esta oportunidade.', 403);
     ensure(raw.version === o.version, 'A oportunidade foi alterada. Atualize a tela e tente novamente.', 409);
     ensure(o.state === 'active' || command === 'reopen' || (['contact', 'reschedule'].includes(command) && o.state === 'archived'), 'Reative a oportunidade antes de alterá-la.');
     const cancelPending = (reason: string) => tasks.filter(t => t.status === 'pending').forEach(t => { t.status = 'cancelled'; t.notes = reason; });
@@ -202,14 +191,6 @@ export function applyCommand(original: Opportunity, originalTasks: Task[], actor
                 tasks.filter(t => t.status === 'pending' && t.kind !== 'Coordenação').forEach(t => { t.ownerId = o.ownerId; });
             break;
         }
-        case 'budget':
-            o.budgetStatus = pick(raw.budgetStatus, ['A elaborar', 'Em elaboração', 'Recebido/concluído'], 'Orçamento');
-            break;
-        case 'approve':
-            ensure(settings.approverIds.includes(actor.uid), 'Validador não configurado para este usuário.', 403);
-            ensure(o.complexity === 'complex', 'Aprovação aplicável somente a proposta complexa.');
-            o.approval = pick(raw.approval, ['Pendente', 'Aprovada', 'Não aprovada'], 'Aprovação');
-            break;
         case 'stage': {
             const stage = pick(raw.stage, STAGES, 'Etapa');
             ensure(stage !== 'Conclusão', 'Utilize a ação Concluir para registrar o resultado.');
@@ -239,7 +220,7 @@ export function applyCommand(original: Opportunity, originalTasks: Task[], actor
             o.cycle++;
             o.responseReceived = false;
             o.stage = 'Proposta enviada';
-            for (const n of [1, 3, 7])
+            for (const n of [1, 2, 3, 7])
                 tasks.push(makeTask(o, `D+${n}` as Task['kind'], businessDays(sent, n, settings.holidays), now, `d${n}`, n === 7));
             break;
         }

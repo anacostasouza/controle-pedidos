@@ -1,5 +1,7 @@
 # Dados sensíveis e arquivos de configuração
 *.env
+**/.tagplus-tokens.json
+*.tokens.json
 **/serviceAccount.json
 **/firebase-debug.log
 **/.firebaserc

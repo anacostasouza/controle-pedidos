@@ -7,6 +7,12 @@
       "hosting": {
         "crm": [
           "crm-desenhar"
+        ],
+        "financeiro": [
+          "financeiro-desenhar"
+        ],
+        "financeiro-desenhar": [
+          "financeiro-desenhar"
         ]
       }
     }

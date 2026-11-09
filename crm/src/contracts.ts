@@ -1,4 +1,4 @@
-export type Role = 'recepcao' | 'vendedor' | 'orcamentista' | 'coordenacao' | 'admin' | 'leitura';
+export type Role = 'recepcao' | 'vendedor' | 'coordenacao' | 'admin' | 'leitura';
 
 export type Stage = 'Lead qualificado' | 'Elaboração de proposta' | 'Proposta enviada' | 'Em negociação' | 'Conclusão';
 export type OpportunityState = 'active' | 'archived' | 'closed';
@@ -13,7 +13,7 @@ export interface Settings {
     holidays: string[];
     channels: string[];
     serviceGroups: string[];
-    approverIds: string[];
+    approverIds?: string[];
 }
 
 export interface Client {
@@ -50,10 +50,10 @@ export interface Opportunity {
     notes: string;
     valueCents: number | null;
     rating: number;
-    complexity: 'simple' | 'complex';
-    estimatorId: string;
-    budgetStatus: 'A elaborar' | 'Em elaboração' | 'Recebido/concluído';
-    approval: 'Não se aplica' | 'Pendente' | 'Aprovada' | 'Não aprovada';
+    complexity?: 'simple' | 'complex';
+    estimatorId?: string;
+    budgetStatus?: 'A elaborar' | 'Em elaboração' | 'Recebido/concluído';
+    approval?: 'Não se aplica' | 'Pendente' | 'Aprovada' | 'Não aprovada';
     proposalNumber: string;
     sentDate: string | null;
     cycle: number;
@@ -71,7 +71,7 @@ export interface Task {
     id: string;
     opportunityId: string;
     ownerId: string;
-    kind: 'D+1' | 'D+3' | 'D+7' | 'Retomada' | 'Manual' | 'Coordenação';
+    kind: 'D+1' | 'D+2' | 'D+3' | 'D+7' | 'Retomada' | 'Manual' | 'Coordenação';
     cycle: number;
     dueDate: string;
     originalDueDate: string;

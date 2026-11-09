@@ -48,4 +48,4 @@ export async function all<T>(path: string): Promise<T[]> { let offset: number | 
 } return rows; }
 export const money = (cents: number | null | undefined) => cents === null || cents === undefined ? 'Sem valor' : (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 export const displayDate = (value: string | null) => value ? value.slice(0, 10).split('-').reverse().join('/') : '—';
-export const roleLabels: Record<Role, string> = { admin: 'Administrador', coordenacao: 'Coordenação', recepcao: 'Recepção', vendedor: 'Vendedor', orcamentista: 'Orçamentista', leitura: 'Consulta' };
+export const roleLabels: Record<Role, string> = { admin: 'Administrador', coordenacao: 'Coordenação', recepcao: 'Recepção', vendedor: 'Vendedor', leitura: 'Consulta' };

@@ -669,12 +669,46 @@ td small {
 .opportunity-card h4 {
   margin: 12px 0 5px;
   font-size: 14px;
+  text-transform: uppercase;
 }
 .opportunity-card p {
   color: var(--muted);
   font-size: 11px;
   margin: 0 0 18px;
   white-space: normal;
+  text-transform: uppercase;
+}
+.record-title,
+.company-name,
+.client-name,
+.table-uppercase td:first-child,
+.table-uppercase td:nth-child(2) {
+  text-transform: uppercase;
+}
+.badge-support {
+  display: inline-block;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.task-support-notes {
+  display: block;
+  color: #8c531b;
+  background: #fff8f1;
+  border-left: 3px solid #f97316;
+  padding: 4px 6px;
+  border-radius: 4px;
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: normal;
+  max-width: 220px;
 }
 .opportunity-card > strong {
   font-size: 16px;
@@ -1605,3 +1639,25 @@ h4 {
   color: #9aabb9;
   font-style: italic;
 }
+
+.auto-save-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.auto-save-status.saving {
+  color: var(--blue);
+}
+
+.auto-save-status.saved {
+  color: #107e3e;
+}
+
+.auto-save-status.error {
+  color: #c93b2b;
+}
+

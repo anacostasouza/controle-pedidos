@@ -361,8 +361,8 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
                     {taskList.map((t) => (
                       <tr key={t.id}>
                         <td>
-                          <strong>{t.client?.name || "Cliente"}</strong>
-                          <small>{t.company?.name || "Pessoa física"}</small>
+                          <strong className="record-title">{t.client?.name ? t.client.name.toUpperCase() : "CLIENTE"}</strong>
+                          <small className="company-name">{t.company?.name ? t.company.name.toUpperCase() : "Pessoa física"}</small>
                         </td>
                         <td>
                           {(() => {
@@ -386,11 +386,20 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
                             {displayDate(t.dueDate)}
                           </span>
                           <small>
-                            {t.kind}
+                            {t.kind === "Coordenação" ? (
+                              <span className="badge-support">Apoio à Negociação</span>
+                            ) : (
+                              t.kind
+                            )}
                             {t.opportunity?.state === "archived"
                               ? " · arquivada"
                               : ""}
                           </small>
+                          {t.kind === "Coordenação" && t.notes && (
+                            <span className="task-support-notes" title={t.notes}>
+                              <strong>Objeção:</strong> {t.notes.length > 70 ? `${t.notes.slice(0, 70)}…` : t.notes}
+                            </span>
+                          )}
                         </td>
                         <td>
                           <Stars value={t.opportunity?.rating || 0} />
@@ -530,8 +539,8 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
                               {o.channel || "Canal não informado"}
                               {o.state === "archived" ? " · Arquivada" : ""}
                             </span>
-                            <h4>{o.client?.name || "Cliente"}</h4>
-                            <p>{o.company?.name || "Sem empresa vinculada"}</p>
+                            <h4>{o.client?.name ? o.client.name.toUpperCase() : "CLIENTE"}</h4>
+                            <p>{o.company?.name ? o.company.name.toUpperCase() : "SEM EMPRESA VINCULADA"}</p>
                             <strong>{money(o.valueCents)}</strong>
                             <Stars value={o.rating} />
                             <footer>
@@ -563,8 +572,8 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
                     <tbody>
                       {result.items.map((o) => (
                         <tr key={o.id}>
-                          <td>{o.client?.name}</td>
-                          <td>{o.company?.name || "—"}</td>
+                          <td className="client-name">{o.client?.name ? o.client.name.toUpperCase() : "—"}</td>
+                          <td className="company-name">{o.company?.name ? o.company.name.toUpperCase() : "—"}</td>
                           <td>
                             {boot.users.find((u) => u.id === o.ownerId)?.name ||
                               "A distribuir"}

@@ -9,7 +9,7 @@
     "serve:crm": "node scripts/serve-crm-emulator.cjs",
     "shell": "npm run build && npx firebase-tools@15.11.0 functions:shell --config ../firebase.json",
     "start": "npm run shell",
-    "deploy": "npx firebase-tools@15.11.0 deploy --only functions --config ../firebase.json",
+    "deploy": "npm run build && npx firebase-tools@15.11.0 deploy --only functions --config ../firebase.json",
     "logs": "npx firebase-tools@15.11.0 functions:log --config ../firebase.json",
     "test": "jest",
     "test:watch": "jest --watch",

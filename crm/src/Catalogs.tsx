@@ -172,15 +172,15 @@ export function Catalogs({
               {filtered.slice(page * 30, page * 30 + 30).map((row) => (
                 <tr key={row.id}>
                   <td>
-                    <strong>{row.name}</strong>
+                    <strong className="record-title">{row.name.toUpperCase()}</strong>
                   </td>
                   {"cnpj" in row && <td>{formatCnpj(row.cnpj)}</td>}
                   {"phone" in row && (
                     <>
-                      <td>
-                        {companies.find(
+                      <td className="company-name">
+                        {(companies.find(
                           (company) => company.id === row.companyId,
-                        )?.name || "—"}
+                        )?.name || "—").toUpperCase()}
                       </td>
                       <td>
                         {row.phone}
@@ -235,7 +235,7 @@ export function Catalogs({
         />
       )}
       {view && (
-        <Modal title={`Vínculos de ${view.name}`} close={() => setView(null)}>
+        <Modal title={`Vínculos de ${view.name.toUpperCase()}`} close={() => setView(null)}>
           {!related.length ? (
             <Empty>Nenhuma oportunidade vinculada.</Empty>
           ) : (
@@ -251,7 +251,7 @@ export function Catalogs({
                 <tbody>
                   {related.map((row) => (
                     <tr key={row.id}>
-                      <td>{row.client?.name}</td>
+                      <td className="client-name">{row.client?.name ? row.client.name.toUpperCase() : "—"}</td>
                       <td>{row.stage}</td>
                       <td>{money(row.valueCents)}</td>
                     </tr>

@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
-import { api, money, displayDate, today } from "./services/crmApi";
+import { useEffect, useRef, useState } from "react";
+import { api, money, displayDate, today, roleLabels } from "./services/crmApi";
 import type {
   Bootstrap,
   Client,
   Company,
   Detail,
   History,
+  Opportunity,
   Task,
 } from "./services/crmApi";
 import { AsyncForm, Empty, Field, Modal, Stars, str } from "./components";
@@ -51,23 +52,134 @@ export function OpportunityDetail({
     [tab, setTab] = useState("Dados"),
     [rating, setRating] = useState(0),
     [historyCursor, setHistoryCursor] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState({
+    ownerId: "",
+    value: "",
+    channel: "",
+    serviceGroup: "",
+    proposalNumber: "",
+    notes: "",
+  });
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveError, setSaveError] = useState("");
+  const isDirtyRef = useRef(false);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedValuesRef = useRef<string>("");
+  const currentVersionRef = useRef<number>(0);
+  const formDataRef = useRef(formData);
+  formDataRef.current = formData;
+  const ratingRef = useRef(rating);
+  ratingRef.current = rating;
+
   async function load() {
     const d = await api<Detail>(`/opportunities/${id}`);
     setData(d);
-    setRating(d.opportunity.rating);
+    currentVersionRef.current = d.opportunity.version;
+    if (!isDirtyRef.current) {
+      setRating(d.opportunity.rating);
+      const initialForm = {
+        ownerId: d.opportunity.ownerId || "",
+        value: d.opportunity.valueCents === null ? "" : (d.opportunity.valueCents / 100).toString(),
+        channel: d.opportunity.channel || "",
+        serviceGroup: d.opportunity.serviceGroup || "",
+        proposalNumber: d.opportunity.proposalNumber || "",
+        notes: d.opportunity.notes || "",
+      };
+      setFormData(initialForm);
+      lastSavedValuesRef.current = JSON.stringify({ ...initialForm, rating: d.opportunity.rating });
+    }
     setHistoryCursor(d.history.length === 40 ? d.history[39].id : null);
   }
+
   useEffect(() => {
+    isDirtyRef.current = false;
+    lastSavedValuesRef.current = "";
+    setSaveStatus("idle");
+    setSaveError("");
     load().catch((e) => setError(e.message));
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
   }, [id]);
+
+  const performSave = async (dataToSave = formDataRef.current, ratingToSave = ratingRef.current) => {
+    if (!data || !data.canEdit || data.opportunity.state !== "active") return;
+    const serialized = JSON.stringify({ ...dataToSave, rating: ratingToSave });
+    if (serialized === lastSavedValuesRef.current) {
+      isDirtyRef.current = false;
+      return;
+    }
+    setSaveStatus("saving");
+    setSaveError("");
+    try {
+      const rawVal = dataToSave.value.trim();
+      const valueCents = rawVal === "" ? null : Math.round(Number(rawVal) * 100);
+      const res = await api<{ opportunity: Opportunity; tasks: Task[] }>(
+        `/opportunities/${id}/actions`,
+        "POST",
+        {
+          ownerId: dataToSave.ownerId,
+          channel: dataToSave.channel,
+          serviceGroup: dataToSave.serviceGroup,
+          notes: dataToSave.notes,
+          proposalNumber: dataToSave.proposalNumber,
+          valueCents,
+          rating: ratingToSave,
+          action: "edit",
+          version: currentVersionRef.current || data.opportunity.version,
+        }
+      );
+      currentVersionRef.current = res.opportunity.version;
+      lastSavedValuesRef.current = serialized;
+      isDirtyRef.current = false;
+      setSaveStatus("saved");
+      setData((prev) => (prev ? { ...prev, opportunity: res.opportunity, tasks: res.tasks } : prev));
+      changed();
+    } catch (err) {
+      setSaveStatus("error");
+      setSaveError(err instanceof Error ? err.message : "Não foi possível salvar os dados.");
+      await load();
+    }
+  };
+
+  const scheduleSave = (newFormData: typeof formData, newRating: number, delayMs = 800) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    isDirtyRef.current = true;
+    setSaveStatus("saving");
+    saveTimeoutRef.current = setTimeout(() => {
+      void performSave(newFormData, newRating);
+    }, delayMs);
+  };
+
+  const handleClose = async () => {
+    if (isDirtyRef.current) {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      await performSave(formDataRef.current, ratingRef.current);
+    }
+    close();
+  };
+
   async function action(name: string, body: Record<string, unknown>) {
     if (!data) return;
+    if (isDirtyRef.current && name !== "edit") {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      await performSave(formDataRef.current, ratingRef.current);
+    }
     setNotice("");
     try {
       await api(`/opportunities/${id}/actions`, "POST", {
         ...body,
         action: name,
-        version: data.opportunity.version,
+        version: currentVersionRef.current || data.opportunity.version,
       });
     } catch (e) {
       await load();
@@ -99,16 +211,16 @@ export function OpportunityDetail({
     c = clients.find((c) => c.id === o?.clientId),
     company = companies.find((e) => e.id === c?.companyId);
   return (
-    <Modal title={c?.name || "Oportunidade"} close={close} closeOnBackdrop={false}>
+    <Modal title={(c?.name || "Oportunidade").toUpperCase()} close={handleClose} closeOnBackdrop={false}>
       {error && <p className="error">{error}</p>}
-      {boot.actor.role === 'admin' && <button type="button" className="danger-button" onClick={() => void deleteOpportunity()}>Excluir oportunidade</button>}
+      {['admin', 'coordenacao', 'vendedor', 'recepcao'].includes(boot.actor.role) && <button type="button" className="danger-button" onClick={() => void deleteOpportunity()}>Excluir oportunidade</button>}
       {!o || !data ? (
         <p>Carregando oportunidade…</p>
       ) : (
         <>
           <div className="detail-summary">
             <div>
-              <p>{company?.name || "Sem empresa vinculada"}</p>
+              <p>{company?.name ? company.name.toUpperCase() : "Sem empresa vinculada"}</p>
               <p>
                 {c?.phone}{" "}
                 {c?.email && (
@@ -127,14 +239,14 @@ export function OpportunityDetail({
               </span>
             </div>
             <div>
-              <strong>{money(o.valueCents)}</strong>
-              <Stars value={o.rating} />
+              <strong>{money(formData.value.trim() !== "" ? Math.round(Number(formData.value) * 100) : o.valueCents)}</strong>
+              <Stars value={rating} />
             </div>
           </div>
           <div className="meta-line">
             Criada em {displayDate(o.createdAt)} · Proposta enviada em{" "}
             {displayDate(o.sentDate)}
-            {" · Número da proposta: "}{o.proposalNumber || "Não informado"}
+            {" · Número da proposta: "}{formData.proposalNumber || o.proposalNumber || "Não informado"}
             {o.archiveDate && (
               <> · Arquivamento previsto: {displayDate(o.archiveDate)}</>
             )}
@@ -156,7 +268,13 @@ export function OpportunityDetail({
                 <button
                   className={tab === t ? "active" : ""}
                   key={t}
-                  onClick={() => setTab(t)}
+                  onClick={() => {
+                    if (isDirtyRef.current) {
+                      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+                      void performSave(formDataRef.current, ratingRef.current);
+                    }
+                    setTab(t);
+                  }}
                 >
                   {t}
                   {t === "Acompanhamentos" && (
@@ -170,37 +288,30 @@ export function OpportunityDetail({
           </div>
           {tab === "Dados" && (
             <>
-              <AsyncForm
-                key={o.version}
-                disabled={!data.canEdit || o.state !== "active"}
-                label="Salvar dados"
-                save={async (f) => {
-                  await action("edit", {
-                    ownerId: str(f, "ownerId"),
-                    channel: str(f, "channel"),
-                    serviceGroup: str(f, "serviceGroup"),
-                    notes: str(f, "notes"),
-                    proposalNumber: str(f, "proposalNumber"),
-                    valueCents:
-                      str(f, "value") === ""
-                        ? null
-                        : Math.round(Number(str(f, "value")) * 100),
-                    rating,
-                    complexity: str(f, "complexity"),
-                    estimatorId: str(f, "estimatorId"),
-                    budgetStatus: str(f, "budgetStatus"),
-                  });
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+                  await performSave(formData, rating);
                 }}
               >
                 <fieldset disabled={!data.canEdit || o.state !== "active"}>
                   <div className="form-grid">
                     <Field label="Vendedor">
-                      <select name="ownerId" defaultValue={o.ownerId}>
+                      <select
+                        name="ownerId"
+                        value={formData.ownerId}
+                        onChange={(e) => {
+                          const next = { ...formData, ownerId: e.target.value };
+                          setFormData(next);
+                          scheduleSave(next, rating, 200);
+                        }}
+                      >
                         <option value="">Aguardando distribuição</option>
                         {boot.users
                           .filter(
                             (u) =>
-                              u.id === o.ownerId ||
+                              u.id === formData.ownerId ||
                               (u.active &&
                                 ["vendedor", "admin", "coordenacao"].includes(
                                   u.role,
@@ -220,18 +331,35 @@ export function OpportunityDetail({
                         type="number"
                         step="0.01"
                         min="0"
-                        defaultValue={
-                          o.valueCents === null ? "" : o.valueCents / 100
-                        }
+                        value={formData.value}
+                        onChange={(e) => {
+                          const next = { ...formData, value: e.target.value };
+                          setFormData(next);
+                          scheduleSave(next, rating);
+                        }}
+                        onBlur={() => {
+                          if (isDirtyRef.current) {
+                            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+                            void performSave(formData, rating);
+                          }
+                        }}
                       />
                     </Field>
                     <Field label="Canal de entrada">
-                      <select name="channel" defaultValue={o.channel}>
+                      <select
+                        name="channel"
+                        value={formData.channel}
+                        onChange={(e) => {
+                          const next = { ...formData, channel: e.target.value };
+                          setFormData(next);
+                          scheduleSave(next, rating, 200);
+                        }}
+                      >
                         <option value="">Não informado</option>
                         {[
                           ...new Set([
                             ...boot.settings.channels,
-                            ...(o.channel ? [o.channel] : []),
+                            ...(formData.channel ? [formData.channel] : []),
                           ]),
                         ].map((v) => (
                           <option key={v}>{v}</option>
@@ -239,12 +367,20 @@ export function OpportunityDetail({
                       </select>
                     </Field>
                     <Field label="Grupo de serviços">
-                      <select name="serviceGroup" defaultValue={o.serviceGroup}>
+                      <select
+                        name="serviceGroup"
+                        value={formData.serviceGroup}
+                        onChange={(e) => {
+                          const next = { ...formData, serviceGroup: e.target.value };
+                          setFormData(next);
+                          scheduleSave(next, rating, 200);
+                        }}
+                      >
                         <option value="">Não informado</option>
                         {[
                           ...new Set([
                             ...boot.settings.serviceGroups,
-                            ...(o.serviceGroup ? [o.serviceGroup] : []),
+                            ...(formData.serviceGroup ? [formData.serviceGroup] : []),
                           ]),
                         ].map((v) => (
                           <option key={v}>{v}</option>
@@ -255,7 +391,18 @@ export function OpportunityDetail({
                       <input
                         name="proposalNumber"
                         maxLength={100}
-                        defaultValue={o.proposalNumber || ""}
+                        value={formData.proposalNumber}
+                        onChange={(e) => {
+                          const next = { ...formData, proposalNumber: e.target.value };
+                          setFormData(next);
+                          scheduleSave(next, rating);
+                        }}
+                        onBlur={() => {
+                          if (isDirtyRef.current) {
+                            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+                            void performSave(formData, rating);
+                          }
+                        }}
                         placeholder="Informado pelo ERP"
                       />
                     </Field>
@@ -263,7 +410,10 @@ export function OpportunityDetail({
                       <span>
                         <Stars
                           value={rating}
-                          onChange={setRating}
+                          onChange={(newRating) => {
+                            setRating(newRating);
+                            scheduleSave(formData, newRating, 200);
+                          }}
                           disabled={!data.canEdit || o.state !== "active"}
                         />
                         <small>
@@ -273,121 +423,44 @@ export function OpportunityDetail({
                         </small>
                       </span>
                     </Field>
-                    <Field label="Complexidade">
-                      <select name="complexity" defaultValue={o.complexity}>
-                        <option value="simple">Simples</option>
-                        <option value="complex">Complexo</option>
-                      </select>
-                    </Field>
-                    <Field label="Orçamentista">
-                      <select name="estimatorId" defaultValue={o.estimatorId}>
-                        <option value="">Não definido</option>
-                        {boot.users
-                          .filter(
-                            (u) =>
-                              u.id === o.estimatorId ||
-                              (u.active &&
-                                [
-                                  "orcamentista",
-                                  "admin",
-                                  "coordenacao",
-                                ].includes(u.role)),
-                          )
-                          .map((u) => (
-                            <option key={u.id} value={u.id}>
-                              {u.name}
-                            </option>
-                          ))}
-                      </select>
-                    </Field>
-                    <Field label="Situação do orçamento">
-                      <select name="budgetStatus" defaultValue={o.budgetStatus}>
-                        {[
-                          "A elaborar",
-                          "Em elaboração",
-                          "Recebido/concluído",
-                        ].map((s) => (
-                          <option key={s}>{s}</option>
-                        ))}
-                      </select>
-                    </Field>
+
                     <Field label="Anotações" wide>
                       <textarea
                         name="notes"
                         rows={4}
-                        defaultValue={o.notes}
+                        value={formData.notes}
+                        onChange={(e) => {
+                          const next = { ...formData, notes: e.target.value };
+                          setFormData(next);
+                          scheduleSave(next, rating);
+                        }}
+                        onBlur={() => {
+                          if (isDirtyRef.current) {
+                            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+                            void performSave(formData, rating);
+                          }
+                        }}
                         maxLength={10000}
                       />
                     </Field>
                   </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    <button
+                      className="primary"
+                      disabled={!data.canEdit || o.state !== "active" || saveStatus === "saving"}
+                      type="submit"
+                    >
+                      {saveStatus === "saving" ? "Salvando…" : "Salvar dados"}
+                    </button>
+                    <div className={`auto-save-status ${saveStatus}`}>
+                      {saveStatus === 'saving' && <span>Salvando alterações…</span>}
+                      {saveStatus === 'saved' && <span>✓ Todas as alterações salvas</span>}
+                      {saveStatus === 'error' && <span>{saveError || 'Erro ao salvar alterações.'}</span>}
+                      {saveStatus === 'idle' && <span>Salvamento automático ativo</span>}
+                    </div>
+                  </div>
                 </fieldset>
-              </AsyncForm>
-              <div className="approval-note">
-                <strong>Validação: {o.approval}</strong>
-                <p>
-                  A validação da proposta complexa não bloqueia a oportunidade.
-                </p>
-                {!boot.settings.approverIds.length && (
-                  <small>
-                    Responsável pela validação ainda não configurado.
-                  </small>
-                )}
-              </div>
-              {o.state === "active" &&
-                boot.settings.approverIds.includes(boot.actor.uid) &&
-                o.complexity === "complex" && (
-                  <details className="action-block">
-                    <summary>Registrar validação</summary>
-                    <AsyncForm
-                      save={async (f) => {
-                        await action("approve", {
-                          approval: str(f, "approval"),
-                          notes: str(f, "notes"),
-                        });
-                      }}
-                    >
-                      <Field label="Status">
-                        <select name="approval" defaultValue={o.approval}>
-                          {["Pendente", "Aprovada", "Não aprovada"].map((v) => (
-                            <option key={v}>{v}</option>
-                          ))}
-                        </select>
-                      </Field>
-                      <Field label="Observações">
-                        <textarea name="notes" />
-                      </Field>
-                    </AsyncForm>
-                  </details>
-                )}
-              {o.state === "active" &&
-                boot.actor.role === "orcamentista" &&
-                o.estimatorId === boot.actor.uid && (
-                  <details className="action-block">
-                    <summary>Atualizar elaboração do orçamento</summary>
-                    <AsyncForm
-                      save={async (f) => {
-                        await action("budget", {
-                          budgetStatus: str(f, "budgetStatus"),
-                        });
-                      }}
-                    >
-                      <Field label="Situação">
-                        <select
-                          name="budgetStatus"
-                          defaultValue={o.budgetStatus}
-                        >
-                          {[
-                            "A elaborar",
-                            "Em elaboração",
-                            "Recebido/concluído",
-                          ].map((v) => (
-                            <option key={v}>{v}</option>
-                          ))}
-                        </select>
-                      </Field>
-                    </AsyncForm>
-                  </details>
-                )}
+              </form>
               {data.canEdit && o.state === "active" && (
                 <>
                   <details className="action-block">
@@ -400,7 +473,7 @@ export function OpportunityDetail({
                       O documento é enviado fora do CRM.{" "}
                       {o.sentDate
                         ? "O reenvio inicia novo ciclo e cancela os acompanhamentos pendentes do anterior."
-                        : "Serão criadas tarefas em D+1, D+3 e D+7 úteis."}
+                        : "Serão criadas tarefas em D+1, D+2, D+3 e D+7 úteis."}
                     </p>
                     <AsyncForm
                       label={
@@ -588,11 +661,12 @@ export function OpportunityDetail({
                             .filter(
                               (u) =>
                                 u.active &&
-                                ["admin", "coordenacao"].includes(u.role),
+                                ["admin", "coordenacao", "vendedor"].includes(u.role) &&
+                                u.id !== boot.actor.uid,
                             )
                             .map((u) => (
                               <option key={u.id} value={u.id}>
-                                {u.name}
+                                {u.name} ({roleLabels[u.role] || u.role})
                               </option>
                             ))}
                         </select>

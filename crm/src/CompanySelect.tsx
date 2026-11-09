@@ -23,7 +23,7 @@ export function CompanySelect({ companies, defaultValue = '' }: {
         setBusy(true);
         setError('');
         try {
-            const company: Company = { id: crypto.randomUUID(), name: name.trim(), cnpj: cnpj.replace(/\D/g, ''), active: true, createdAt: new Date().toISOString() };
+            const company: Company = { id: crypto.randomUUID(), name: name.trim().toUpperCase(), cnpj: cnpj.replace(/\D/g, ''), active: true, createdAt: new Date().toISOString() };
             await api(`/companies/${company.id}`, 'PUT', { name: company.name, cnpj: company.cnpj, active: true });
             setCreated(c => [...c, company]);
             setValue(company.id);
@@ -41,7 +41,7 @@ export function CompanySelect({ companies, defaultValue = '' }: {
         .filter((c, i, all) => all.findIndex(x => x.id === c.id) === i && (c.active || c.id === value))
         .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
 
-    const options = allCompanies.map(c => ({ value: c.id, label: c.name }));
+    const options = allCompanies.map(c => ({ value: c.id, label: c.name.toUpperCase() }));
 
     return (
         <div>

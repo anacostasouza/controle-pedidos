@@ -120,7 +120,7 @@ export function createCrmApp(authentication: express.RequestHandler = authMiddle
         app.put(`/${kind}/:id`, route(async (req, res) => {
             writeAccess(req.actor);
             const key = id(req.params.id), raw = req.body;
-            const data: Record<string, unknown> = { name: text(raw.name, 'Nome', 180, true), active: raw.active !== false, updatedAt: new Date().toISOString() };
+            const data: Record<string, unknown> = { name: text(raw.name, 'Nome', 180, true).toUpperCase(), active: raw.active !== false, updatedAt: new Date().toISOString() };
             if (kind === 'companies') {
                 const cnpj = String(raw.cnpj || '').replace(/\D/g, '');
                 ensure(cnpj.length === 14, 'CNPJ deve conter 14 dígitos.');
@@ -218,7 +218,7 @@ export function createCrmApp(authentication: express.RequestHandler = authMiddle
         res.json({ opportunity: { ...o.data(), id: ref.id }, tasks, history: history.docs.map(d => ({ id: d.id, ...d.data() })), canEdit: canEdit(req.actor, o.data() as Opportunity) });
     }));
     app.delete('/opportunities/:id', route(async (req, res) => {
-        adminAccess(req.actor);
+        ensure(['admin', 'coordenacao', 'vendedor', 'recepcao'].includes(req.actor.role), 'Sem permissão para excluir oportunidades.', 403);
         const key = id(req.params.id);
         const ref = db().collection(COLLECTIONS.opportunities).doc(key);
         const opportunity = await ref.get();
@@ -281,8 +281,8 @@ export function createCrmApp(authentication: express.RequestHandler = authMiddle
         const clients = related.clients;
         const companies = related.companies;
         const active = opps.filter(o => o.state === 'active'), won = opps.filter(o => o.outcome === 'Conquistado' && o.closedAt && today(new Date(o.closedAt)).slice(0, 7) === day.slice(0, 7));
-        const todayTasks = tasks.filter(t => t.kind !== 'Coordenação' && t.status !== 'cancelled' && t.dueDate === day);
-        const planned = tasks.filter(t => t.kind !== 'Coordenação' && ((t.status === 'pending' && t.dueDate <= day) || (t.status === 'done' && t.completedDate === day)));
+        const todayTasks = tasks.filter(t => t.status !== 'cancelled' && t.dueDate === day);
+        const planned = tasks.filter(t => (t.status === 'pending' && t.dueDate <= day) || (t.status === 'done' && t.completedDate === day));
         const done = planned.filter(t => t.status === 'done' && t.completedDate === day).length;
         const sum = (rows: Opportunity[]) => rows.reduce((n, o) => n + (o.valueCents || 0), 0);
         const rows = tasks.filter(t => t.status === 'pending' || t.completedDate === day || t.reschedules.some(r => r.from === day && today(new Date(r.at)) === day)).map(t => {
@@ -291,10 +291,7 @@ export function createCrmApp(authentication: express.RequestHandler = authMiddle
         }).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
         res.json({ day, metrics: { portfolio: sum(active), activeCount: active.length, missingValue: active.filter(o => o.valueCents === null).length, wonValue: sum(won), wonCount: won.length, negotiationValue: sum(active.filter(o => o.stage === 'Em negociação')), contacts: todayTasks.length, planned: planned.length, done }, tasks: rows });
     }));
-    app.put('/settings', route(async (req, res) => { adminAccess(req.actor); const config = validateSettings(req.body); const refs = config.approverIds.map(uid => db().collection('usuarios').doc(id(uid))); if (refs.length) {
-        const users = await db().getAll(...refs);
-        ensure(users.every(u => u.exists && u.data()?.statusConta !== false), 'Validador inválido.');
-    } await db().collection(COLLECTIONS.settings).doc('general').set(config); res.json(config); }));
+    app.put('/settings', route(async (req, res) => { adminAccess(req.actor); const config = validateSettings(req.body); await db().collection(COLLECTIONS.settings).doc('general').set(config); res.json(config); }));
     app.post('/settings/import-services', route(async (req, res) => {
         adminAccess(req.actor);
         const legacy = await scan<Record<string, unknown>>('servicosStatus');
@@ -303,7 +300,7 @@ export function createCrmApp(authentication: express.RequestHandler = authMiddle
         const config = await db().runTransaction(async (tx) => { const snap = await tx.get(ref); const current = snap.exists ? snap.data() as Settings : DEFAULT_SETTINGS; const next = validateSettings({ ...current, serviceGroups: [...new Set([...current.serviceGroups, ...names])] }); tx.set(ref, next); return next; });
         res.json(config);
     }));
-    app.put('/access/:id', route(async (req, res) => { adminAccess(req.actor); const uid = id(req.params.id); ensure(['recepcao', 'vendedor', 'orcamentista', 'coordenacao', 'admin', 'leitura'].includes(req.body.role), 'Perfil inválido.'); ensure(uid !== req.actor.uid, 'Outro administrador deve alterar seu acesso.', 403); const user = await db().collection('usuarios').doc(uid).get(); ensure(user.exists, 'Usuário não encontrado.'); await db().collection(COLLECTIONS.access).doc(uid).set({ role: req.body.role, enabled: req.body.enabled !== false, by: req.actor.uid, at: new Date().toISOString() }); res.json({ ok: true }); }));
+    app.put('/access/:id', route(async (req, res) => { adminAccess(req.actor); const uid = id(req.params.id); ensure(['recepcao', 'vendedor', 'coordenacao', 'admin', 'leitura'].includes(req.body.role), 'Perfil inválido.'); ensure(uid !== req.actor.uid, 'Outro administrador deve alterar seu acesso.', 403); const user = await db().collection('usuarios').doc(uid).get(); ensure(user.exists, 'Usuário não encontrado.'); await db().collection(COLLECTIONS.access).doc(uid).set({ role: req.body.role, enabled: req.body.enabled !== false, by: req.actor.uid, at: new Date().toISOString() }); res.json({ ok: true }); }));
     app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => { if (error instanceof CrmError) {
         res.status(error.status).json({ message: error.message });
         return;
@@ -311,14 +308,12 @@ export function createCrmApp(authentication: express.RequestHandler = authMiddle
     return app;
 }
 async function validateReferences(tx: FirebaseFirestore.Transaction, o: Opportunity) {
-    for (const uid of [...new Set([o.ownerId, o.estimatorId].filter(Boolean))]) {
-        const [u, access] = await Promise.all([tx.get(db().collection('usuarios').doc(id(uid))), tx.get(db().collection(COLLECTIONS.access).doc(id(uid)))]);
+    if (o.ownerId) {
+        const uid = id(o.ownerId);
+        const [u, access] = await Promise.all([tx.get(db().collection('usuarios').doc(uid)), tx.get(db().collection(COLLECTIONS.access).doc(uid))]);
         ensure(u.exists && u.data()?.statusConta !== false && access.data()?.enabled !== false, 'Responsável não está ativo.');
         const role = access.data()?.role || 'leitura';
-        if (uid === o.ownerId)
-            ensure(['vendedor', 'admin', 'coordenacao'].includes(role), 'Responsável precisa ter perfil de vendedor, coordenação ou administrador no CRM.');
-        if (uid === o.estimatorId)
-            ensure(['orcamentista', 'admin', 'coordenacao'].includes(role), 'Orçamentista precisa ter perfil compatível no CRM.');
+        ensure(['vendedor', 'admin', 'coordenacao'].includes(role), 'Responsável precisa ter perfil de vendedor, coordenação ou administrador no CRM.');
     }
 }
 export async function runArchiveSweep(now = new Date().toISOString()) {
