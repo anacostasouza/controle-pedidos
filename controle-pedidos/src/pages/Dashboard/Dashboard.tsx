@@ -28,7 +28,7 @@ import {
 import { tiposServico } from "../../types/tipoServicos";
 import { STATUS_SEQUENCE_DEFAULT } from "../../types/StatusPedidos";
 import { gerarOpcoesStatus, convertToTimestamp } from "./utils/dashboardUtils";
-import { getTodasEtapasDoPedido } from "../../utils/FirestoreUtils";
+import { fetchAllServicosStatus, getTodasEtapasDoPedido } from "../../utils/FirestoreUtils";
 
 import { podeEditarPedido as podeEditarPedidoUtils, podeMarcarEntregue, podeEditarPrazoEntrega } from "../../utils/PermissionUtils";
 
@@ -64,6 +64,7 @@ export default function Dashboard() {
   const [lastEntregas, setLastEntregas] = useState<number[]>([]);
   const [lastIds, setLastIds] = useState<string[]>([]);
   const [lastResponsaveis, setLastResponsaveis] = useState<string[]>([]);
+  const [fetchError, setFetchError] = useState("");
   const totalPages = Math.ceil(totalPedidosFiltrados / itemsPerPage);
 
   const normalizeResponsavelTerm = (value: string): string =>
@@ -93,10 +94,65 @@ export default function Dashboard() {
     return () => unsubscribeAuth();
   }, [navigate]);
 
+  const buildFetchParams = useCallback(
+    (page = currentPage): Record<string, string> => {
+      const responsavelPrefixoRaw = filtroResponsavel.trim();
+      const responsavelPrefixoNormalizado = normalizeResponsavelTerm(responsavelPrefixoRaw);
+      const usarPrefixoResponsavel = responsavelPrefixoNormalizado.length >= 2;
+
+      const params: Record<string, string> = {
+        filtroTipo: filtroServico,
+        filtroSubTipo,
+        filtroStatus,
+        filtroAtrasados: filtroAtrasados ? "true" : "",
+        itensPorPagina: itemsPerPage.toString(),
+        porPagina: itemsPerPage.toString(),
+        pagina: page.toString(),
+        filtroCliente: buscaCliente.trim(),
+        filtroRequerArte: filtroRequerArte ?? "",
+        filtroRequerGalpao: filtroRequerGalpao ?? "",
+        filtroOcultarEntregues: "true",
+      };
+
+      if (usarPrefixoResponsavel) {
+        params.filtroResponsavelNomePrefixo = responsavelPrefixoRaw;
+      }
+
+      if (page > 1 && lastEntregas[page - 2]) {
+        params.lastEntrega = lastEntregas[page - 2].toString();
+        if (lastIds[page - 2]) {
+          params.lastId = lastIds[page - 2];
+        }
+        if (usarPrefixoResponsavel && lastResponsaveis[page - 2]) {
+          params.lastResponsavelNome = lastResponsaveis[page - 2];
+        }
+      }
+
+      return params;
+    },
+    [
+      filtroServico,
+      filtroSubTipo,
+      filtroStatus,
+      filtroResponsavel,
+      filtroAtrasados,
+      buscaCliente,
+      currentPage,
+      itemsPerPage,
+      filtroRequerArte,
+      filtroRequerGalpao,
+      lastEntregas,
+      lastIds,
+      lastResponsaveis,
+    ]
+  );
+
   const debouncedFetchPedidos = useCallback(
-    debounce(async (params) => {
+    debounce(async (params: Record<string, string>) => {
       setLoading(true);
+      setFetchError("");
       const token = (await getAuth().currentUser?.getIdToken()) || "";
+      const pageIndex = Math.max(0, (Number(params.pagina) || 1) - 1);
       try {
         const data = await buscarPedidos(params, token);
 
@@ -119,7 +175,7 @@ export default function Dashboard() {
         if (data.nextLastEntrega) {
           setLastEntregas((prev) => {
             const arr = [...prev];
-            arr[currentPage - 1] = data.nextLastEntrega;
+            arr[pageIndex] = data.nextLastEntrega;
             return arr;
           });
         }
@@ -127,7 +183,7 @@ export default function Dashboard() {
         if (data.nextLastId) {
           setLastIds((prev) => {
             const arr = [...prev];
-            arr[currentPage - 1] = data.nextLastId;
+            arr[pageIndex] = data.nextLastId;
             return arr;
           });
         }
@@ -135,70 +191,34 @@ export default function Dashboard() {
         if (data.nextLastResponsavelNome) {
           setLastResponsaveis((prev) => {
             const arr = [...prev];
-            arr[currentPage - 1] = data.nextLastResponsavelNome;
+            arr[pageIndex] = data.nextLastResponsavelNome;
             return arr;
           });
         }
-
       } catch (error) {
+        setFetchError(
+          error instanceof Error
+            ? error.message
+            : "Não foi possível carregar os pedidos com os filtros selecionados."
+        );
         if (import.meta.env.DEV) {
           console.log("Erro ao buscar pedidos:", error);
         }
       } finally {
         setLoading(false);
       }
-    }, 400),
+    }, 300),
     []
   );
 
   useEffect(() => {
-    const responsavelPrefixoRaw = filtroResponsavel.trim();
-    const responsavelPrefixoNormalizado = normalizeResponsavelTerm(responsavelPrefixoRaw);
-    const usarPrefixoResponsavel = responsavelPrefixoNormalizado.length >= 2;
-
-    const params: Record<string, string> = {
-      filtroTipo: filtroServico,
-      filtroSubTipo,
-      filtroStatus,
-      filtroAtrasados: (!usarPrefixoResponsavel && filtroAtrasados) ? "true" : "",
-      porPagina: itemsPerPage.toString(),
-      filtroCliente: buscaCliente,
-      filtroRequerArte: filtroRequerArte ?? "",
-      filtroRequerGalpao: filtroRequerGalpao ?? "",
-      filtroOcultarEntregues: usarPrefixoResponsavel ? "" : "true",
-    };
-
-    if (usarPrefixoResponsavel) {
-      params.filtroResponsavelNomePrefixo = responsavelPrefixoRaw;
-    }
-
-    if (currentPage > 1 && lastEntregas[currentPage - 2]) {
-      params.lastEntrega = lastEntregas[currentPage - 2].toString();
-      if (lastIds[currentPage - 2]) {
-        params.lastId = lastIds[currentPage - 2];
-      }
-      if (usarPrefixoResponsavel && lastResponsaveis[currentPage - 2]) {
-        params.lastResponsavelNome = lastResponsaveis[currentPage - 2];
-      }
-    }
-    
+    const params = buildFetchParams(currentPage);
     debouncedFetchPedidos(params);
-    
+
     return () => {
       debouncedFetchPedidos.cancel();
     };
-  }, [
-    filtroServico,
-    filtroSubTipo,
-    filtroStatus,
-    filtroResponsavel,
-    filtroAtrasados,
-    buscaCliente,
-    currentPage,
-    itemsPerPage,
-    filtroRequerArte,
-    filtroRequerGalpao,
-  ]);
+  }, [buildFetchParams, currentPage, debouncedFetchPedidos]);
 
 
 
@@ -222,11 +242,26 @@ export default function Dashboard() {
       const tipoSelecionado = tiposServico.find(
         (t) => t.value === filtroServico
       );
-      if (tipoSelecionado?.subTipos)
+      if (tipoSelecionado?.subTipos && tipoSelecionado.subTipos.length > 0) {
         setSubTipoOptions(tipoSelecionado.subTipos);
-      else {
-        setSubTipoOptions([]);
-        setFiltroSubTipo("");
+      } else {
+        try {
+          const servicos = await fetchAllServicosStatus();
+          const subTiposDinamicos = Array.from(
+            new Set(
+              servicos
+                .filter((s) => s.tipo === filtroServico && s.subTipo)
+                .map((s) => s.subTipo as SubTipoServicoValue)
+            )
+          ).map((v) => ({ value: v, label: v }));
+          setSubTipoOptions(subTiposDinamicos);
+          if (!subTiposDinamicos.length) {
+            setFiltroSubTipo("");
+          }
+        } catch {
+          setSubTipoOptions([]);
+          setFiltroSubTipo("");
+        }
       }
     }
     atualizarOpcoes();
@@ -300,19 +335,7 @@ export default function Dashboard() {
       await marcarComoEntregueBackend(pedidoId);
       alert("Pedido marcado como entregue!");
       // Recarregar dados após sucesso
-      const params: Record<string, string> = {
-        filtroTipo: filtroServico,
-        filtroSubTipo,
-        filtroStatus,
-        filtroResponsavelUid: filtroResponsavel,
-        filtroAtrasados: filtroAtrasados ? "true" : "",
-        porPagina: itemsPerPage.toString(),
-        filtroCliente: buscaCliente,
-        filtroRequerArte: filtroRequerArte ?? "",
-        filtroRequerGalpao: filtroRequerGalpao ?? "",
-        filtroOcultarEntregues: "true"
-      };
-      debouncedFetchPedidos(params);
+      debouncedFetchPedidos(buildFetchParams(currentPage));
     } catch (error) {
       console.error("Erro ao marcar como entregue:", error);
       alert("Erro ao atualizar pedido.");
@@ -333,6 +356,8 @@ export default function Dashboard() {
     filtroResponsavel,
     filtroAtrasados,
     buscaCliente,
+    filtroRequerArte,
+    filtroRequerGalpao,
   ]);
 
   useEffect(() => {
@@ -383,6 +408,41 @@ export default function Dashboard() {
         navigate={navigate}
         totalPedidosFiltrados={totalPedidosFiltrados}
       />
+
+      {fetchError && (
+        <div
+          role="alert"
+          style={{
+            margin: "12px 0",
+            padding: "12px 16px",
+            borderRadius: "8px",
+            backgroundColor: "#fef2f2",
+            border: "1px solid #fecaca",
+            color: "#991b1b",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+          }}
+        >
+          <span>{fetchError}</span>
+          <button
+            type="button"
+            onClick={() => debouncedFetchPedidos(buildFetchParams(currentPage))}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "6px",
+              border: "1px solid #991b1b",
+              backgroundColor: "#ffffff",
+              color: "#991b1b",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      )}
 
       <PedidosTable
         pedidosFiltrados={pedidosFiltrados}

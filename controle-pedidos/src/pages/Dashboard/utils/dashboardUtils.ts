@@ -2,7 +2,7 @@
 import { Timestamp } from "firebase/firestore";
 import type { Pedido, StatusPedido } from "../../../types/Pedidos";
 import {type TipoServicoValue, type SubTipoServicoValue } from "../../../types/Servicos";
-import { fetchStatusSequence } from "../../../utils/FirestoreUtils";
+import { fetchAllServicosStatus, fetchStatusSequence } from "../../../utils/FirestoreUtils";
 
 export function convertToTimestamp(ts: any): Timestamp | null {
   if (!ts) return null;
@@ -66,12 +66,36 @@ export function isPedidoAtrasado(entrega?: any): boolean {
 
 const statusCache = new Map<string, StatusPedido[]>();
 
+let allServicosCache: { tipo: string; subTipo?: string | null; sequenciaStatus: string[] }[] | null = null;
+
 export async function gerarOpcoesStatus(
   pedidos: Pedido[],
   filtroServico: TipoServicoValue | "",
   filtroSubTipo: SubTipoServicoValue | ""
 ): Promise<string[]> {
   const statusSet = new Set<string>();
+
+  if (filtroServico) {
+    try {
+      const seq = await fetchStatusSequence(filtroServico, filtroSubTipo || undefined);
+      seq.forEach((s) => statusSet.add(s));
+    } catch {
+      // ignore
+    }
+  } else {
+    try {
+      if (!allServicosCache) {
+        allServicosCache = await fetchAllServicosStatus();
+      }
+      for (const item of allServicosCache) {
+        if (item.tipo === "ARTE" || item.tipo === "GALPAO") continue;
+        (item.sequenciaStatus || []).forEach((s) => statusSet.add(s));
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   for (const p of pedidos) {
     if (filtroServico && p.servico.tipo !== filtroServico) continue;
     if (filtroSubTipo && p.servico.subTipo !== filtroSubTipo) continue;

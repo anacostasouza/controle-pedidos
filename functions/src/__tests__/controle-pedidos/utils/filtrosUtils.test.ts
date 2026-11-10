@@ -1,5 +1,9 @@
 import { Timestamp } from "firebase-admin/firestore";
-import { aplicarFiltrosPedidos } from "../../../controle-pedidos/utils/filtrosUtils";
+import {
+  aplicarFiltrosPedidos,
+  filtrarPedidosEmMemoria,
+  ordenarPedidosPorEntrega,
+} from "../../../controle-pedidos/utils/filtrosUtils";
 
 describe("filtrosUtils - Controle de Pedidos", () => {
   let mockQuery: any;
@@ -283,6 +287,89 @@ describe("filtrosUtils - Controle de Pedidos", () => {
       );
       expect(mockQuery.where).toHaveBeenCalledWith("servico.tipo", "==", "Gravação");
       expect(mockQuery.where).toHaveBeenCalledWith("servico.subTipo", "==", "Laser");
+    });
+  });
+
+  describe("filtrarPedidosEmMemoria e ordenarPedidosPorEntrega", () => {
+    const nowMs = new Date("2026-11-10T12:00:00Z").getTime();
+    const pastTs = { _seconds: Math.floor((nowMs - 86400000) / 1000), _nanoseconds: 0 };
+    const futureTs = { _seconds: Math.floor((nowMs + 86400000) / 1000), _nanoseconds: 0 };
+
+    const samplePedidos = [
+      {
+        id: "p1",
+        numeroPedido: 1001,
+        nomeCliente: "PADARIA ESTRELA LTDA",
+        servico: { tipo: "IMPRESSAO_DIGITAL", subTipo: null },
+        responsavel: "Ana Souza",
+        responsavelUid: "uid-ana",
+        statusAtual: "Em Produção",
+        requerArte: true,
+        requerGalpao: false,
+        prazos: { entrega: pastTs },
+      },
+      {
+        id: "p2",
+        numeroPedido: 1002,
+        nomeCliente: "MERCADO CENTRAL",
+        servico: { tipo: "COMUNICACAO_VISUAL", subTipo: "PLACA_SIMPLES" },
+        responsavel: "João Silva",
+        responsavelUid: "uid-joao",
+        responsavelNomeNormalizado: "JOAO SILVA",
+        statusAtual: "Entregue",
+        requerArte: false,
+        requerGalpao: true,
+        prazos: { entrega: pastTs },
+      },
+      {
+        id: "p3",
+        numeroPedido: 1003,
+        nomeCliente: "PADARIA CENTRAL",
+        servico: { tipo: "IMPRESSAO_DIGITAL", subTipo: null },
+        responsavel: "João Silva",
+        responsavelUid: "uid-joao",
+        statusAtual: "Novo",
+        requerArte: true,
+        requerGalpao: false,
+        prazos: { entrega: futureTs },
+      },
+    ];
+
+    test("filtra cliente por nome parcial ignorando acentos e caixa", () => {
+      const res = filtrarPedidosEmMemoria(samplePedidos, { filtroCliente: "padaria" }, nowMs);
+      expect(res.map((p) => p.id)).toEqual(["p1", "p3"]);
+    });
+
+    test("filtra numeroPedido com espaços ao redor", () => {
+      const res = filtrarPedidosEmMemoria(samplePedidos, { filtroCliente: " 1002 " }, nowMs);
+      expect(res.map((p) => p.id)).toEqual(["p2"]);
+    });
+
+    test("filtra responsável por prefixo mesmo em pedidos legados sem responsavelNomeNormalizado", () => {
+      const res = filtrarPedidosEmMemoria(
+        samplePedidos,
+        { filtroResponsavelNomePrefixo: "joão" },
+        nowMs
+      );
+      expect(res.map((p) => p.id)).toEqual(["p2", "p3"]);
+    });
+
+    test("combina filtroResponsavelNomePrefixo com filtroAtrasados e filtroOcultarEntregues sem conflitos", () => {
+      const res = filtrarPedidosEmMemoria(
+        samplePedidos,
+        {
+          filtroResponsavelNomePrefixo: "Ana",
+          filtroAtrasados: "true",
+          filtroOcultarEntregues: "true",
+        },
+        nowMs
+      );
+      expect(res.map((p) => p.id)).toEqual(["p1"]);
+    });
+
+    test("ordena pedidos por data de entrega crescente", () => {
+      const sorted = ordenarPedidosPorEntrega([samplePedidos[2], samplePedidos[0]]);
+      expect(sorted.map((p) => p.id)).toEqual(["p1", "p3"]);
     });
   });
 });

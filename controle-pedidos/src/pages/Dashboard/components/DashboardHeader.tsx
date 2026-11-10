@@ -53,22 +53,6 @@ export function DashboardHeader(props: Readonly<DashboardHeaderProps>) {
   const handleTipoChange = (tipoSelecionado: TipoServicoValue | "") => {
     props.setFiltroServico(tipoSelecionado);
     props.setFiltroSubTipo("");
-
-    fetchAllServicosStatus().then((servicos) => {
-      const subTiposDoTipo = servicos
-        .filter((s) => s.tipo === tipoSelecionado && s.subTipo)
-        .map((s) => ({
-          value: s.subTipo as SubTipoServicoValue, 
-          label: s.subTipo!,
-        }));
-
-      props.setFiltroSubTipo("");
-      props.subTipoOptions.splice(
-        0,
-        props.subTipoOptions.length,
-        ...subTiposDoTipo
-      );
-    });
   };
 
   return (

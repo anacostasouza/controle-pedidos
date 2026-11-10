@@ -1,6 +1,6 @@
 import * as admin from "firebase-admin";
 import express from "express";
-import { FieldPath, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { deepConvertTimestamps } from "../../../utils/deepConvertTimestamps";
 import {
   podeEditarPedidoBackend,
@@ -9,8 +9,116 @@ import {
   podeEditarStatusGalpao,
   podeMarcarEntregue,
 } from "../../../utils/permissaoUtils";
-import { aplicarFiltrosPedidos, normalizarTexto } from "../../utils/filtrosUtils";
+import {
+  extractTimestampMs,
+  filtrarPedidosEmMemoria,
+  normalizarTexto,
+  ordenarPedidosPorEntrega,
+} from "../../utils/filtrosUtils";
 import { logError } from "../../../utils/logger";
+
+function buildCandidatePedidosQuery(
+  db: FirebaseFirestore.Firestore,
+  reqQuery: any
+): FirebaseFirestore.Query {
+  const col = db.collection("pedidos");
+  const termoCliente =
+    typeof reqQuery.filtroCliente === "string" ? reqQuery.filtroCliente.trim() : "";
+
+  if (termoCliente && /^\d+$/.test(termoCliente)) {
+    return col.where("numeroPedido", "==", Number(termoCliente));
+  }
+  if (reqQuery.filtroStatus && reqQuery.filtroAtrasados !== "true") {
+    return col.where("statusAtual", "==", String(reqQuery.filtroStatus));
+  }
+  if (reqQuery.filtroResponsavelUid) {
+    return col.where("responsavelUid", "==", String(reqQuery.filtroResponsavelUid));
+  }
+  if (reqQuery.filtroOcultarEntregues === "true" || reqQuery.filtroAtrasados === "true") {
+    return col.where("statusAtual", "!=", "Entregue");
+  }
+  if (reqQuery.filtroTipo) {
+    return col.where("servico.tipo", "==", String(reqQuery.filtroTipo));
+  }
+  if (reqQuery.dataInicioInclusao) {
+    return col.where(
+      "criadoEm",
+      ">=",
+      Timestamp.fromDate(new Date(String(reqQuery.dataInicioInclusao)))
+    );
+  }
+  if (reqQuery.dataInicioRetirada) {
+    return col.where(
+      "prazos.entrega",
+      ">=",
+      Timestamp.fromDate(new Date(`${String(reqQuery.dataInicioRetirada)}T00:00:00.000Z`))
+    );
+  }
+  return col.orderBy("criadoEm", "desc").limit(1000);
+}
+
+async function executarBuscaPedidos(
+  db: FirebaseFirestore.Firestore,
+  reqQuery: any,
+  defaultLimit = 20
+) {
+  const rawLimit = reqQuery.itensPorPagina || reqQuery.porPagina;
+  const limit = Math.max(1, Math.min(200, Number(rawLimit) || defaultLimit));
+  const rawPage = reqQuery.pagina || reqQuery.page;
+  const pageNum = rawPage ? Math.max(1, Number(rawPage) || 1) : null;
+
+  const snapshot = await buildCandidatePedidosQuery(db, reqQuery).get();
+  const allDocs = snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as any[];
+
+  const filtered = ordenarPedidosPorEntrega(filtrarPedidosEmMemoria(allDocs, reqQuery));
+  const total = filtered.length;
+
+  let pedidos: any[];
+  if (pageNum !== null) {
+    const start = (pageNum - 1) * limit;
+    pedidos = filtered.slice(start, start + limit);
+  } else if (reqQuery.lastEntrega && !Number.isNaN(Number(reqQuery.lastEntrega))) {
+    const lastMs = Number(reqQuery.lastEntrega);
+    const lastId = typeof reqQuery.lastId === "string" ? reqQuery.lastId : "";
+    const startIndex = filtered.findIndex((p) => {
+      const ms = extractTimestampMs(p.prazos?.entrega);
+      if (ms === null) return true;
+      if (ms > lastMs) return true;
+      if (ms === lastMs && lastId && String(p.id) > lastId) return true;
+      return false;
+    });
+    pedidos = startIndex >= 0 ? filtered.slice(startIndex, startIndex + limit) : [];
+  } else {
+    pedidos = filtered.slice(0, limit);
+  }
+
+  let nextLastEntrega: number | null = null;
+  let nextLastId: string | null = null;
+  let nextLastResponsavelNome: string | null = null;
+  const ultimoPedido = pedidos.at(-1);
+  if (ultimoPedido) {
+    const ms = extractTimestampMs(ultimoPedido.prazos?.entrega);
+    if (ms !== null) {
+      nextLastEntrega = ms;
+    }
+    nextLastId = ultimoPedido.id;
+    const responsavelNome = ultimoPedido.responsavelNomeNormalizado
+      ? String(ultimoPedido.responsavelNomeNormalizado)
+      : normalizarTexto(String(ultimoPedido.responsavel || ""));
+    nextLastResponsavelNome = responsavelNome || null;
+  }
+
+  return {
+    pedidos,
+    nextLastEntrega,
+    nextLastId,
+    nextLastResponsavelNome,
+    total,
+  };
+}
 
 export function createProtectedDashboardRouter(): express.Router {
   const router = express.Router();
@@ -309,81 +417,8 @@ export function createProtectedDashboardRouter(): express.Router {
   router.get("/dashboard/buscarPedidos", async (req, res) => {
     try {
       const db = admin.firestore();
-
-      let queryRef: FirebaseFirestore.Query = db.collection("pedidos");
-      queryRef = aplicarFiltrosPedidos(queryRef, req.query);
-      const responsavelPrefixoRaw = typeof req.query.filtroResponsavelNomePrefixo === "string"
-        ? req.query.filtroResponsavelNomePrefixo
-        : "";
-      const responsavelPrefixo = normalizarTexto(responsavelPrefixoRaw);
-      const usarPrefixoResponsavel = responsavelPrefixo.length >= 2;
-
-
-      if (usarPrefixoResponsavel) {
-        queryRef = queryRef
-          .orderBy("responsavelNomeNormalizado", "asc")
-          .orderBy("prazos.entrega", "asc");
-      } else {
-        queryRef = queryRef
-          .orderBy("prazos.entrega", "asc");
-      }
-
-      const { itensPorPagina = 20, lastEntrega, lastId, lastResponsavelNome } = req.query;
-      if (lastEntrega && !Number.isNaN(Number(lastEntrega))) {
-        const lastTimestamp = Timestamp.fromMillis(Number(lastEntrega));
-        if (usarPrefixoResponsavel && typeof lastResponsavelNome === "string" && lastResponsavelNome.trim()) {
-          queryRef = queryRef.startAfter(lastResponsavelNome, lastTimestamp);
-        } else {
-          queryRef = queryRef.startAfter(lastTimestamp);
-        }
-      }
-
-      const limiteBusca = Number(itensPorPagina) + 10;
-      queryRef = queryRef.limit(Number(limiteBusca));
-
-      try {
-        const snapshot = await queryRef.get();
-        const pedidos = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as any[];
-
-        let nextLastEntrega: number | null = null;
-        let nextLastId: string | null = null;
-        let nextLastResponsavelNome: string | null = null;
-        const ultimoPedido = pedidos.at(-1);
-        if (ultimoPedido?.prazos?.entrega) {
-          const entrega = ultimoPedido.prazos.entrega;
-          if (typeof entrega._seconds === "number") {
-            nextLastEntrega = entrega._seconds * 1000;
-          } else if (typeof entrega.seconds === "number") {
-            nextLastEntrega = entrega.seconds * 1000;
-          }
-          nextLastId = ultimoPedido.id;
-          const responsavelNome = ultimoPedido.responsavelNomeNormalizado
-            ? String(ultimoPedido.responsavelNomeNormalizado)
-            : normalizarTexto(String(ultimoPedido.responsavel || ""));
-          nextLastResponsavelNome = responsavelNome || null;
-        }
-
-        let total: number | null = 0;
-        try {
-          let countRef: FirebaseFirestore.Query = db.collection("pedidos");
-          countRef = aplicarFiltrosPedidos(countRef, req.query);
-
-          // @ts-ignore
-          const countSnap = await countRef.count().get();
-          // @ts-ignore
-          total = countSnap.data().count || 0;
-        } catch {
-          total = null;
-        }
-
-        return res.json({ pedidos, nextLastEntrega, nextLastId, nextLastResponsavelNome, total });
-      } catch (error) {
-        logError("Erro ao executar query Firestore:", error);
-        return res.status(500).json({ message: "Erro ao buscar pedidos" });
-      }
+      const resultado = await executarBuscaPedidos(db, req.query, 10);
+      return res.json(resultado);
     } catch (error) {
       logError("Erro ao buscar pedidos:", error);
       return res.status(500).json({ message: "Erro ao buscar pedidos" });
@@ -429,94 +464,17 @@ export function createProtectedDashboardRouter(): express.Router {
   router.get("/relatorios/buscarPedidos", async (req, res) => {
     try {
       const db = admin.firestore();
-
-      let queryRef: FirebaseFirestore.Query = db.collection("pedidos");
-      queryRef = aplicarFiltrosPedidos(queryRef, req.query);
-
-      if (req.query.dataInicioInclusao) {
-        queryRef = queryRef.where(
-          "criadoEm",
-          ">=",
-          Timestamp.fromDate(new Date(String(req.query.dataInicioInclusao)))
-        );
-      }
-      if (req.query.dataFimInclusao) {
-        const fim = new Date(String(req.query.dataFimInclusao) + "T23:59:59.999Z");
-        queryRef = queryRef.where("criadoEm", "<=", Timestamp.fromDate(fim));
-      }
-
-      if (req.query.dataInicioRetirada) {
-        const inicio = new Date(`${req.query.dataInicioRetirada}T00:00:00.000Z`);
-        queryRef = queryRef.where("prazos.entrega", ">=", Timestamp.fromDate(inicio));
-      }
-      if (req.query.dataFimRetirada) {
-        const fim = new Date(`${req.query.dataFimRetirada}T23:59:59.999Z`);
-        queryRef = queryRef.where("prazos.entrega", "<=", Timestamp.fromDate(fim));
-      }
-
-      queryRef = queryRef.orderBy("prazos.entrega", "asc");
-
-      const { itensPorPagina = 20, lastEntrega } = req.query;
-      if (lastEntrega && !Number.isNaN(Number(lastEntrega))) {
-        const lastTimestamp = Timestamp.fromMillis(Number(lastEntrega));
-        queryRef = queryRef.startAfter(lastTimestamp);
-      }
-      queryRef = queryRef.limit(Number(itensPorPagina));
-
-      const snapshot = await queryRef.get();
-      const pedidos = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        criadoEm: doc.data().criadoEm ?? null,
-        prazos: doc.data().prazos ?? {},
-      }));
-
-      let nextLastEntrega: number | null = null;
-      let nextLastId: string | null = null;
-      const ultimoDoc = snapshot.docs.at(-1);
-      if (ultimoDoc) {
-        const entrega = ultimoDoc.get("prazos.entrega");
-        if (typeof entrega._seconds === "number") {
-          nextLastEntrega = entrega._seconds * 1000;
-        } else if (typeof entrega.seconds === "number") {
-          nextLastEntrega = entrega.seconds * 1000;
-        }
-        nextLastId = ultimoDoc.id;
-      }
-
-      let total: number | null = 0;
-      try {
-        let countRef: FirebaseFirestore.Query = db.collection("pedidos");
-        countRef = aplicarFiltrosPedidos(countRef, req.query);
-
-        if (req.query.dataInicioInclusao) {
-          countRef = countRef.where(
-            "criadoEm",
-            ">=",
-            Timestamp.fromDate(new Date(String(req.query.dataInicioInclusao)))
-          );
-        }
-        if (req.query.dataFimInclusao) {
-          const fim = new Date(String(req.query.dataFimInclusao) + "T23:59:59.999Z");
-          countRef = countRef.where("criadoEm", "<=", Timestamp.fromDate(fim));
-        }
-        if (req.query.dataInicioRetirada) {
-          const inicio = new Date(`${req.query.dataInicioRetirada}T00:00:00.000Z`);
-          countRef = countRef.where("prazos.entrega", ">=", Timestamp.fromDate(inicio));
-        }
-        if (req.query.dataFimRetirada) {
-          const fim = new Date(`${req.query.dataFimRetirada}T23:59:59.999Z`);
-          countRef = countRef.where("prazos.entrega", "<=", Timestamp.fromDate(fim));
-        }
-        // @ts-ignore
-        const countSnap = await countRef.count().get();
-        // @ts-ignore
-        total = countSnap.data().count || 0;
-      } catch {
-        total = null;
-      }
-
-      return res.json({ pedidos, nextLastEntrega, nextLastId, total });
+      const resultado = await executarBuscaPedidos(db, req.query, 20);
+      return res.json({
+        pedidos: resultado.pedidos.map((p) => ({
+          ...p,
+          criadoEm: p.criadoEm ?? null,
+          prazos: p.prazos ?? {},
+        })),
+        nextLastEntrega: resultado.nextLastEntrega,
+        nextLastId: resultado.nextLastId,
+        total: resultado.total,
+      });
     } catch (error) {
       logError("Erro ao buscar pedidos:", error);
       return res.status(500).json({ message: "Erro ao buscar pedidos" });
