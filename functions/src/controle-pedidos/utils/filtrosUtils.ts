@@ -82,7 +82,13 @@ export function aplicarFiltrosPedidos(queryRef: FirebaseFirestore.Query, filtros
   return queryRef;
 }
 
-export function filtrarPedidosEmMemoria(pedidos: any[], filtros: any, nowMs = Date.now()): any[] {
+export function filtrarPedidosEmMemoria(
+  pedidos: any[],
+  filtros: any,
+  nowMs = Date.now(),
+  options: { exigirCamposDashboard?: boolean } = {}
+): any[] {
+  const { exigirCamposDashboard = false } = options;
   const termoCliente = typeof filtros.filtroCliente === "string" ? filtros.filtroCliente.trim() : "";
   const isClienteNumerico = termoCliente !== "" && /^\d+$/.test(termoCliente);
   const termoClienteNorm = termoCliente ? normalizarTexto(termoCliente) : "";
@@ -109,6 +115,13 @@ export function filtrarPedidosEmMemoria(pedidos: any[], filtros: any, nowMs = Da
     : null;
 
   return pedidos.filter((p) => {
+    if (exigirCamposDashboard && (!p || !p.servico || !p.statusAtual || !p.prazos)) {
+      return false;
+    }
+
+    const statusNorm = normalizarTexto(String(p.statusAtual || ""));
+    const isEntregue = statusNorm === "ENTREGUE" || Boolean(p.entregueEm);
+
     if (filtros.filtroTipo && p.servico?.tipo !== filtros.filtroTipo) {
       return false;
     }
@@ -158,9 +171,13 @@ export function filtrarPedidosEmMemoria(pedidos: any[], filtros: any, nowMs = Da
 
     const entregaMs = extractTimestampMs(p.prazos?.entrega);
 
+    if (exigirCamposDashboard && isEntregue) {
+      return false;
+    }
+
     // Prioridade: Atrasados > Status específico > Ocultar entregues
     if (filtros.filtroAtrasados === "true") {
-      if (p.statusAtual === "Entregue" || p.statusAtual === "Concluído") {
+      if (isEntregue || statusNorm === "CONCLUIDO") {
         return false;
       }
       if (entregaMs === null || entregaMs >= nowMs) {
@@ -171,7 +188,7 @@ export function filtrarPedidosEmMemoria(pedidos: any[], filtros: any, nowMs = Da
         return false;
       }
     } else if (filtros.filtroOcultarEntregues === "true") {
-      if (p.statusAtual === "Entregue") {
+      if (isEntregue) {
         return false;
       }
     }

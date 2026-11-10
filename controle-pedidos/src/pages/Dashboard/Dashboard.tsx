@@ -2,7 +2,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import debounce from "lodash.debounce";
 import { useNavigate } from "react-router-dom";
 import {
@@ -10,9 +10,7 @@ import {
   collection,
   doc,
   getDoc,
-  where,
   getDocs,
-  orderBy,
 } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
@@ -39,7 +37,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
-  const [_loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   const [buscaCliente, setBuscaCliente] = useState("");
   const [filtroServico, setFiltroServico] = useState<TipoServicoValue | "">("");
@@ -61,10 +59,9 @@ export default function Dashboard() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const [lastEntregas, setLastEntregas] = useState<number[]>([]);
-  const [lastIds, setLastIds] = useState<string[]>([]);
-  const [lastResponsaveis, setLastResponsaveis] = useState<string[]>([]);
   const [fetchError, setFetchError] = useState("");
+  const requestIdRef = useRef(0);
+  const prevSearchRef = useRef({ buscaCliente: "", filtroResponsavel: "" });
   const totalPages = Math.ceil(totalPedidosFiltrados / itemsPerPage);
 
   const normalizeResponsavelTerm = (value: string): string =>
@@ -118,16 +115,6 @@ export default function Dashboard() {
         params.filtroResponsavelNomePrefixo = responsavelPrefixoRaw;
       }
 
-      if (page > 1 && lastEntregas[page - 2]) {
-        params.lastEntrega = lastEntregas[page - 2].toString();
-        if (lastIds[page - 2]) {
-          params.lastId = lastIds[page - 2];
-        }
-        if (usarPrefixoResponsavel && lastResponsaveis[page - 2]) {
-          params.lastResponsavelNome = lastResponsaveis[page - 2];
-        }
-      }
-
       return params;
     },
     [
@@ -141,20 +128,28 @@ export default function Dashboard() {
       itemsPerPage,
       filtroRequerArte,
       filtroRequerGalpao,
-      lastEntregas,
-      lastIds,
-      lastResponsaveis,
     ]
   );
 
-  const debouncedFetchPedidos = useCallback(
-    debounce(async (params: Record<string, string>) => {
+  const fetchPedidos = useCallback(
+    async (params: Record<string, string>) => {
+      const fetchId = ++requestIdRef.current;
       setLoading(true);
       setFetchError("");
       const token = (await getAuth().currentUser?.getIdToken()) || "";
-      const pageIndex = Math.max(0, (Number(params.pagina) || 1) - 1);
       try {
         const data = await buscarPedidos(params, token);
+        if (fetchId !== requestIdRef.current) return;
+
+        const total = data.total || 0;
+        const reqPage = Math.max(1, Number(params.pagina) || 1);
+        const maxPage = Math.max(1, Math.ceil(total / itemsPerPage));
+
+        if (total > 0 && (data.pedidos || []).length === 0 && reqPage > maxPage) {
+          setTotalPedidosFiltrados(total);
+          setCurrentPage(maxPage);
+          return;
+        }
 
         const pedidosConvertidos = (data.pedidos || []).map((pedido: any) => ({
           ...pedido,
@@ -170,32 +165,9 @@ export default function Dashboard() {
         }));
 
         setPedidos(pedidosConvertidos);
-        setTotalPedidosFiltrados(data.total || 0);
-
-        if (data.nextLastEntrega) {
-          setLastEntregas((prev) => {
-            const arr = [...prev];
-            arr[pageIndex] = data.nextLastEntrega;
-            return arr;
-          });
-        }
-
-        if (data.nextLastId) {
-          setLastIds((prev) => {
-            const arr = [...prev];
-            arr[pageIndex] = data.nextLastId;
-            return arr;
-          });
-        }
-
-        if (data.nextLastResponsavelNome) {
-          setLastResponsaveis((prev) => {
-            const arr = [...prev];
-            arr[pageIndex] = data.nextLastResponsavelNome;
-            return arr;
-          });
-        }
+        setTotalPedidosFiltrados(total);
       } catch (error) {
+        if (fetchId !== requestIdRef.current) return;
         setFetchError(
           error instanceof Error
             ? error.message
@@ -205,20 +177,40 @@ export default function Dashboard() {
           console.log("Erro ao buscar pedidos:", error);
         }
       } finally {
-        setLoading(false);
+        if (fetchId === requestIdRef.current) {
+          setLoading(false);
+        }
       }
+    },
+    [itemsPerPage]
+  );
+
+  const debouncedFetchPedidos = useCallback(
+    debounce((params: Record<string, string>) => {
+      void fetchPedidos(params);
     }, 300),
-    []
+    [fetchPedidos]
   );
 
   useEffect(() => {
     const params = buildFetchParams(currentPage);
-    debouncedFetchPedidos(params);
+    const searchChanged =
+      prevSearchRef.current.buscaCliente !== buscaCliente ||
+      prevSearchRef.current.filtroResponsavel !== filtroResponsavel;
+
+    prevSearchRef.current = { buscaCliente, filtroResponsavel };
+
+    if (searchChanged) {
+      debouncedFetchPedidos(params);
+    } else {
+      debouncedFetchPedidos.cancel();
+      void fetchPedidos(params);
+    }
 
     return () => {
       debouncedFetchPedidos.cancel();
     };
-  }, [buildFetchParams, currentPage, debouncedFetchPedidos]);
+  }, [buildFetchParams, buscaCliente, currentPage, debouncedFetchPedidos, fetchPedidos, filtroResponsavel]);
 
 
 
@@ -335,7 +327,7 @@ export default function Dashboard() {
       await marcarComoEntregueBackend(pedidoId);
       alert("Pedido marcado como entregue!");
       // Recarregar dados após sucesso
-      debouncedFetchPedidos(buildFetchParams(currentPage));
+      void fetchPedidos(buildFetchParams(currentPage));
     } catch (error) {
       console.error("Erro ao marcar como entregue:", error);
       alert("Erro ao atualizar pedido.");
@@ -346,9 +338,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     setCurrentPage(1);
-    setLastEntregas([]);
-    setLastIds([]);
-    setLastResponsaveis([]);
   }, [
     filtroServico,
     filtroSubTipo,
@@ -428,7 +417,7 @@ export default function Dashboard() {
           <span>{fetchError}</span>
           <button
             type="button"
-            onClick={() => debouncedFetchPedidos(buildFetchParams(currentPage))}
+            onClick={() => void fetchPedidos(buildFetchParams(currentPage))}
             style={{
               padding: "6px 12px",
               borderRadius: "6px",
@@ -444,24 +433,40 @@ export default function Dashboard() {
         </div>
       )}
 
-      <PedidosTable
-        pedidosFiltrados={pedidosFiltrados}
-        etapasPorPedido={etapasPorPedido}
-        userSetor={userSetor}
-        userDisplayName={userDisplayName}
-        userUid={getAuth().currentUser?.uid || ""}
-        handleMarcarComoEntregue={handleMarcarComoEntregue}
-        shouldShowActionsColumn={shouldShowActionsColumn}
-        navigate={navigate}
-        podeEditarPedido={podeEditarPedido}
-        podeEditarPrazo={podeEditarPrazo}
-      />
+      {loading && (
+        <div
+          role="status"
+          style={{
+            margin: "8px 0",
+            fontSize: "13px",
+            color: "#475569",
+            fontWeight: 500,
+          }}
+        >
+          Carregando pedidos…
+        </div>
+      )}
+
+      <div style={{ opacity: loading ? 0.55 : 1, transition: "opacity 0.15s ease" }}>
+        <PedidosTable
+          pedidosFiltrados={pedidosFiltrados}
+          etapasPorPedido={etapasPorPedido}
+          userSetor={userSetor}
+          userDisplayName={userDisplayName}
+          userUid={getAuth().currentUser?.uid || ""}
+          handleMarcarComoEntregue={handleMarcarComoEntregue}
+          shouldShowActionsColumn={shouldShowActionsColumn}
+          navigate={navigate}
+          podeEditarPedido={podeEditarPedido}
+          podeEditarPrazo={podeEditarPrazo}
+        />
+      </div>
 
       {totalPages > 1 && (
         <div className="pagination">
           <button
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((prev) => prev - 1)}
+            disabled={loading || currentPage === 1}
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
           >
             Anterior
           </button>
@@ -469,8 +474,8 @@ export default function Dashboard() {
             Página {currentPage} de {totalPages}
           </span>
           <button
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((prev) => prev + 1)}
+            disabled={loading || currentPage >= totalPages}
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
           >
             Próximo
           </button>

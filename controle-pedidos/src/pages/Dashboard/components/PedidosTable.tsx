@@ -17,13 +17,16 @@ interface PedidosTableProps {
 }
 
 export function PedidosTable(props: Readonly<PedidosTableProps>) {
-  if (!props.pedidosFiltrados.length) 
+  const pedidosValidos = props.pedidosFiltrados.filter(
+    (p) => p && p.servico && p.statusAtual && p.prazos
+  );
+
+  if (!pedidosValidos.length)
     return (
       <div className="no-results">
         <p>Nenhum pedido encontrado.</p>
       </div>
-    )
-
+    );
 
   return (
     <div className="table-responsive">
@@ -41,9 +44,7 @@ export function PedidosTable(props: Readonly<PedidosTableProps>) {
           </tr>
         </thead>
         <tbody>
-          {props.pedidosFiltrados
-            .filter(p => p && p.servico && p.statusAtual && p.prazos)
-            .map((pedido) => {
+          {pedidosValidos.map((pedido) => {
               try {
                 return (
                   <PedidoRow

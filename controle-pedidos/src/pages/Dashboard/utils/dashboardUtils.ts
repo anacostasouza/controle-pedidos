@@ -112,5 +112,7 @@ export async function gerarOpcoesStatus(
     }
     statusDisponiveis.forEach((s) => statusSet.add(s));
   }
-  return Array.from(statusSet);
+  return Array.from(statusSet).filter(
+    (s) => s.trim().toLowerCase() !== "entregue"
+  );
 }

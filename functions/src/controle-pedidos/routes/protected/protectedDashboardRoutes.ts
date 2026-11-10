@@ -60,20 +60,27 @@ function buildCandidatePedidosQuery(
 async function executarBuscaPedidos(
   db: FirebaseFirestore.Firestore,
   reqQuery: any,
-  defaultLimit = 20
+  defaultLimit = 20,
+  exigirCamposDashboard = false
 ) {
-  const rawLimit = reqQuery.itensPorPagina || reqQuery.porPagina;
+  const effectiveQuery = exigirCamposDashboard
+    ? { ...reqQuery, filtroOcultarEntregues: "true" }
+    : reqQuery;
+
+  const rawLimit = effectiveQuery.itensPorPagina || effectiveQuery.porPagina;
   const limit = Math.max(1, Math.min(200, Number(rawLimit) || defaultLimit));
-  const rawPage = reqQuery.pagina || reqQuery.page;
+  const rawPage = effectiveQuery.pagina || effectiveQuery.page;
   const pageNum = rawPage ? Math.max(1, Number(rawPage) || 1) : null;
 
-  const snapshot = await buildCandidatePedidosQuery(db, reqQuery).get();
+  const snapshot = await buildCandidatePedidosQuery(db, effectiveQuery).get();
   const allDocs = snapshot.docs.map((doc) => ({
     id: doc.id,
     ...doc.data(),
   })) as any[];
 
-  const filtered = ordenarPedidosPorEntrega(filtrarPedidosEmMemoria(allDocs, reqQuery));
+  const filtered = ordenarPedidosPorEntrega(
+    filtrarPedidosEmMemoria(allDocs, effectiveQuery, Date.now(), { exigirCamposDashboard })
+  );
   const total = filtered.length;
 
   let pedidos: any[];
@@ -417,7 +424,7 @@ export function createProtectedDashboardRouter(): express.Router {
   router.get("/dashboard/buscarPedidos", async (req, res) => {
     try {
       const db = admin.firestore();
-      const resultado = await executarBuscaPedidos(db, req.query, 10);
+      const resultado = await executarBuscaPedidos(db, req.query, 10, true);
       return res.json(resultado);
     } catch (error) {
       logError("Erro ao buscar pedidos:", error);

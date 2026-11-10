@@ -371,5 +371,43 @@ describe("filtrosUtils - Controle de Pedidos", () => {
       const sorted = ordenarPedidosPorEntrega([samplePedidos[2], samplePedidos[0]]);
       expect(sorted.map((p) => p.id)).toEqual(["p1", "p3"]);
     });
+
+    test("exigirCamposDashboard descarta registros incompletos e pedidos entregues (por status ou entregueEm)", () => {
+      const pedidosMistos = [
+        ...samplePedidos,
+        {
+          id: "p-incompleto",
+          numeroPedido: 1004,
+          nomeCliente: "INCOMPLETO",
+          statusAtual: "Novo",
+          // sem servico e sem prazos
+        },
+        {
+          id: "p-entregue-em",
+          numeroPedido: 1005,
+          nomeCliente: "ENTREGUE COM DATA",
+          servico: { tipo: "IMPRESSAO_DIGITAL", subTipo: null },
+          statusAtual: "Concluído",
+          entregueEm: pastTs,
+          prazos: { entrega: pastTs },
+        },
+        {
+          id: "p-entregue-upper",
+          numeroPedido: 1006,
+          nomeCliente: "ENTREGUE MAIUSCULA",
+          servico: { tipo: "IMPRESSAO_DIGITAL", subTipo: null },
+          statusAtual: " ENTREGUE ",
+          prazos: { entrega: pastTs },
+        },
+      ];
+
+      const res = filtrarPedidosEmMemoria(
+        pedidosMistos,
+        { filtroOcultarEntregues: "true" },
+        nowMs,
+        { exigirCamposDashboard: true }
+      );
+      expect(res.map((p) => p.id)).toEqual(["p1", "p3"]);
+    });
   });
 });
