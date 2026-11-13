@@ -2,9 +2,16 @@ import { useState } from 'react';
 import { signOut } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { api, auth, displayDate } from '../../api';
-import { IconDashboard, IconReceber, IconPagar, IconLogout, IconRefresh } from '../icons/Icons';
+import {
+    IconDashboard,
+    IconReceber,
+    IconPagar,
+    IconShoppingCart,
+    IconLogout,
+    IconRefresh,
+} from '../icons/Icons';
 
-type Page = 'dashboard' | 'receber' | 'pagar';
+export type Page = 'dashboard' | 'pedidos' | 'receber' | 'pagar';
 
 type FinanceiroShellProps = {
     user: User;
@@ -14,14 +21,31 @@ type FinanceiroShellProps = {
     children: React.ReactNode;
 };
 
-const NAV_ITEMS: { label: string; page: Page; icon: (selected: boolean) => React.ReactNode }[] = [
-    { label: 'Dashboard', page: 'dashboard', icon: () => <IconDashboard size={18} /> },
-    { label: 'Contas a Receber', page: 'receber', icon: () => <IconReceber size={18} /> },
-    { label: 'Contas a Pagar', page: 'pagar', icon: () => <IconPagar size={18} /> },
+type NavGroup = {
+    caption: string;
+    items: { label: string; page: Page; icon: (selected: boolean) => React.ReactNode }[];
+};
+
+const NAV_GROUPS: NavGroup[] = [
+    {
+        caption: 'FINANCEIRO',
+        items: [
+            { label: 'Dashboard', page: 'dashboard', icon: () => <IconDashboard size={18} /> },
+            { label: 'Contas a Receber', page: 'receber', icon: () => <IconReceber size={18} /> },
+            { label: 'Contas a Pagar', page: 'pagar', icon: () => <IconPagar size={18} /> },
+        ],
+    },
+    {
+        caption: 'COMERCIAL / VENDAS',
+        items: [
+            { label: 'Vendas Simples', page: 'pedidos', icon: () => <IconShoppingCart size={18} /> },
+        ],
+    },
 ];
 
 const PAGE_LABELS: Record<Page, string> = {
     dashboard: 'Dashboard',
+    pedidos: 'Vendas Simples (TagPlus)',
     receber: 'Contas a Receber',
     pagar: 'Contas a Pagar',
 };
@@ -55,21 +79,25 @@ export function FinanceiroShell({
         <div className="app-shell">
             <aside className="sidebar">
                 <div className="brand">
-                    desenhar<span>FIN</span>
+                    desenhar<span>ERP</span>
                 </div>
-                <div className="nav-caption">FINANCEIRO</div>
                 <nav aria-label="Navegação principal">
-                    {NAV_ITEMS.map((item) => (
-                        <button
-                            key={item.page}
-                            className={page === item.page ? 'selected' : ''}
-                            onClick={() => onPageChange(item.page)}
-                        >
-                            <span className="nav-icon" aria-hidden="true">
-                                {item.icon(page === item.page)}
-                            </span>
-                            {item.label}
-                        </button>
+                    {NAV_GROUPS.map((group) => (
+                        <div key={group.caption} style={{ marginBottom: '14px' }}>
+                            <div className="nav-caption">{group.caption}</div>
+                            {group.items.map((item) => (
+                                <button
+                                    key={item.page}
+                                    className={page === item.page ? 'selected' : ''}
+                                    onClick={() => onPageChange(item.page)}
+                                >
+                                    <span className="nav-icon" aria-hidden="true">
+                                        {item.icon(page === item.page)}
+                                    </span>
+                                    {item.label}
+                                </button>
+                            ))}
+                        </div>
                     ))}
                 </nav>
                 <div className="sidebar-bottom">

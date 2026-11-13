@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { getFirestore, collection, getDocs, doc, onSnapshot, query, getDoc, addDoc, Timestamp } from "firebase/firestore";
+import { getFirestore, collection, getDocs, doc, onSnapshot, query, where, getDoc, addDoc, Timestamp } from "firebase/firestore";
 import { app, db } from "./firebase"; 
 import { fetchWithAuth } from "../utils/FetchWithAuth";
 import { getAuth } from "firebase/auth";
@@ -64,10 +64,23 @@ export async function filaAtendimento() {
   });
 }
 
-export async function deletarAtendimento(id: string) {
+export async function deletarAtendimento(id: string, justificativa?: string) {
   return requestAuthJson(`/deletarAtendimento/${id}`, {
     method: "DELETE",
+    ...(justificativa
+      ? {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ justificativa }),
+        }
+      : {}),
   });
+}
+
+export async function buscarAtendentes(): Promise<Record<string, string>> {
+  const data = await requestAuthJson("/atendentes", {
+    method: "GET",
+  });
+  return data?.atendentes ?? {};
 }
 
 // Atualizar historico do atendimento
@@ -121,7 +134,10 @@ export const handleAdicionarControlePedidos = (atendimento: any) => {
 };
 
 export function listenFilaAtendimento(callback: (fila: any[]) => void) {
-  const q = query(collection(db, "atendimentos"));
+  const q = query(
+    collection(db, "atendimentos"),
+    where("status", "in", ["Aguardando", "Em Atendimento"])
+  );
   return onSnapshot(q, (snapshot) => {
     const fila = snapshot.docs.map((doc) =>
       ({ id: doc.id, ...doc.data() })
@@ -202,7 +218,7 @@ export async function buscarClienteTagPlus(termo: string) {
 // Registrar atendimento
 
 export async function registrarAtendimento(atendimentoData: any): Promise<string> {
-  const result = await requestPublicJson("/criarAtendimentoFila", {
+  const result = await requestAuthJson("/registrarAtendimento", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

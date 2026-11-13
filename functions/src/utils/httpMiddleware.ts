@@ -67,7 +67,7 @@ function isLoopbackIp(ip: string): boolean {
   );
 }
 
-function getRequestIp(req: {
+export function getRequestIp(req: {
   ip?: string;
   socket?: { remoteAddress?: string };
   headers?: Record<string, string | string[] | undefined>;
@@ -170,16 +170,37 @@ export function applySecurityHeaders(app: express.Express): void {
   app.use(createSecurityHeadersMiddleware());
 }
 
-export function createDefaultRateLimiter() {
+export function createDefaultRateLimiter(options: { max?: number; windowMs?: number } = {}) {
   return rateLimit({
-    windowMs: 5 * 60 * 1000,
-    max: 200,
+    windowMs: options.windowMs ?? 5 * 60 * 1000,
+    max: options.max ?? 200,
     standardHeaders: true,
     legacyHeaders: false,
     message: {
       message: "Muitas requisições deste IP, tente novamente em 5 minutos.",
     },
     keyGenerator: (req) => getRequestIp(req),
+    skip: (req) => {
+      const isDev = process.env.NODE_ENV !== "production";
+      const remoteIp = getRequestIp(req);
+      return isDev && isLoopbackIp(remoteIp);
+    },
+  });
+}
+
+export function createAuthenticatedRateLimiter(options: { max?: number; windowMs?: number } = {}) {
+  return rateLimit({
+    windowMs: options.windowMs ?? 5 * 60 * 1000,
+    max: options.max ?? 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      message: "Muitas requisições desta conta, aguarde alguns instantes.",
+    },
+    keyGenerator: (req) => {
+      const uid = (req as express.Request & { user?: { uid?: string } }).user?.uid;
+      return uid ? `uid:${uid}` : `ip:${getRequestIp(req)}`;
+    },
     skip: (req) => {
       const isDev = process.env.NODE_ENV !== "production";
       const remoteIp = getRequestIp(req);

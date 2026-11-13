@@ -46,6 +46,7 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
   const [error, setError] = useState(""),
     [loading, setLoading] = useState(true),
     [revision, setRevision] = useState(0),
+    [catalogRevision, setCatalogRevision] = useState(0),
     [selected, setSelected] = useState(""),
     [creating, setCreating] = useState(false),
     [clients, setClients] = useState<Client[]>([]),
@@ -70,7 +71,7 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
     return () => {
       active = false;
     };
-  }, [revision]);
+  }, [catalogRevision]);
   useEffect(() => {
     let current = true;
     setLoading(true);
@@ -127,32 +128,6 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
     revision,
     boot.actor.uid,
   ]);
-  useEffect(() => {
-    if (page !== "Oportunidades" || view !== "Kanban") return;
-    const cards = [
-      ...document.querySelectorAll<HTMLElement>(".opportunity-card"),
-    ];
-    const handlers = cards.map((card) => {
-      card.setAttribute("draggable", "true");
-      const cardName = card.querySelector("h4")?.textContent?.trim();
-      const opportunity = result.items.find(
-        (item) => item.client?.name === cardName,
-      );
-      if (opportunity) card.dataset.opportunityId = opportunity.id;
-      const handler = (event: DragEvent) => {
-        if (card.dataset.opportunityId)
-          event.dataTransfer?.setData("text/plain", card.dataset.opportunityId);
-        if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
-        setDraggedOpportunity(card.dataset.opportunityId || null);
-      };
-      card.addEventListener("dragstart", handler);
-      return { card, handler };
-    });
-    return () =>
-      handlers.forEach(({ card, handler }) =>
-        card.removeEventListener("dragstart", handler),
-      );
-  }, [page, view, result.items]);
   const change = (setter: (v: string) => void, value: string) => {
     setter(value);
     setOffset(0);
@@ -208,26 +183,7 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
     }
   }
   return (
-    <section
-      className={`page ${draggedOpportunity ? "is-dragging" : ""}`}
-      onDragOver={(event) => {
-        if ((event.target as HTMLElement).closest(".kanban-column"))
-          event.preventDefault();
-      }}
-      onDrop={(event) => {
-        const column = (event.target as HTMLElement).closest(".kanban-column");
-        if (!column) return;
-        const stageName = column
-          .querySelector("h3")
-          ?.textContent?.replace(/\d+$/, "")
-          .trim();
-        const opportunity = result.items.find(
-          (item) => item.id === event.dataTransfer.getData("text/plain"),
-        );
-        if (stageName && opportunity)
-          void moveOpportunity(opportunity, stageName);
-      }}
-    >
+    <section className={`page ${draggedOpportunity ? "is-dragging" : ""}`}>
       <WorkspaceHeader
         page={page}
         ownerName={name}
@@ -509,7 +465,23 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
               view === "Kanban" ? (
                 kanbanItems.length ? <div className="kanban">
                   {STAGES.map((s, i) => (
-                    <section className="kanban-column" key={s}>
+                    <section
+                      className="kanban-column"
+                      key={s}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        const opportunityId =
+                          event.dataTransfer.getData("text/plain") ||
+                          draggedOpportunity;
+                        const opportunity = result.items.find(
+                          (item) => item.id === opportunityId,
+                        );
+                        if (opportunity) {
+                          void moveOpportunity(opportunity, s);
+                        }
+                      }}
+                    >
                       <h3>
                         <i
                           style={{
@@ -533,6 +505,13 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
                           <button
                             className="opportunity-card"
                             key={o.id}
+                            draggable
+                            onDragStart={(event) => {
+                              event.dataTransfer.setData("text/plain", o.id);
+                              event.dataTransfer.effectAllowed = "move";
+                              setDraggedOpportunity(o.id);
+                            }}
+                            onDragEnd={() => setDraggedOpportunity(null)}
                             onClick={() => setSelected(o.id)}
                           >
                             <span className="card-channel">
@@ -631,6 +610,7 @@ export function Workspace({ boot, page }: { boot: Bootstrap; page: string }) {
           close={() => setCreating(false)}
           saved={(key) => {
             setCreating(false);
+            setCatalogRevision((r) => r + 1);
             refresh();
             setSelected(key);
           }}

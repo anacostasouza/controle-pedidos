@@ -2,12 +2,55 @@ import express, { Request, Response, NextFunction } from 'express';
 import * as admin from 'firebase-admin';
 import { FieldPath } from 'firebase-admin/firestore';
 import { authMiddleware } from '../utils/authMiddleware';
-import { applyStandardCors, applySecurityHeaders, createDefaultRateLimiter } from '../utils/httpMiddleware';
+import { applyStandardCors, applySecurityHeaders, createAuthenticatedRateLimiter, createDefaultRateLimiter } from '../utils/httpMiddleware';
 import { Actor, Client, Company, CrmError, DEFAULT_SETTINGS, SERVICE_LABELS, Opportunity, Role, Settings, Task, applyCommand, archiveOpportunity, canEdit, ensure, newOpportunity, patchOpportunity, text, today, validateSettings } from './domain';
 export const COLLECTIONS = { opportunities: 'crmOportunidades', tasks: 'crmTarefas', clients: 'crmClientes', companies: 'crmEmpresas', settings: 'crmConfiguracoes', access: 'crmAcessos' };
 const db = () => admin.firestore();
 const CRM_QUERY_WARN_MS = Number(process.env.CRM_QUERY_WARN_MS || 1000);
 const CRM_READ_WARN_DOCUMENTS = Number(process.env.CRM_READ_WARN_DOCUMENTS || 1000);
+
+type CrmCacheEntry<T> = { value: T; expiresAt: number };
+const crmCache = new Map<string, CrmCacheEntry<unknown>>();
+
+function getCrmCacheTtlMs(): number {
+    const configured = process.env.CRM_CACHE_TTL_MS;
+    if (configured !== undefined) {
+        const parsed = Number(configured);
+        return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+    }
+    return process.env.NODE_ENV === 'test' ? 0 : 45_000;
+}
+
+export function invalidateCrmCache(prefix?: string): void {
+    if (!prefix) {
+        crmCache.clear();
+        return;
+    }
+    for (const key of crmCache.keys()) {
+        if (key === prefix || key.startsWith(`${prefix}:`)) {
+            crmCache.delete(key);
+        }
+    }
+}
+
+async function cached<T>(key: string, loader: () => Promise<T>): Promise<T> {
+    const ttlMs = getCrmCacheTtlMs();
+    const now = Date.now();
+    if (ttlMs > 0) {
+        const hit = crmCache.get(key);
+        if (hit && hit.expiresAt > now) {
+            return hit.value as T;
+        }
+        if (hit) {
+            crmCache.delete(key);
+        }
+    }
+    const value = await loader();
+    if (ttlMs > 0) {
+        crmCache.set(key, { value, expiresAt: Date.now() + ttlMs });
+    }
+    return value;
+}
 type AuthRequest = Request & {
     user: {
         uid: string;
@@ -58,7 +101,12 @@ function equalityFilters(req: Request): [string, unknown][] {
         .filter(field => typeof req.query[field] === 'string' && String(req.query[field]).length > 0)
         .map(field => [field, String(req.query[field])] as [string, unknown]);
 }
-async function settings(): Promise<Settings> { const doc = await db().collection(COLLECTIONS.settings).doc('general').get(); return doc.exists ? doc.data() as Settings : DEFAULT_SETTINGS; }
+async function settings(): Promise<Settings> {
+    return cached('settings:general', async () => {
+        const doc = await db().collection(COLLECTIONS.settings).doc('general').get();
+        return doc.exists ? doc.data() as Settings : DEFAULT_SETTINGS;
+    });
+}
 async function loadRelatedCatalogs(opportunities: Opportunity[]): Promise<{ clients: Client[]; companies: Company[] }> {
     const clientIds = [...new Set(opportunities.map(opportunity => opportunity.clientId).filter(Boolean))];
     const clientRefs = clientIds.map(clientId => db().collection(COLLECTIONS.clients).doc(clientId));
@@ -77,9 +125,10 @@ function adminAccess(a: Actor) { ensure(a.role === 'admin', 'Apenas administrado
 const normalized = (s: unknown) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 export function createCrmApp(authentication: express.RequestHandler = authMiddleware) {
     const app = express();
+    app.set('trust proxy', 1);
     applyStandardCors(app);
     applySecurityHeaders(app);
-    app.use(createDefaultRateLimiter());
+    app.use(createDefaultRateLimiter({ max: 600 }));
     app.use(express.json({ limit: '100kb' }));
     app.use((req, res, next) => {
         const startedAt = Date.now();
@@ -94,16 +143,24 @@ export function createCrmApp(authentication: express.RequestHandler = authMiddle
         next();
     });
     app.use(authentication);
+    app.use(createAuthenticatedRateLimiter({ max: 250 }));
     app.use((req: Request, _res: Response, next: NextFunction) => {
         const r = req as AuthRequest;
-        db().collection(COLLECTIONS.access).doc(r.user.uid).get().then(access => {
-            ensure(access.data()?.enabled !== false, 'Acesso ao CRM desativado.', 403);
-            r.actor = { uid: r.user.uid, name: r.user.displayName || 'Usuário', role: access.exists ? access.data()!.role as Role : 'leitura' };
+        cached(`access:${r.user.uid}`, async () => {
+            const access = await db().collection(COLLECTIONS.access).doc(r.user.uid).get();
+            return { exists: access.exists, data: access.exists ? access.data() : null };
+        }).then(access => {
+            ensure(access.data?.enabled !== false, 'Acesso ao CRM desativado.', 403);
+            r.actor = { uid: r.user.uid, name: r.user.displayName || 'Usuário', role: access.exists ? access.data!.role as Role : 'leitura' };
             next();
         }).catch(next);
     });
     app.get('/bootstrap', route(async (req, res) => {
-        const [users, access, config] = await Promise.all([scan<Record<string, unknown>>('usuarios'), scan<Record<string, unknown>>(COLLECTIONS.access), settings()]);
+        const [users, access, config] = await Promise.all([
+            cached('scan:usuarios', () => scan<Record<string, unknown>>('usuarios')),
+            cached(`scan:${COLLECTIONS.access}`, () => scan<Record<string, unknown>>(COLLECTIONS.access)),
+            settings(),
+        ]);
         res.json({ actor: req.actor, settings: config, users: users.map(u => {
                 const permission = access.find(a => a.id === u.id);
                 return { id: u.id, name: u.displayName || 'Usuário', sector: u.setor || '', active: u.statusConta !== false && permission?.enabled !== false, role: permission?.role || 'leitura' };
@@ -111,7 +168,7 @@ export function createCrmApp(authentication: express.RequestHandler = authMiddle
     }));
     for (const kind of ['clients', 'companies'] as const) {
         app.get(`/${kind}`, route(async (req, res) => {
-            const all = await scan<Client | Company>(COLLECTIONS[kind]);
+            const all = await cached(`scan:${COLLECTIONS[kind]}`, () => scan<Client | Company>(COLLECTIONS[kind]));
             const q = normalized(req.query.q);
             const rows = all.filter(row => (!q || normalized(row.name).includes(q)) && (req.query.active !== 'true' || row.active));
             const offset = Math.max(0, Number(req.query.offset) || 0), limit = Math.min(200, Math.max(1, Number(req.query.limit) || 100));
@@ -145,6 +202,7 @@ export function createCrmApp(authentication: express.RequestHandler = authMiddle
                     ensure(raw.updatedAt === existing.data()?.updatedAt, 'Cadastro alterado por outro usuário. Atualize a tela.', 409);
                 tx.set(ref, { ...data, id: key, createdAt: existing.data()?.createdAt || data.updatedAt, createdBy: existing.data()?.createdBy || req.actor.uid });
             });
+            invalidateCrmCache(`scan:${COLLECTIONS[kind]}`);
             res.json({ id: key });
         }));
         app.delete(`/${kind}/:id`, route(async (req, res) => {
@@ -157,6 +215,7 @@ export function createCrmApp(authentication: express.RequestHandler = authMiddle
                 const opportunities = await db().collection(COLLECTIONS.opportunities).where('clientId', '==', key).limit(1).get();
                 if (!opportunities.empty) {
                     await ref.set({ ...record.data(), active: false, updatedAt: new Date().toISOString() });
+                    invalidateCrmCache(`scan:${COLLECTIONS[kind]}`);
                     res.json({ ok: true, inactivated: true });
                     return;
                 }
@@ -164,11 +223,13 @@ export function createCrmApp(authentication: express.RequestHandler = authMiddle
                 const clients = await db().collection(COLLECTIONS.clients).where('companyId', '==', key).limit(1).get();
                 if (!clients.empty) {
                     await ref.set({ ...record.data(), active: false, updatedAt: new Date().toISOString() });
+                    invalidateCrmCache(`scan:${COLLECTIONS[kind]}`);
                     res.json({ ok: true, inactivated: true });
                     return;
                 }
             }
             await ref.delete();
+            invalidateCrmCache(`scan:${COLLECTIONS[kind]}`);
             res.json({ ok: true });
         }));
     }
@@ -187,9 +248,9 @@ export function createCrmApp(authentication: express.RequestHandler = authMiddle
         const clientMap = new Map(clients.map(c => [c.id, c])), companyMap = new Map(companies.map(c => [c.id, c]));
         const rows = opps.map(o => { const c = clientMap.get(o.clientId); return { ...o, client: c, company: companyMap.get(c?.companyId || ''), canEdit: canEdit(req.actor, o) }; }).filter(o => {
             const q = normalized(req.query.q);
-            return (!q || normalized(`${o.client?.name} ${o.client?.phone} ${o.client?.email} ${o.company?.name}`).includes(q)) && (!req.query.state || o.state === req.query.state) && (!req.query.stage || o.stage === req.query.stage) && (!req.query.channel || o.channel === req.query.channel) && (!req.query.serviceGroup || o.serviceGroup === req.query.serviceGroup) && (!req.query.clientId || o.clientId === req.query.clientId) && (!req.query.from || o.createdAt.slice(0, 10) >= String(req.query.from)) && (!req.query.to || o.createdAt.slice(0, 10) <= String(req.query.to)) && (req.query.unassigned !== 'true' || !o.ownerId);
+            return (!q || normalized(`${o.client?.name} ${o.client?.phone} ${o.client?.email} ${o.company?.name}`).includes(q)) && (!req.query.state || o.state === req.query.state) && (!req.query.stage || o.stage === req.query.stage) && (!req.query.channel || o.channel === req.query.channel) && (!req.query.serviceGroup || o.serviceGroup === req.query.serviceGroup) && (!req.query.clientId || o.clientId === req.query.clientId) && (!req.query.companyId || o.company?.id === req.query.companyId) && (!req.query.from || o.createdAt.slice(0, 10) >= String(req.query.from)) && (!req.query.to || o.createdAt.slice(0, 10) <= String(req.query.to)) && (req.query.unassigned !== 'true' || !o.ownerId);
         }).sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id));
-        const offset = Math.max(0, Number(req.query.offset) || 0), limit = Math.min(100, Math.max(1, Number(req.query.limit) || 30));
+        const offset = Math.max(0, Number(req.query.offset) || 0), limit = Math.min(500, Math.max(1, Number(req.query.limit) || 30));
         res.json({ items: rows.slice(offset, offset + limit), total: rows.length, nextOffset: offset + limit < rows.length ? offset + limit : null });
     }));
     app.post('/opportunities', route(async (req, res) => {
@@ -291,16 +352,17 @@ export function createCrmApp(authentication: express.RequestHandler = authMiddle
         }).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
         res.json({ day, metrics: { portfolio: sum(active), activeCount: active.length, missingValue: active.filter(o => o.valueCents === null).length, wonValue: sum(won), wonCount: won.length, negotiationValue: sum(active.filter(o => o.stage === 'Em negociação')), contacts: todayTasks.length, planned: planned.length, done }, tasks: rows });
     }));
-    app.put('/settings', route(async (req, res) => { adminAccess(req.actor); const config = validateSettings(req.body); await db().collection(COLLECTIONS.settings).doc('general').set(config); res.json(config); }));
+    app.put('/settings', route(async (req, res) => { adminAccess(req.actor); const config = validateSettings(req.body); await db().collection(COLLECTIONS.settings).doc('general').set(config); invalidateCrmCache('settings'); res.json(config); }));
     app.post('/settings/import-services', route(async (req, res) => {
         adminAccess(req.actor);
         const legacy = await scan<Record<string, unknown>>('servicosStatus');
         const names = legacy.map(s => SERVICE_LABELS[String(s.tipo || s.id)] || String(s.nome || s.tipo || s.id)).filter(n => n.length > 0 && n.length <= 150);
         const ref = db().collection(COLLECTIONS.settings).doc('general');
         const config = await db().runTransaction(async (tx) => { const snap = await tx.get(ref); const current = snap.exists ? snap.data() as Settings : DEFAULT_SETTINGS; const next = validateSettings({ ...current, serviceGroups: [...new Set([...current.serviceGroups, ...names])] }); tx.set(ref, next); return next; });
+        invalidateCrmCache('settings');
         res.json(config);
     }));
-    app.put('/access/:id', route(async (req, res) => { adminAccess(req.actor); const uid = id(req.params.id); ensure(['recepcao', 'vendedor', 'coordenacao', 'admin', 'leitura'].includes(req.body.role), 'Perfil inválido.'); ensure(uid !== req.actor.uid, 'Outro administrador deve alterar seu acesso.', 403); const user = await db().collection('usuarios').doc(uid).get(); ensure(user.exists, 'Usuário não encontrado.'); await db().collection(COLLECTIONS.access).doc(uid).set({ role: req.body.role, enabled: req.body.enabled !== false, by: req.actor.uid, at: new Date().toISOString() }); res.json({ ok: true }); }));
+    app.put('/access/:id', route(async (req, res) => { adminAccess(req.actor); const uid = id(req.params.id); ensure(['recepcao', 'vendedor', 'coordenacao', 'admin', 'leitura'].includes(req.body.role), 'Perfil inválido.'); ensure(uid !== req.actor.uid, 'Outro administrador deve alterar seu acesso.', 403); const user = await db().collection('usuarios').doc(uid).get(); ensure(user.exists, 'Usuário não encontrado.'); await db().collection(COLLECTIONS.access).doc(uid).set({ role: req.body.role, enabled: req.body.enabled !== false, by: req.actor.uid, at: new Date().toISOString() }); invalidateCrmCache('access'); invalidateCrmCache(`scan:${COLLECTIONS.access}`); res.json({ ok: true }); }));
     app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => { if (error instanceof CrmError) {
         res.status(error.status).json({ message: error.message });
         return;

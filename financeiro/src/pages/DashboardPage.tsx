@@ -17,7 +17,7 @@ export function DashboardPage() {
         );
     }
 
-    if (error) {
+    if (error && !resumo) {
         return (
             <div className="page">
                 <p className="error">{error}</p>
@@ -148,7 +148,43 @@ export function DashboardPage() {
                     <p className="eyebrow">VISÃO GERAL</p>
                     <h1>Dashboard Financeiro</h1>
                 </div>
+                {loading && (
+                    <span style={{ fontSize: '13px', color: '#4b6357', fontWeight: 500 }}>
+                        Atualizando…
+                    </span>
+                )}
             </div>
+            {error && (
+                <div
+                    className="error"
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px',
+                        marginBottom: '16px',
+                    }}
+                >
+                    <span>{error}</span>
+                    <button
+                        type="button"
+                        onClick={() => void refetch()}
+                        style={{
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            border: '1px solid #005a36',
+                            background: '#005a36',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                        }}
+                    >
+                        <IconRefresh size={14} /> Tentar novamente
+                    </button>
+                </div>
+            )}
 
             {/* Toolbar de Controle de Projeção */}
             <div className="projecao-toolbar">

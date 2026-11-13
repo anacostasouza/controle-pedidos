@@ -14,7 +14,7 @@ export async function fetchWithAuth(input: RequestInfo, init: RequestInit = {}) 
 
     const response = await fetch(input, { ...init, headers });
 
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
         await signOut(auth);
         globalThis.location.href = '/';
         throw new Error("Sessão expirada. Faça login novamente.");

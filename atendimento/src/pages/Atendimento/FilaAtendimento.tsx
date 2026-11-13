@@ -23,11 +23,6 @@ export function FilaAtendimento() {
   const [showRegistroDireto, setShowRegistroDireto] = useState(false);
 
   useEffect(() => {
-    const interval = setInterval(() => setFila((f) => [...f]), 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
     const auth = getAuth();
     const unsub = onAuthStateChanged(auth, (user) => setUser(user));
     return () => unsub();

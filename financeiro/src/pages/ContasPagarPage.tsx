@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useLancamentos } from '../hooks/useLancamentos';
+import { useEffect, useMemo, useState } from 'react';
+import { useDebouncedValue, useLancamentos } from '../hooks/useLancamentos';
 import { money, displayDate } from '../api';
 import type { FiltrosLancamento, StatusLancamento } from '../contracts';
 import { IconRefresh, IconChevronLeft, IconChevronRight } from '../components/icons/Icons';
@@ -28,8 +28,13 @@ export function ContasPagarPage() {
     const [status, setStatus] = useState<StatusLancamento | ''>('');
     const [dataInicial, setDataInicial] = useState('');
     const [dataFinal, setDataFinal] = useState('');
-    const [q, setQ] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const q = useDebouncedValue(searchTerm, 350);
     const [page, setPage] = useState(1);
+
+    useEffect(() => {
+        setPage(1);
+    }, [q]);
 
     const filtros: FiltrosLancamento = {
         tipo: 'D',
@@ -43,7 +48,7 @@ export function ContasPagarPage() {
 
     const { dados, loading, error, refetch } = useLancamentos(filtros);
 
-    const hasFilters = Boolean(status || dataInicial || dataFinal || q);
+    const hasFilters = Boolean(status || dataInicial || dataFinal || searchTerm);
 
     const { totalValor, totalPendente } = useMemo(() => {
         const items = dados?.items ?? [];
@@ -64,7 +69,7 @@ export function ContasPagarPage() {
         setStatus('');
         setDataInicial('');
         setDataFinal('');
-        setQ('');
+        setSearchTerm('');
         setPage(1);
     }
 
@@ -126,10 +131,9 @@ export function ContasPagarPage() {
                     <input
                         type="search"
                         placeholder="Descrição, fornecedor…"
-                        value={q}
+                        value={searchTerm}
                         onChange={(e) => {
-                            setQ(e.target.value);
-                            handleFilterChange();
+                            setSearchTerm(e.target.value);
                         }}
                     />
                 </div>

@@ -52,7 +52,11 @@ export function createAuxiliaresRouter(): express.Router {
       let auxiliares: AuxiliaresFinanceiro;
       try {
         auxiliares = await buscar(accessToken);
-      } catch {
+      } catch (err) {
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status !== 401) {
+          throw err;
+        }
         const refreshed = await ensureTagPlusAccessToken({
           forceRefresh: true,
         });

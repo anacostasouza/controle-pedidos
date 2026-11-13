@@ -55,6 +55,8 @@ export default function EditarPedido() {
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [motivoExclusao, setMotivoExclusao] = useState<string>("");
+  const [motivoRapido, setMotivoRapido] = useState<string>("");
 
   const [originalStatus, setOriginalStatus] = useState<
     StatusPedido | undefined
@@ -320,22 +322,36 @@ export default function EditarPedido() {
   };
 
   const handleDeleteClick = () => {
+    setMotivoExclusao("");
+    setMotivoRapido("");
     setShowDeleteModal(true);
   };
 
   const handleCancelDelete = () => {
     setShowDeleteModal(false);
+    setMotivoExclusao("");
+    setMotivoRapido("");
   };
 
   const handleConfirmDelete = async () => {
     if (!id) return;
 
+    const motivoFinal =
+      motivoRapido && motivoRapido !== "Outro"
+        ? (motivoExclusao.trim() ? `${motivoRapido} - ${motivoExclusao.trim()}` : motivoRapido)
+        : motivoExclusao.trim();
+
+    if (!motivoFinal) {
+      alert("Por favor, selecione ou informe o motivo da exclusão.");
+      return;
+    }
+
     setIsDeleting(true);
     setError("");
 
     try {
-      await deletarPedidoBackend(id);
-      setSuccessMessage("Pedido excluído com sucesso!");
+      await deletarPedidoBackend(id, motivoFinal);
+      setSuccessMessage("Pedido excluído e arquivado na auditoria com sucesso!");
       setShowDeleteModal(false);
 
       setTimeout(() => {
@@ -577,8 +593,65 @@ export default function EditarPedido() {
               Tem certeza que deseja excluir o pedido{" "}
               <strong>{pedido.numeroPedido}</strong>?
             </p>
-            <p className="modal-warning">Esta ação não pode ser desfeita!</p>
-            <div className="modal-actions">
+            <p className="modal-warning" style={{ fontSize: "0.85rem", marginBottom: "1rem" }}>
+              O pedido sairá do painel operacional e será arquivado no <strong>Log de Auditoria</strong> (restrito à Coordenação e Suporte).
+            </p>
+
+            <div style={{ textAlign: "left", marginBottom: "1rem" }}>
+              <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#374151", marginBottom: "6px" }}>
+                Motivo da exclusão *
+              </label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "8px" }}>
+                {[
+                  "Cancelado pelo cliente",
+                  "Pedido duplicado",
+                  "Erro no cadastro",
+                  "Mudança de orçamento",
+                  "Outro",
+                ].map((opcao) => (
+                  <button
+                    key={opcao}
+                    type="button"
+                    onClick={() => setMotivoRapido(opcao)}
+                    style={{
+                      padding: "5px 10px",
+                      borderRadius: "16px",
+                      border: motivoRapido === opcao ? "1.5px solid #dc2626" : "1px solid #d1d5db",
+                      backgroundColor: motivoRapido === opcao ? "#fee2e2" : "#f9fafb",
+                      color: motivoRapido === opcao ? "#991b1b" : "#4b5563",
+                      fontSize: "0.8rem",
+                      fontWeight: motivoRapido === opcao ? 600 : 500,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {opcao}
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                value={motivoExclusao}
+                onChange={(e) => setMotivoExclusao(e.target.value)}
+                placeholder={
+                  motivoRapido === "Outro"
+                    ? "Digite detalhadamente a justificativa..."
+                    : "Detalhes adicionais (opcional se selecionou um motivo acima)..."
+                }
+                rows={2}
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  borderRadius: "8px",
+                  border: "1px solid #d1d5db",
+                  padding: "8px 10px",
+                  fontSize: "0.85rem",
+                  fontFamily: "inherit",
+                  resize: "vertical",
+                }}
+              />
+            </div>
+
+            <div className="modal-actions" style={{ marginTop: "1rem" }}>
               <button
                 className="btn-cancel"
                 onClick={handleCancelDelete}
@@ -589,7 +662,23 @@ export default function EditarPedido() {
               <button
                 className="btn-delete"
                 onClick={handleConfirmDelete}
-                disabled={isDeleting}
+                disabled={
+                  isDeleting ||
+                  (!motivoRapido && !motivoExclusao.trim()) ||
+                  (motivoRapido === "Outro" && !motivoExclusao.trim())
+                }
+                style={{
+                  opacity:
+                    (!motivoRapido && !motivoExclusao.trim()) ||
+                    (motivoRapido === "Outro" && !motivoExclusao.trim())
+                      ? 0.5
+                      : 1,
+                  cursor:
+                    (!motivoRapido && !motivoExclusao.trim()) ||
+                    (motivoRapido === "Outro" && !motivoExclusao.trim())
+                      ? "not-allowed"
+                      : "pointer",
+                }}
               >
                 {isDeleting ? "Excluindo..." : "Excluir Pedido"}
               </button>

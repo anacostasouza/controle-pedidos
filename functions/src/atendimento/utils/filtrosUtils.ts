@@ -43,9 +43,41 @@ async function contarDocumentos(query: any): Promise<number> {
     }
 }
 
+type HistoricoCacheEntry = {
+    value: ResultadoFiltros;
+    expiresAt: number;
+};
+
+const historicoCache = new Map<string, HistoricoCacheEntry>();
+
+function getHistoricoCacheTtlMs(): number {
+    const configured = process.env.HISTORICO_ATENDIMENTOS_CACHE_TTL_MS;
+    if (configured !== undefined) {
+        const parsed = Number(configured);
+        return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+    }
+    return process.env.NODE_ENV === "test" ? 0 : 30_000;
+}
+
+export function clearHistoricoAtendimentosCache(): void {
+    historicoCache.clear();
+}
+
 export async function buscarAtendimentosComFiltros(
     filtros: FiltrosHistorico
 ): Promise<ResultadoFiltros> {
+    const cacheTtlMs = getHistoricoCacheTtlMs();
+    const cacheKey = cacheTtlMs > 0 ? JSON.stringify(filtros) : "";
+    if (cacheTtlMs > 0) {
+        const cached = historicoCache.get(cacheKey);
+        if (cached && cached.expiresAt > Date.now()) {
+            return cached.value;
+        }
+        if (cached) {
+            historicoCache.delete(cacheKey);
+        }
+    }
+
     const {
         dataInicio,
         dataFim,
@@ -135,73 +167,100 @@ export async function buscarAtendimentosComFiltros(
         ? Math.max(Number(offset), 0)
         : 0;
 
-    const total = await contarDocumentos(queryFiltrada);
+    let resultado: ResultadoFiltros;
 
-    const snapshot = temPaginacaoExplicita
-        ? await queryFiltrada
-            .offset(paginaOffset)
-            .limit(paginaLimit)
-            .get()
-        : await queryFiltrada.get();
-
-    const atendimentos = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-    }));
-
-    let totalFinalizados = 0;
-    let totalCancelados = 0;
-    let totalControlePedidos = 0;
-
-    if (status === "Finalizado") {
-        totalFinalizados = total;
-    } else if (status === "Cancelado") {
-        totalCancelados = total;
-    } else if (status === "Adicionado ao controle de pedidos") {
-        totalControlePedidos = total;
+    if (!temPaginacaoExplicita) {
+        const snapshot = await queryFiltrada.limit(2000).get();
+        const atendimentos = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
+        const total = atendimentos.length;
+        resultado = {
+            atendimentos,
+            total,
+            filtrosAplicados,
+            estatisticas: calcularEstatisticas(atendimentos),
+            temMais: snapshot.docs.length === 2000,
+        };
     } else {
-        totalFinalizados = await contarDocumentos(queryBase.where("status", "==", "Finalizado"));
-        totalCancelados = await contarDocumentos(queryBase.where("status", "==", "Cancelado"));
-        totalControlePedidos = await contarDocumentos(
-            queryBase.where("status", "==", "Adicionado ao controle de pedidos")
-        );
-    }
+        const [total, snapshot] = await Promise.all([
+            contarDocumentos(queryFiltrada),
+            queryFiltrada.offset(paginaOffset).limit(paginaLimit).get(),
+        ]);
 
-    const totalDireto = tipo === "direto"
-        ? total
-        : tipo === "fila"
-            ? 0
-            : await contarDocumentos(queryFiltrada.where("atendimentoDireto", "==", true));
+        const atendimentos = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+        }));
 
-    const totalFila = total - totalDireto;
-
-    const totalConsumidor = consumidor === true
-        ? total
-        : consumidor === false
-            ? 0
-            : await contarDocumentos(queryFiltrada.where("isConsumidor", "==", true));
-
-    const totalRegistrado = total - totalConsumidor;
-
-    const temMais = temPaginacaoExplicita
-        ? (paginaOffset + paginaLimit) < total
-        : false;
-
-    return {
-        atendimentos,
-        total,
-        filtrosAplicados,
-        estatisticas: {
+        const [
             totalFinalizados,
             totalCancelados,
             totalControlePedidos,
             totalDireto,
-            totalFila,
             totalConsumidor,
-            totalRegistrado,
-        },
-        temMais,
-    };
+        ] = await Promise.all([
+            status === "Finalizado"
+                ? Promise.resolve(total)
+                : status
+                    ? Promise.resolve(0)
+                    : contarDocumentos(queryBase.where("status", "==", "Finalizado")),
+            status === "Cancelado"
+                ? Promise.resolve(total)
+                : status
+                    ? Promise.resolve(0)
+                    : contarDocumentos(queryBase.where("status", "==", "Cancelado")),
+            status === "Adicionado ao controle de pedidos"
+                ? Promise.resolve(total)
+                : status
+                    ? Promise.resolve(0)
+                    : contarDocumentos(
+                        queryBase.where("status", "==", "Adicionado ao controle de pedidos")
+                    ),
+            tipo === "direto"
+                ? Promise.resolve(total)
+                : tipo === "fila"
+                    ? Promise.resolve(0)
+                    : contarDocumentos(queryFiltrada.where("atendimentoDireto", "==", true)),
+            consumidor === true
+                ? Promise.resolve(total)
+                : consumidor === false
+                    ? Promise.resolve(0)
+                    : contarDocumentos(queryFiltrada.where("isConsumidor", "==", true)),
+        ]);
+
+        const totalFila = total - totalDireto;
+        const totalRegistrado = total - totalConsumidor;
+
+        resultado = {
+            atendimentos,
+            total,
+            filtrosAplicados,
+            estatisticas: {
+                totalFinalizados,
+                totalCancelados,
+                totalControlePedidos,
+                totalDireto,
+                totalFila,
+                totalConsumidor,
+                totalRegistrado,
+            },
+            temMais: (paginaOffset + paginaLimit) < total,
+        };
+    }
+
+    if (cacheTtlMs > 0) {
+        if (historicoCache.size >= 100) {
+            historicoCache.clear();
+        }
+        historicoCache.set(cacheKey, {
+            value: resultado,
+            expiresAt: Date.now() + cacheTtlMs,
+        });
+    }
+
+    return resultado;
 }
 
 export function validarFiltros(

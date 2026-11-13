@@ -151,7 +151,7 @@ export const atualizarPedidoBackend = async (id: string, updateData: any) => {
   }
 };
 
-export async function deletarPedidoBackend(pedidoID: string) {
+export async function deletarPedidoBackend(pedidoID: string, motivo?: string) {
   try {
     const { auth, userToken } = await getAuthenticatedSession();
 
@@ -161,7 +161,7 @@ export async function deletarPedidoBackend(pedidoID: string) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${userToken}`,
       },
-      body: JSON.stringify({ pedidoID }),
+      body: JSON.stringify({ pedidoID, motivo }),
     });
 
     if (!response.ok) {
@@ -182,6 +182,150 @@ export async function deletarPedidoBackend(pedidoID: string) {
     return await response.json();
   } catch (error) {
     console.error("Erro ao deletar pedido:", error);
+    throw error;
+  }
+}
+
+export interface PedidoExcluidoItem {
+  id: string;
+  pedidoId: string;
+  numeroPedido?: number | string;
+  cliente?: {
+    nome?: string;
+    razaoSocial?: string;
+    cnpjCpf?: string;
+  } | string;
+  valorTotal?: number;
+  excluidoPor?: {
+    uid: string;
+    nome: string;
+    email: string;
+    setor: string;
+  };
+  excluidoEm: any;
+  motivo: string;
+  restaurado: boolean;
+  restauradoEm?: any;
+  restauradoPor?: {
+    uid: string;
+    nome: string;
+    email: string;
+    setor: string;
+  } | null;
+}
+
+export interface PedidosExcluidosResponse {
+  logs: PedidoExcluidoItem[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export async function buscarPedidosExcluidos(
+  params: {
+    page?: number;
+    limit?: number;
+    termo?: string;
+    dataInicio?: string;
+    dataFim?: string;
+  } = {},
+  token?: string
+): Promise<PedidosExcluidosResponse> {
+  try {
+    let authToken = token;
+    if (!authToken) {
+      const { userToken } = await getAuthenticatedSession();
+      authToken = userToken;
+    }
+
+    const cleanParams: Record<string, string> = {};
+    if (params.page) cleanParams.page = String(params.page);
+    if (params.limit) cleanParams.limit = String(params.limit);
+    if (params.termo) cleanParams.termo = params.termo;
+    if (params.dataInicio) cleanParams.dataInicio = params.dataInicio;
+    if (params.dataFim) cleanParams.dataFim = params.dataFim;
+
+    const queryString = new URLSearchParams(cleanParams).toString();
+    const response = await fetchWithAuth(
+      `${API_URL}/dashboard/pedidosExcluidos?${queryString}`,
+      {
+        headers: { Authorization: `Bearer ${authToken}` },
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await parseErrorData(response);
+      if (response.status === 401) {
+        globalThis.alert("Sessão expirada. Redirecionando para login...");
+        const auth = getAuth();
+        await auth.signOut();
+        globalThis.location.href = "/";
+        throw new Error("Sessão expirada");
+      } else if (response.status === 403) {
+        throw new Error("Acesso negado: apenas Suporte e Coordenação/Gestão podem acessar esta auditoria.");
+      }
+      throw new Error(errorData.message || "Erro ao buscar logs de pedidos excluídos");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Erro ao buscar logs de pedidos excluídos:", error);
+    throw error;
+  }
+}
+
+export async function buscarDetalhesPedidoExcluido(id: string, token?: string) {
+  try {
+    let authToken = token;
+    if (!authToken) {
+      const { userToken } = await getAuthenticatedSession();
+      authToken = userToken;
+    }
+
+    const response = await fetchWithAuth(
+      `${API_URL}/dashboard/pedidosExcluidos/${encodeURIComponent(id)}`,
+      {
+        headers: { Authorization: `Bearer ${authToken}` },
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await parseErrorData(response);
+      throw new Error(errorData.message || "Erro ao buscar detalhes do pedido excluído");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Erro ao buscar detalhes do pedido excluído:", error);
+    throw error;
+  }
+}
+
+export async function restaurarPedidoBackend(pedidoID: string, token?: string) {
+  try {
+    let authToken = token;
+    if (!authToken) {
+      const { userToken } = await getAuthenticatedSession();
+      authToken = userToken;
+    }
+
+    const response = await fetchWithAuth(`${API_URL}/dashboard/restaurarPedido`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: JSON.stringify({ pedidoID }),
+    });
+
+    if (!response.ok) {
+      const errorData = await parseErrorData(response);
+      throw new Error(errorData.message || "Erro ao restaurar pedido");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Erro ao restaurar pedido:", error);
     throw error;
   }
 }

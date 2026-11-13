@@ -6,8 +6,25 @@ import {
   buscarAtendimentosComFiltros,
   validarFiltros,
 } from "../../utils/filtrosUtils";
+import { createSetorMiddleware } from "../../../utils/authMiddleware";
 import { logError } from "../../../utils/logger";
 import { getOmieRuntimeConfig } from "../../../config/runtimeParams";
+
+const ATENDIMENTO_DELETE_SECTORS = [
+  "BALCAO",
+  "CAIXA",
+  "COMERCIAL",
+  "GESTAO",
+  "SUPORTE",
+  "PRODUCAO_LOJA",
+] as const;
+
+let atendentesCache: { map: Record<string, string>; expiresAt: number } | null = null;
+
+function readTrimmedString(value: unknown, maxLength: number): string {
+  if (typeof value !== "string") return "";
+  return value.trim().slice(0, maxLength);
+}
 
 function segundosParaHHMMSS(segundos: number): string {
   const h = Math.floor(segundos / 3600);
@@ -77,6 +94,44 @@ function mascararCpfCnpj(cnpj_cpf: string): string {
 
 export function createProtectedAtendimentoRouter(): express.Router {
   const router = express.Router();
+  const requireDeletePermission = createSetorMiddleware(
+    ATENDIMENTO_DELETE_SECTORS,
+    "Acesso negado para excluir atendimento."
+  );
+
+  router.get("/auth/verify", (req, res) => {
+    const user = (req as express.Request & { user?: { uid?: string; setor?: string } }).user;
+    return res.status(200).json({
+      authorized: true,
+      uid: user?.uid || null,
+      setor: user?.setor || null,
+    });
+  });
+
+  router.get("/atendentes", async (_req, res) => {
+    try {
+      const ttlMs = process.env.NODE_ENV === "test" ? 0 : 60_000;
+      const now = Date.now();
+      if (ttlMs > 0 && atendentesCache && atendentesCache.expiresAt > now) {
+        return res.status(200).json({ atendentes: atendentesCache.map });
+      }
+
+      const snap = await admin.firestore().collection("usuarios").get();
+      const map: Record<string, string> = {};
+      snap.docs.forEach((doc) => {
+        const data = doc.data() as { displayName?: string; nome?: string };
+        map[doc.id] = data.displayName || data.nome || doc.id;
+      });
+
+      if (ttlMs > 0) {
+        atendentesCache = { map, expiresAt: now + ttlMs };
+      }
+
+      return res.status(200).json({ atendentes: map });
+    } catch {
+      return res.status(500).json({ message: "Erro ao listar atendentes." });
+    }
+  });
 
   router.post("/atualizarHistorico/:id", async (req, res) => {
     const atendimentoId = req.params.id;
@@ -169,7 +224,10 @@ export function createProtectedAtendimentoRouter(): express.Router {
 
   router.get("/filaAtendimento", async (_req, res) => {
     try {
-      const atendimentosRef = admin.firestore().collection("atendimentos");
+      const atendimentosRef = admin
+        .firestore()
+        .collection("atendimentos")
+        .where("status", "in", ["Aguardando", "Em Atendimento"]);
       const snapshot = await atendimentosRef.get();
       const atendimentos = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -181,14 +239,35 @@ export function createProtectedAtendimentoRouter(): express.Router {
     }
   });
 
-  router.delete("/deletarAtendimento/:id", async (req, res) => {
+  router.delete("/deletarAtendimento/:id", requireDeletePermission, async (req, res) => {
     const atendimentoId = req.params.id;
+    const justificativa = readTrimmedString(req.body?.justificativa, 500);
+    const user = (req as express.Request & { user?: { uid?: string; displayName?: string } }).user;
+
     try {
-      await admin
-        .firestore()
-        .collection("atendimentos")
-        .doc(atendimentoId)
-        .delete();
+      const db = admin.firestore();
+      const atendimentoRef = db.collection("atendimentos").doc(atendimentoId);
+      const docSnap = await atendimentoRef.get();
+      if (!docSnap.exists) {
+        res.status(404).send({ message: "Atendimento não encontrado." });
+        return;
+      }
+
+      const data = docSnap.data() as { nomeCliente?: string } | undefined;
+      await atendimentoRef.delete();
+
+      if (justificativa) {
+        await db.collection("logAtendimentos").add({
+          atendimentoId,
+          nomeCliente: data?.nomeCliente || "",
+          justificativa,
+          data: Timestamp.now(),
+          responsavelNome: user?.displayName || "",
+          responsavelUid: user?.uid || "",
+          acao: "delete",
+        });
+      }
+
       res.status(200).send({ message: "Atendimento deletado com sucesso." });
     } catch {
       res.status(500).send("Erro interno ao deletar atendimento.");
@@ -197,7 +276,12 @@ export function createProtectedAtendimentoRouter(): express.Router {
 
   router.get("/todosAtendimentos", async (_req, res) => {
     try {
-      const snapshot = await admin.firestore().collection("atendimentos").get();
+      const snapshot = await admin
+        .firestore()
+        .collection("atendimentos")
+        .orderBy("criadoEm", "desc")
+        .limit(500)
+        .get();
       const atendimento = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
@@ -243,22 +327,35 @@ export function createProtectedAtendimentoRouter(): express.Router {
 
   router.post("/registrarAtendimento", async (req, res) => {
     try {
-      const atendimentoData = req.body;
+      const raw = req.body || {};
+      const nomeCliente = readTrimmedString(raw.nomeCliente, 150);
+      const tipoAtendimento = readTrimmedString(raw.tipoAtendimento, 100);
 
-      if (!atendimentoData.nomeCliente || !atendimentoData.tipoAtendimento) {
+      if (!nomeCliente || !tipoAtendimento) {
         res
           .status(400)
           .send("Nome do cliente e tipo de atendimento são obrigatórios.");
         return;
       }
 
+      const user = (req as express.Request & { user?: { uid?: string; displayName?: string } }).user;
+      const sanitizedPayload = {
+        nomeCliente,
+        tipoAtendimento,
+        codigoPedido: readTrimmedString(raw.codigoPedido, 60),
+        codigoClienteTagPlus: readTrimmedString(raw.codigoClienteTagPlus, 60),
+        atendente: readTrimmedString(raw.atendente, 120) || user?.displayName || "",
+        atendenteUid: readTrimmedString(raw.atendenteUid, 128) || user?.uid || "",
+        status: readTrimmedString(raw.status, 60) || "Finalizado",
+        atendimentoDireto: raw.atendimentoDireto === true,
+        isConsumidor: raw.isConsumidor === true,
+        criadoEm: Timestamp.now(),
+      };
+
       const docRef = await admin
         .firestore()
         .collection("atendimentos")
-        .add({
-          ...atendimentoData,
-          criadoEm: Timestamp.now(),
-        });
+        .add(sanitizedPayload);
 
       res.status(201).send({ atendimentoId: docRef.id });
     } catch (error) {

@@ -24,6 +24,17 @@ function buildQuery(filtros: FiltrosLancamento): string {
     return qs ? `?${qs}` : '';
 }
 
+export function useDebouncedValue<T>(value: T, delayMs = 350): T {
+    const [debounced, setDebounced] = useState(value);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setDebounced(value), delayMs);
+        return () => clearTimeout(timer);
+    }, [value, delayMs]);
+
+    return debounced;
+}
+
 export function useLancamentos(filtros: FiltrosLancamento): UseLancamentosResult {
     const [dados, setDados] = useState<PagedLancamentos | null>(null);
     const [loading, setLoading] = useState(true);
@@ -55,7 +66,11 @@ export function useLancamentos(filtros: FiltrosLancamento): UseLancamentosResult
 
     useEffect(() => {
         void fetch_();
-        const interval = setInterval(() => void fetch_(), 60_000);
+        const interval = setInterval(() => {
+            if (!document.hidden) {
+                void fetch_();
+            }
+        }, 180_000);
         return () => clearInterval(interval);
     }, [fetch_]);
 

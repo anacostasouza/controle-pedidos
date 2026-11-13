@@ -16,6 +16,7 @@ import {
   ordenarPedidosPorEntrega,
 } from "../../utils/filtrosUtils";
 import { logError } from "../../../utils/logger";
+import { createSetorMiddleware } from "../../../utils/authMiddleware";
 
 function buildCandidatePedidosQuery(
   db: FirebaseFirestore.Firestore,
@@ -57,6 +58,49 @@ function buildCandidatePedidosQuery(
   return col.orderBy("criadoEm", "desc").limit(1000);
 }
 
+const ACTIVE_PEDIDOS_CACHE_TTL_MS = 45 * 1000;
+let activePedidosCache: { items: any[]; expiresAt: number } | null = null;
+let activePedidosInFlight: Promise<any[]> | null = null;
+
+export function invalidateActivePedidosCache(): void {
+  activePedidosCache = null;
+  activePedidosInFlight = null;
+}
+
+async function getActivePedidosFromCacheOrDb(
+  db: FirebaseFirestore.Firestore,
+  forceRefresh = false
+): Promise<any[]> {
+  if (!forceRefresh && activePedidosCache && Date.now() < activePedidosCache.expiresAt) {
+    return activePedidosCache.items;
+  }
+
+  if (activePedidosInFlight && !forceRefresh) {
+    return activePedidosInFlight;
+  }
+
+  activePedidosInFlight = db
+    .collection("pedidos")
+    .where("statusAtual", "!=", "Entregue")
+    .get()
+    .then((snapshot) => {
+      const items = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as any[];
+      activePedidosCache = {
+        items,
+        expiresAt: Date.now() + ACTIVE_PEDIDOS_CACHE_TTL_MS,
+      };
+      return items;
+    })
+    .finally(() => {
+      activePedidosInFlight = null;
+    });
+
+  return activePedidosInFlight;
+}
+
 async function executarBuscaPedidos(
   db: FirebaseFirestore.Firestore,
   reqQuery: any,
@@ -72,11 +116,16 @@ async function executarBuscaPedidos(
   const rawPage = effectiveQuery.pagina || effectiveQuery.page;
   const pageNum = rawPage ? Math.max(1, Number(rawPage) || 1) : null;
 
-  const snapshot = await buildCandidatePedidosQuery(db, effectiveQuery).get();
-  const allDocs = snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as any[];
+  let allDocs: any[];
+  if (exigirCamposDashboard) {
+    allDocs = await getActivePedidosFromCacheOrDb(db, effectiveQuery.refresh === "true");
+  } else {
+    const snapshot = await buildCandidatePedidosQuery(db, effectiveQuery).get();
+    allDocs = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as any[];
+  }
 
   const filtered = ordenarPedidosPorEntrega(
     filtrarPedidosEmMemoria(allDocs, effectiveQuery, Date.now(), { exigirCamposDashboard })
@@ -129,6 +178,15 @@ async function executarBuscaPedidos(
 
 export function createProtectedDashboardRouter(): express.Router {
   const router = express.Router();
+
+  router.get("/auth/verify", (req, res) => {
+    const user = (req as any).user;
+    return res.status(200).json({
+      authorized: true,
+      uid: user?.uid || null,
+      setor: user?.setor || null,
+    });
+  });
 
   router.post("/dashboard/criarPedido", async (req, res) => {
     try {
@@ -236,6 +294,7 @@ export function createProtectedDashboardRouter(): express.Router {
 
       const pedidoRef = await db.collection("pedidos").add(pedidoData);
       await pedidoRef.update({ pedidoID: pedidoRef.id });
+      invalidateActivePedidosCache();
 
       return res.status(201).json({ pedidoID: pedidoRef.id });
     } catch (error) {
@@ -394,6 +453,7 @@ export function createProtectedDashboardRouter(): express.Router {
       }
 
       await pedidoRef.update(updateData);
+      invalidateActivePedidosCache();
       return res.status(200).json({ message: "Pedido atualizado com sucesso" });
     } catch (error) {
       logError("Erro ao editar pedido:", error instanceof Error ? error.message : "Erro desconhecido");
@@ -403,21 +463,218 @@ export function createProtectedDashboardRouter(): express.Router {
 
   router.delete("/dashboard/deletarPedido", async (req, res) => {
     try {
-      const { pedidoID } = req.body;
+      const { pedidoID, motivo } = req.body;
       if (!pedidoID) {
-        return res.status(400).json({ message: "Parâmetro obrigatório não preenchido" });
+        return res.status(400).json({ message: "Parâmetro obrigatório não preenchido: pedidoID" });
       }
+      const motivoFinal = typeof motivo === "string" && motivo.trim().length > 0
+        ? motivo.trim()
+        : "Não informado";
+
       const db = admin.firestore();
       const pedidoRef = db.collection("pedidos").doc(pedidoID);
       const pedidoDoc = await pedidoRef.get();
       if (!pedidoDoc.exists) {
         return res.status(404).json({ message: "Pedido não encontrado" });
       }
+
+      const pedidoData = pedidoDoc.data() || {};
+      const user = (req as any).user || {};
+
+      // Snapshot completo e imutável para auditoria
+      const excluidoEm = Timestamp.now();
+      const logExclusao = {
+        id: pedidoID,
+        pedidoId: pedidoID,
+        numeroPedido: pedidoData.numeroPedido ?? null,
+        cliente: pedidoData.cliente ?? null,
+        valorTotal: pedidoData.servico?.valorTotal ?? pedidoData.valorTotal ?? null,
+        dadosOriginais: pedidoData,
+        excluidoPor: {
+          uid: user.uid || "sistema",
+          nome: user.displayName || user.name || "Usuário",
+          email: user.email || "",
+          setor: user.setor || user.setorNome || "",
+        },
+        excluidoEm,
+        motivo: motivoFinal,
+        restaurado: false,
+        restauradoEm: null,
+        restauradoPor: null,
+      };
+
+      await db.collection("pedidos_excluidos").doc(pedidoID).set(logExclusao);
       await pedidoRef.delete();
+      invalidateActivePedidosCache();
       return res.status(200).json({ message: "Pedido deletado com sucesso" });
     } catch (error) {
       logError("Erro ao deletar pedido:", error instanceof Error ? error.message : "Erro desconhecido");
       return res.status(500).json({ message: "Erro ao deletar pedido" });
+    }
+  });
+
+  const requireAuditAccess = createSetorMiddleware(
+    ["SUPORTE", "GESTAO", "COORDENACAO"],
+    "Acesso negado: apenas Suporte ou Coordenação/Gestão podem acessar auditoria de exclusões."
+  );
+
+  router.get("/dashboard/pedidosExcluidos", requireAuditAccess, async (req, res) => {
+    try {
+      const db = admin.firestore();
+      const page = Math.max(1, parseInt(String(req.query.page || "1"), 10) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || "20"), 10) || 20));
+      const { dataInicio, dataFim, termo } = req.query as Record<string, string | undefined>;
+
+      let query: FirebaseFirestore.Query = db.collection("pedidos_excluidos");
+
+      if (dataInicio) {
+        const dInicio = new Date(`${dataInicio}T00:00:00.000Z`);
+        if (!isNaN(dInicio.getTime())) {
+          query = query.where("excluidoEm", ">=", Timestamp.fromDate(dInicio));
+        }
+      }
+
+      if (dataFim) {
+        const dFim = new Date(`${dataFim}T23:59:59.999Z`);
+        if (!isNaN(dFim.getTime())) {
+          query = query.where("excluidoEm", "<=", Timestamp.fromDate(dFim));
+        }
+      }
+
+      query = query.orderBy("excluidoEm", "desc").limit(1000);
+
+      const snapshot = await query.get();
+      let docs = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          pedidoId: data.pedidoId || doc.id,
+          numeroPedido: data.numeroPedido,
+          cliente: data.cliente,
+          valorTotal: data.valorTotal,
+          excluidoPor: data.excluidoPor,
+          excluidoEm: data.excluidoEm,
+          motivo: data.motivo,
+          restaurado: Boolean(data.restaurado),
+          restauradoEm: data.restauradoEm || null,
+          restauradoPor: data.restauradoPor || null,
+        };
+      });
+
+      if (termo && termo.trim()) {
+        const t = normalizarTexto(termo.trim());
+        docs = docs.filter((d) => {
+          const numStr = String(d.numeroPedido || "");
+          const clienteNome = normalizarTexto(
+            d.cliente?.nome || d.cliente?.razaoSocial || (typeof d.cliente === "string" ? d.cliente : "")
+          );
+          const motivoStr = normalizarTexto(d.motivo || "");
+          const quemExcluiu = normalizarTexto(d.excluidoPor?.nome || "");
+          return (
+            numStr.includes(t) ||
+            clienteNome.includes(t) ||
+            motivoStr.includes(t) ||
+            quemExcluiu.includes(t)
+          );
+        });
+      }
+
+      const total = docs.length;
+      const totalPages = Math.ceil(total / limit) || 1;
+      const offset = (page - 1) * limit;
+      const paginatedItems = docs.slice(offset, offset + limit);
+
+      return res.status(200).json({
+        logs: deepConvertTimestamps(paginatedItems),
+        total,
+        page,
+        totalPages,
+      });
+    } catch (error) {
+      logError("Erro ao buscar logs de pedidos excluídos:", error);
+      return res.status(500).json({ message: "Erro ao buscar pedidos excluídos" });
+    }
+  });
+
+  router.get("/dashboard/pedidosExcluidos/:id", requireAuditAccess, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const db = admin.firestore();
+      const docRef = db.collection("pedidos_excluidos").doc(id);
+      const docSnap = await docRef.get();
+      if (!docSnap.exists) {
+        return res.status(404).json({ message: "Registro de exclusão não encontrado" });
+      }
+      return res.status(200).json(deepConvertTimestamps(docSnap.data()));
+    } catch (error) {
+      logError("Erro ao buscar detalhes do pedido excluído:", error);
+      return res.status(500).json({ message: "Erro ao buscar detalhes do pedido excluído" });
+    }
+  });
+
+  router.post("/dashboard/restaurarPedido", requireAuditAccess, async (req, res) => {
+    try {
+      const { pedidoID } = req.body;
+      if (!pedidoID) {
+        return res.status(400).json({ message: "pedidoID é obrigatório" });
+      }
+
+      const db = admin.firestore();
+      const logRef = db.collection("pedidos_excluidos").doc(pedidoID);
+      const logSnap = await logRef.get();
+      if (!logSnap.exists) {
+        return res.status(404).json({ message: "Registro de exclusão não encontrado" });
+      }
+
+      const logData = logSnap.data();
+      if (!logData || !logData.dadosOriginais) {
+        return res.status(400).json({ message: "Dados originais do pedido não disponíveis para restauração" });
+      }
+
+      const pedidoRef = db.collection("pedidos").doc(pedidoID);
+      const pedidoExistente = await pedidoRef.get();
+      if (pedidoExistente.exists) {
+        return res.status(409).json({ message: "Já existe um pedido ativo com este ID" });
+      }
+
+      const user = (req as any).user || {};
+      const now = Timestamp.now();
+
+      // Reconstrói o pedido original com atualização no histórico
+      const dadosRestaurados = {
+        ...logData.dadosOriginais,
+        atualizadoEm: now,
+        historicoStatus: [
+          ...(logData.dadosOriginais.historicoStatus ?? []),
+          {
+            status: logData.dadosOriginais.statusAtual || "Em Aberto",
+            data: now,
+            responsavel: user.displayName || user.name || "Usuário",
+            setor: user.setor || user.setorNome || "SUPORTE",
+            observacao: "Pedido restaurado a partir da auditoria de exclusões",
+          },
+        ],
+      };
+
+      await pedidoRef.set(dadosRestaurados);
+
+      // Atualiza o log para restaurado
+      await logRef.update({
+        restaurado: true,
+        restauradoEm: now,
+        restauradoPor: {
+          uid: user.uid || "sistema",
+          nome: user.displayName || user.name || "Usuário",
+          email: user.email || "",
+          setor: user.setor || user.setorNome || "",
+        },
+      });
+
+      invalidateActivePedidosCache();
+      return res.status(200).json({ message: "Pedido restaurado com sucesso!" });
+    } catch (error) {
+      logError("Erro ao restaurar pedido:", error);
+      return res.status(500).json({ message: "Erro ao restaurar pedido" });
     }
   });
 
@@ -460,6 +717,7 @@ export function createProtectedDashboardRouter(): express.Router {
           { status: "Entregue", data: now, responsavel: (req as any).user.name, setor: (req as any).user.setor },
         ],
       });
+      invalidateActivePedidosCache();
 
       return res.status(200).json({ message: "Pedido marcado como entregue!" });
     } catch (error) {

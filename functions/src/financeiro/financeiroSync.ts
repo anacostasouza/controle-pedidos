@@ -1,13 +1,72 @@
 import * as admin from "firebase-admin";
 import { ensureTagPlusAccessToken } from "../tagplus/tagplusShared";
 import { FinanceiroClient } from "./FinanceiroClient";
-import type { SyncMeta } from "./financeiroDomain";
+import type { LancamentoFinanceiro, SyncMeta } from "./financeiroDomain";
 
 const DB_COLLECTION = "financeiro_cache";
 const META_COLLECTION = "financeiro_meta";
 const SYNC_META_DOC = "sync";
 
 let isSyncInProgress = false;
+
+type MemoryCacheEntry = {
+  items: LancamentoFinanceiro[];
+  expiresAt: number;
+};
+
+let memoryCache: MemoryCacheEntry | null = null;
+let memoryCachePromise: Promise<LancamentoFinanceiro[]> | null = null;
+
+function getMemoryCacheTtlMs(): number {
+  const configured = process.env.FINANCEIRO_MEMORY_CACHE_TTL_MS;
+  if (configured !== undefined) {
+    const parsed = Number(configured);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+  }
+  return process.env.NODE_ENV === "test" ? 0 : 45_000;
+}
+
+export function invalidateFinanceiroMemoryCache(): void {
+  memoryCache = null;
+  memoryCachePromise = null;
+}
+
+export async function getCachedLancamentos(): Promise<LancamentoFinanceiro[]> {
+  const ttlMs = getMemoryCacheTtlMs();
+  const now = Date.now();
+  if (ttlMs > 0 && memoryCache && memoryCache.expiresAt > now) {
+    return memoryCache.items;
+  }
+
+  if (memoryCachePromise) {
+    return memoryCachePromise;
+  }
+
+  memoryCachePromise = (async () => {
+    const snapshot = await admin.firestore().collection(DB_COLLECTION).get();
+    const items: LancamentoFinanceiro[] = [];
+    for (const doc of snapshot.docs) {
+      items.push(doc.data() as LancamentoFinanceiro);
+    }
+
+    if (ttlMs > 0) {
+      memoryCache = {
+        items,
+        expiresAt: Date.now() + ttlMs,
+      };
+    } else {
+      memoryCache = null;
+    }
+
+    return items;
+  })();
+
+  try {
+    return await memoryCachePromise;
+  } finally {
+    memoryCachePromise = null;
+  }
+}
 
 export async function syncFinanceiro(force = false): Promise<void> {
   // 1. Trava de concorrência em memória
@@ -135,6 +194,7 @@ export async function syncFinanceiro(force = false): Promise<void> {
     });
 
     console.info(`[financeiroSync] Sincronização concluída com sucesso! Total: ${totalSynced} lançamentos.`);
+    invalidateFinanceiroMemoryCache();
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("[financeiroSync] Erro na sincronização:", msg);
@@ -177,6 +237,16 @@ export async function getSyncMeta(): Promise<SyncMeta> {
   };
 }
 
+export async function upsertFinanceiroCacheItem(item: LancamentoFinanceiro): Promise<void> {
+  await admin
+    .firestore()
+    .collection(DB_COLLECTION)
+    .doc(String(item.id))
+    .set({ ...item, _synced_at: new Date().toISOString() }, { merge: true });
+  invalidateFinanceiroMemoryCache();
+}
+
 export async function invalidarCacheItem(id: number): Promise<void> {
   await admin.firestore().collection(DB_COLLECTION).doc(String(id)).delete();
+  invalidateFinanceiroMemoryCache();
 }

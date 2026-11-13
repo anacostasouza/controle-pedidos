@@ -7,10 +7,8 @@ import debounce from "lodash.debounce";
 import { useNavigate } from "react-router-dom";
 import {
   getFirestore,
-  collection,
   doc,
   getDoc,
-  getDocs,
 } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
@@ -26,7 +24,7 @@ import {
 import { tiposServico } from "../../types/tipoServicos";
 import { STATUS_SEQUENCE_DEFAULT } from "../../types/StatusPedidos";
 import { gerarOpcoesStatus, convertToTimestamp } from "./utils/dashboardUtils";
-import { fetchAllServicosStatus, getTodasEtapasDoPedido } from "../../utils/FirestoreUtils";
+import { fetchAllServicosStatus, fetchResponsaveisCached, getTodasEtapasDoPedido } from "../../utils/FirestoreUtils";
 
 import { podeEditarPedido as podeEditarPedidoUtils, podeMarcarEntregue, podeEditarPrazoEntrega } from "../../utils/PermissionUtils";
 
@@ -61,8 +59,18 @@ export default function Dashboard() {
   const itemsPerPage = 10;
   const [fetchError, setFetchError] = useState("");
   const requestIdRef = useRef(0);
+  const lastSentQueryKeyRef = useRef("");
   const prevSearchRef = useRef({ buscaCliente: "", filtroResponsavel: "" });
   const totalPages = Math.ceil(totalPedidosFiltrados / itemsPerPage);
+
+  const updateFilter = useCallback(
+    <T,>(setter: React.Dispatch<React.SetStateAction<T>>) =>
+      (val: T) => {
+        setter(val);
+        setCurrentPage(1);
+      },
+    []
+  );
 
   const normalizeResponsavelTerm = (value: string): string =>
     value
@@ -97,6 +105,10 @@ export default function Dashboard() {
       const responsavelPrefixoNormalizado = normalizeResponsavelTerm(responsavelPrefixoRaw);
       const usarPrefixoResponsavel = responsavelPrefixoNormalizado.length >= 2;
 
+      const clienteTrim = buscaCliente.trim();
+      const isClienteNum = /^\d+$/.test(clienteTrim);
+      const effectiveCliente = isClienteNum || clienteTrim.length >= 2 ? clienteTrim : "";
+
       const params: Record<string, string> = {
         filtroTipo: filtroServico,
         filtroSubTipo,
@@ -105,7 +117,7 @@ export default function Dashboard() {
         itensPorPagina: itemsPerPage.toString(),
         porPagina: itemsPerPage.toString(),
         pagina: page.toString(),
-        filtroCliente: buscaCliente.trim(),
+        filtroCliente: effectiveCliente,
         filtroRequerArte: filtroRequerArte ?? "",
         filtroRequerGalpao: filtroRequerGalpao ?? "",
         filtroOcultarEntregues: "true",
@@ -132,13 +144,20 @@ export default function Dashboard() {
   );
 
   const fetchPedidos = useCallback(
-    async (params: Record<string, string>) => {
+    async (params: Record<string, string>, options?: { force?: boolean; refresh?: boolean }) => {
+      const queryKey = JSON.stringify(params);
+      if (!options?.force && queryKey === lastSentQueryKeyRef.current) {
+        return;
+      }
+      lastSentQueryKeyRef.current = queryKey;
+
       const fetchId = ++requestIdRef.current;
       setLoading(true);
       setFetchError("");
       const token = (await getAuth().currentUser?.getIdToken()) || "";
       try {
-        const data = await buscarPedidos(params, token);
+        const requestParams = options?.refresh ? { ...params, refresh: "true" } : params;
+        const data = await buscarPedidos(requestParams, token);
         if (fetchId !== requestIdRef.current) return;
 
         const total = data.total || 0;
@@ -168,6 +187,7 @@ export default function Dashboard() {
         setTotalPedidosFiltrados(total);
       } catch (error) {
         if (fetchId !== requestIdRef.current) return;
+        lastSentQueryKeyRef.current = "";
         setFetchError(
           error instanceof Error
             ? error.message
@@ -188,7 +208,7 @@ export default function Dashboard() {
   const debouncedFetchPedidos = useCallback(
     debounce((params: Record<string, string>) => {
       void fetchPedidos(params);
-    }, 300),
+    }, 500),
     [fetchPedidos]
   );
 
@@ -327,7 +347,7 @@ export default function Dashboard() {
       await marcarComoEntregueBackend(pedidoId);
       alert("Pedido marcado como entregue!");
       // Recarregar dados após sucesso
-      void fetchPedidos(buildFetchParams(currentPage));
+      void fetchPedidos(buildFetchParams(currentPage), { force: true, refresh: true });
     } catch (error) {
       console.error("Erro ao marcar como entregue:", error);
       alert("Erro ao atualizar pedido.");
@@ -337,32 +357,11 @@ export default function Dashboard() {
   const shouldShowActionsColumn = true;
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [
-    filtroServico,
-    filtroSubTipo,
-    filtroStatus,
-    filtroResponsavel,
-    filtroAtrasados,
-    buscaCliente,
-    filtroRequerArte,
-    filtroRequerGalpao,
-  ]);
-
-  useEffect(() => {
-    async function fetchResponsaveis() {
-      const db = getFirestore();
-      const usuariosSnap = await getDocs(collection(db, "usuarios"));
-      const responsaveis = usuariosSnap.docs
-        .map((doc) => ({
-          uid: doc.id,
-          displayName: doc.data().displayName,
-        }))
-        .filter(user => user.displayName);
-      responsaveis.sort((a, b) => a.displayName.localeCompare(b.displayName));
-      setResponsaveisOptions(responsaveis);
-    }
-    fetchResponsaveis();
+    fetchResponsaveisCached()
+      .then((responsaveis) => setResponsaveisOptions(responsaveis))
+      .catch(() => {
+        // fallback silencioso se falhar leitura de usuários
+      });
   }, []);
 
   useEffect(() => {
@@ -375,21 +374,21 @@ export default function Dashboard() {
       <DashboardHeader
         pedidosFiltrados={pedidosFiltrados}
         buscaCliente={buscaCliente}
-        setBuscaCliente={setBuscaCliente}
+        setBuscaCliente={updateFilter(setBuscaCliente)}
         filtroServico={filtroServico}
-        setFiltroServico={setFiltroServico}
+        setFiltroServico={updateFilter(setFiltroServico)}
         filtroSubTipo={filtroSubTipo}
-        setFiltroSubTipo={setFiltroSubTipo}
+        setFiltroSubTipo={updateFilter(setFiltroSubTipo)}
         filtroStatus={filtroStatus}
-        setFiltroStatus={setFiltroStatus}
+        setFiltroStatus={updateFilter(setFiltroStatus)}
         filtroAtrasados={filtroAtrasados}
-        setFiltroAtrasados={setFiltroAtrasados}
+        setFiltroAtrasados={updateFilter(setFiltroAtrasados)}
         filtroRequerArte={filtroRequerArte}
-        setFiltroRequerArte={setFiltroRequerArte}
+        setFiltroRequerArte={updateFilter(setFiltroRequerArte)}
         filtroRequerGalpao={filtroRequerGalpao}
-        setFiltroRequerGalpao={setFiltroRequerGalpao}
+        setFiltroRequerGalpao={updateFilter(setFiltroRequerGalpao)}
         filtroResponsavel={filtroResponsavel}
-        setFiltroResponsavel={setFiltroResponsavel}
+        setFiltroResponsavel={updateFilter(setFiltroResponsavel)}
         subTipoOptions={subTipoOptions}
         statusOptions={statusOptions}
         responsaveisOptions={responsaveisOptions}
@@ -417,7 +416,7 @@ export default function Dashboard() {
           <span>{fetchError}</span>
           <button
             type="button"
-            onClick={() => void fetchPedidos(buildFetchParams(currentPage))}
+            onClick={() => void fetchPedidos(buildFetchParams(currentPage), { force: true, refresh: true })}
             style={{
               padding: "6px 12px",
               borderRadius: "6px",

@@ -7,6 +7,7 @@
     "serve": "npm run build && npx firebase-tools@15.11.0 emulators:start --only functions --config ../firebase.json",
     "serve:functions": "npm run serve",
     "serve:crm": "node scripts/serve-crm-emulator.cjs",
+    "serve:financeiro": "node scripts/serve-financial-emulator.cjs",
     "shell": "npm run build && npx firebase-tools@15.11.0 functions:shell --config ../firebase.json",
     "start": "npm run shell",
     "deploy": "npm run build && npx firebase-tools@15.11.0 deploy --only functions --config ../firebase.json",

@@ -1,103 +1,178 @@
+import crypto from "crypto";
 import express from "express";
+import * as admin from "firebase-admin";
 import { onRequest } from "firebase-functions/v2/https";
+import { authMiddleware, createSetorMiddleware } from "../utils/authMiddleware";
 import {
   applyStandardCors,
   applySecurityHeaders,
+  createAuthenticatedRateLimiter,
   createDefaultRateLimiter,
 } from "../utils/httpMiddleware";
-import { TagPlusClient } from "./TagPlusClient";
+import { logError, logSecurityEvent } from "../utils/logger";
 import {
   exchangeTagPlusCodeForToken,
   ensureTagPlusAccessToken,
-  refreshTagPlusAccessToken,
   saveStoredTagPlusTokens,
 } from "./tagplusShared";
 
-export const appTagPlus = express();
+const OAUTH_STATES_COLLECTION = "tagplus_oauth_states";
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+const TAGPLUS_ADMIN_SECTORS = ["SUPORTE", "GESTAO"] as const;
 
-applyStandardCors(appTagPlus);
-applySecurityHeaders(appTagPlus);
-appTagPlus.use(createDefaultRateLimiter());
-appTagPlus.use(express.json());
+export function createTagPlusApp(
+  authentication: express.RequestHandler = authMiddleware
+): express.Express {
+  const app = express();
+  app.set("trust proxy", 1);
 
-appTagPlus.get("/auth/status", async (_req, res) => {
-  const storedTokens = await ensureTagPlusAccessToken();
-  return res.json({
-    ok: true,
-    hasProcessToken: Boolean(process.env.TAGPLUS_ACCESS_TOKEN),
-    hasStoredToken: Boolean(storedTokens?.access_token),
-    savedAt: storedTokens?.saved_at || null,
-  });
-});
+  applyStandardCors(app);
+  applySecurityHeaders(app);
+  app.use(createDefaultRateLimiter({ max: 120 }));
+  app.use(express.json());
 
-// Inicia o fluxo de autorização (redireciona o usuário para a tela de autorização TagPlus)
-appTagPlus.get("/auth/start", (req, res) => {
-  const clientId = process.env.TAGPLUS_CLIENT_ID;
-  const defaultScopes = [
-    "read:clientes",
-    "read:pedidos",
-    "read:financeiros",
-    "write:financeiros",
-    "read:contas",
-    "read:formas_pagamento",
-    "read:planos_orcamentarios",
-    "read:fornecedores",
-  ].join(" ");
-  const scope = (process.env.TAGPLUS_SCOPE as string) || defaultScopes;
-  if (!clientId) {
-    return res.status(500).json({ message: "TAGPLUS_CLIENT_ID not configured" });
-  }
+  const requireAdmin = createSetorMiddleware(
+    TAGPLUS_ADMIN_SECTORS,
+    "Acesso negado. Apenas Gestão ou Suporte pode gerenciar a integração TagPlus."
+  );
+  const authRateLimiter = createAuthenticatedRateLimiter({ max: 120 });
 
-  const redirectUri = (process.env.TAGPLUS_REDIRECT_URI as string) || "";
-  const state = req.query.state || "";
-  const params = new URLSearchParams({
-    response_type: "code",
-    client_id: clientId,
-    scope: scope,
-    state: String(state),
+  app.get("/auth/status", authentication, authRateLimiter, requireAdmin, async (_req, res) => {
+    const storedTokens = await ensureTagPlusAccessToken();
+    return res.json({
+      ok: true,
+      hasProcessToken: Boolean(process.env.TAGPLUS_ACCESS_TOKEN),
+      hasStoredToken: Boolean(storedTokens?.access_token),
+      savedAt: storedTokens?.saved_at || null,
+    });
   });
 
-  // TagPlus ignore redirect_uri in some flows; include if provided
-  if (redirectUri) params.set("redirect_uri", redirectUri);
+  // Inicia o fluxo de autorização (gera state CSRF de uso único e redireciona para o TagPlus)
+  app.get("/auth/start", authentication, authRateLimiter, requireAdmin, async (req, res) => {
+    const clientId = process.env.TAGPLUS_CLIENT_ID;
+    const defaultScopes = [
+      "read:clientes",
+      "read:pedidos",
+      "read:financeiros",
+      "write:financeiros",
+      "read:contas",
+      "read:formas_pagamento",
+      "read:planos_orcamentarios",
+      "read:fornecedores",
+      "read:vendas_simples",
+      "read:movimentacoes",
+      "read:produtos",
+    ].join(" ");
+    const scope = (process.env.TAGPLUS_SCOPE as string) || defaultScopes;
+    if (!clientId) {
+      return res.status(500).json({ message: "TAGPLUS_CLIENT_ID not configured" });
+    }
 
-  const authorizeUrl = `https://developers.tagplus.com.br/authorize?${params.toString()}`;
-  return res.redirect(authorizeUrl);
-});
+    const state = crypto.randomBytes(32).toString("hex");
+    const now = Date.now();
+    const uid = (req as express.Request & { user?: { uid?: string } }).user?.uid || "unknown";
 
-// Callback que TagPlus irá chamar com ?code=... após autorização
-appTagPlus.get("/oauth/tagplus/callback", async (req, res) => {
-  const code = req.query.code as string;
-  const error = req.query.error as string;
+    await admin
+      .firestore()
+      .collection(OAUTH_STATES_COLLECTION)
+      .doc(state)
+      .set({
+        uid,
+        createdAt: now,
+        expiresAt: now + OAUTH_STATE_TTL_MS,
+      });
 
-  if (error) {
-    return res.status(400).json({ ok: false, error });
-  }
+    const redirectUri = (process.env.TAGPLUS_REDIRECT_URI as string) || "";
+    const params = new URLSearchParams({
+      response_type: "code",
+      client_id: clientId,
+      scope,
+      state,
+    });
 
-  if (!code) {
-    return res.status(400).json({ ok: false, message: "Missing code" });
-  }
+    if (redirectUri) params.set("redirect_uri", redirectUri);
 
-  const clientId = process.env.TAGPLUS_CLIENT_ID;
-  const clientSecret = process.env.TAGPLUS_CLIENT_SECRET;
+    const authorizeUrl = `https://developers.tagplus.com.br/authorize?${params.toString()}`;
+    const wantsJson =
+      req.query.format === "json" ||
+      (typeof req.headers.accept === "string" &&
+        req.headers.accept.includes("application/json") &&
+        !req.headers.accept.includes("text/html"));
 
-  if (!clientId || !clientSecret) {
-    return res.status(500).json({ message: "TAGPLUS_CLIENT_ID or TAGPLUS_CLIENT_SECRET not configured" });
-  }
+    if (wantsJson) {
+      return res.status(200).json({ authorizeUrl });
+    }
 
-  try {
-    const tokenData = await exchangeTagPlusCodeForToken(code, clientId, clientSecret);
+    return res.redirect(authorizeUrl);
+  });
 
-    // Para testes locais, armazenamos em variáveis de ambiente e também em arquivo.
-    if (tokenData.access_token) process.env.TAGPLUS_ACCESS_TOKEN = tokenData.access_token;
-    if (tokenData.refresh_token) process.env.TAGPLUS_REFRESH_TOKEN = tokenData.refresh_token;
-    await saveStoredTagPlusTokens(tokenData);
+  // Callback que TagPlus irá chamar com ?code=...&state=... após autorização
+  app.get("/oauth/tagplus/callback", async (req, res) => {
+    const code = typeof req.query.code === "string" ? req.query.code.trim() : "";
+    const state = typeof req.query.state === "string" ? req.query.state.trim() : "";
+    const error = typeof req.query.error === "string" ? req.query.error.trim() : "";
 
-    return res.json({ ok: true, tokenData });
-  } catch (err: any) {
-    console.error("Error exchanging code for token:", err?.response?.data || err.message || err);
-    return res.status(500).json({ ok: false, error: err?.response?.data || err.message || String(err) });
-  }
-});
+    if (error) {
+      return res.status(400).json({ ok: false, message: "Autorização recusada pelo TagPlus." });
+    }
+
+    if (!code) {
+      return res.status(400).json({ ok: false, message: "Missing code" });
+    }
+
+    if (!/^[a-f0-9]{64}$/i.test(state)) {
+      logSecurityEvent("tagplus.oauth.invalid_state");
+      return res.status(403).json({ ok: false, message: "Parâmetro state inválido ou ausente." });
+    }
+
+    const clientId = process.env.TAGPLUS_CLIENT_ID;
+    const clientSecret = process.env.TAGPLUS_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+      return res.status(500).json({ message: "TAGPLUS_CLIENT_ID or TAGPLUS_CLIENT_SECRET not configured" });
+    }
+
+    try {
+      const db = admin.firestore();
+      const stateRef = db.collection(OAUTH_STATES_COLLECTION).doc(state);
+      const validState = await db.runTransaction(async (tx) => {
+        const snap = await tx.get(stateRef);
+        if (!snap.exists) {
+          return false;
+        }
+        const data = snap.data() as { expiresAt?: number } | undefined;
+        tx.delete(stateRef);
+        return typeof data?.expiresAt === "number" && data.expiresAt > Date.now();
+      });
+
+      if (!validState) {
+        logSecurityEvent("tagplus.oauth.expired_or_replayed_state");
+        return res.status(403).json({ ok: false, message: "Sessão OAuth expirada ou inválida." });
+      }
+
+      const tokenData = await exchangeTagPlusCodeForToken(code, clientId, clientSecret);
+
+      if (tokenData.access_token) process.env.TAGPLUS_ACCESS_TOKEN = tokenData.access_token;
+      if (tokenData.refresh_token) process.env.TAGPLUS_REFRESH_TOKEN = tokenData.refresh_token;
+      await saveStoredTagPlusTokens(tokenData);
+
+      return res.status(200).json({
+        ok: true,
+        message: "Autorização TagPlus concluída com sucesso.",
+      });
+    } catch (err: any) {
+      logError("Error exchanging code for token:", err?.response?.data || err?.message || err);
+      return res.status(500).json({
+        ok: false,
+        message: "Erro ao concluir autorização com a API TagPlus.",
+      });
+    }
+  });
+
+  return app;
+}
+
+export const appTagPlus = createTagPlusApp();
 
 export const apiTagPlus = onRequest(
   {

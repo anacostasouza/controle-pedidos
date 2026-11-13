@@ -71,6 +71,53 @@ export const money = (val: number | null | undefined) =>
         ? '—'
         : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
-/** Formata data ISO (YYYY-MM-DD) para pt-BR (DD/MM/YYYY) */
-export const displayDate = (value: string | null) =>
-    value ? new Date(value + 'T00:00:00').toLocaleDateString('pt-BR') : '—';
+/** Formata data para pt-BR (DD/MM/YYYY) de forma segura */
+export const displayDate = (value: string | null | undefined): string => {
+    if (!value) return '—';
+    const trimmed = String(value).trim();
+    if (!trimmed) return '—';
+    // Se já estiver no formato brasileiro DD/MM/YYYY
+    if (/^\d{2}\/\d{2}\/\d{4}/.test(trimmed)) {
+        return trimmed.slice(0, 10);
+    }
+    // Extrai YYYY-MM-DD
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoMatch) {
+        return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+    }
+    // Fallback com Date
+    const d = new Date(trimmed);
+    if (!isNaN(d.getTime())) {
+        return d.toLocaleDateString('pt-BR');
+    }
+    return trimmed;
+};
+
+/** Formata data e hora para pt-BR (DD/MM/YYYY às HH:mm) */
+export const displayDateTime = (value: string | null | undefined): string => {
+    if (!value) return '—';
+    const trimmed = String(value).trim();
+    if (!trimmed) return '—';
+    // Se formato brasileiro com hora DD/MM/YYYY HH:mm:ss
+    const brMatch = trimmed.match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})/);
+    if (brMatch) {
+        return `${brMatch[1]} às ${brMatch[2]}`;
+    }
+    if (/^\d{2}\/\d{2}\/\d{4}/.test(trimmed)) {
+        return trimmed.slice(0, 10);
+    }
+    // Se formato ISO YYYY-MM-DD HH:mm:ss ou YYYY-MM-DDTHH:mm:ss
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
+    if (isoMatch) {
+        return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]} às ${isoMatch[4]}:${isoMatch[5]}`;
+    }
+    const isoOnlyDate = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoOnlyDate) {
+        return `${isoOnlyDate[3]}/${isoOnlyDate[2]}/${isoOnlyDate[1]}`;
+    }
+    const d = new Date(trimmed);
+    if (!isNaN(d.getTime())) {
+        return `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    }
+    return displayDate(trimmed);
+};

@@ -1,17 +1,19 @@
 import express from "express";
-import * as admin from "firebase-admin";
 import { ensureTagPlusAccessToken } from "../../tagplus/tagplusShared";
 import { logError } from "../../utils/logger";
 import { FinanceiroClient } from "../FinanceiroClient";
-import { getSyncMeta, syncFinanceiro } from "../financeiroSync";
+import {
+  getCachedLancamentos,
+  getSyncMeta,
+  syncFinanceiro,
+  upsertFinanceiroCacheItem,
+} from "../financeiroSync";
 import type {
   LancamentoFinanceiro,
   PagedLancamentos,
   BaixaPayload,
   CriarLancamentoPayload,
 } from "../financeiroDomain";
-
-const DB_COLLECTION = "financeiro_cache";
 
 async function getClientWithRetry(): Promise<FinanceiroClient> {
   const storedTokens = await ensureTagPlusAccessToken();
@@ -33,18 +35,32 @@ async function getClientAfterRefresh(): Promise<FinanceiroClient> {
   return new FinanceiroClient({ accessToken });
 }
 
+function isTagPlusUnauthorized(error: unknown): boolean {
+  return (error as { response?: { status?: number } })?.response?.status === 401;
+}
+
+async function executeWithTagPlusRetry<T>(
+  action: (client: FinanceiroClient) => Promise<T>
+): Promise<T> {
+  const client = await getClientWithRetry();
+  try {
+    return await action(client);
+  } catch (err) {
+    if (!isTagPlusUnauthorized(err)) {
+      throw err;
+    }
+    const retryClient = await getClientAfterRefresh();
+    return action(retryClient);
+  }
+}
+
 export function createLancamentosRouter(): express.Router {
   const router = express.Router();
 
   // GET /financeiro/resumo — métricas consolidadas do dashboard
   router.get("/resumo", async (req, res) => {
     try {
-      const db = admin.firestore();
-      const snapshot = await db.collection(DB_COLLECTION).get();
-      const items: LancamentoFinanceiro[] = [];
-      for (const doc of snapshot.docs) {
-        items.push(doc.data() as LancamentoFinanceiro);
-      }
+      const items = await getCachedLancamentos();
 
       const todayStr = new Intl.DateTimeFormat("en-CA", {
         timeZone: "America/Sao_Paulo",
@@ -216,17 +232,9 @@ export function createLancamentosRouter(): express.Router {
       } = req.query as Record<string, string | undefined>;
 
       const page = Math.max(1, parseInt(pageRaw ?? "1", 10) || 1);
-      const limit = Math.max(1, parseInt(limitRaw ?? "50", 10) || 50);
+      const limit = Math.min(200, Math.max(1, parseInt(limitRaw ?? "50", 10) || 50));
 
-      const db = admin.firestore();
-
-      // Lê todos os documentos de lançamentos da coleção de cache
-      const snapshot = await db.collection(DB_COLLECTION).get();
-
-      let items: LancamentoFinanceiro[] = [];
-      for (const doc of snapshot.docs) {
-        items.push(doc.data() as LancamentoFinanceiro);
-      }
+      let items = await getCachedLancamentos();
 
       // Filtros em memória
       if (tipo) {
@@ -309,19 +317,8 @@ export function createLancamentosRouter(): express.Router {
         return res.status(400).json({ message: "ID inválido" });
       }
 
-      const executar = async (client: FinanceiroClient) =>
-        client.buscarPorId(id);
-
-      let client: FinanceiroClient;
-      try {
-        client = await getClientWithRetry();
-        const item = await executar(client);
-        return res.status(200).json(item);
-      } catch (err) {
-        const retryClient = await getClientAfterRefresh();
-        const item = await executar(retryClient);
-        return res.status(200).json(item);
-      }
+      const item = await executeWithTagPlusRetry((client) => client.buscarPorId(id));
+      return res.status(200).json(item);
     } catch (error) {
       logError(
         "[financeiro] Erro ao buscar lançamento por ID:",
@@ -346,19 +343,9 @@ export function createLancamentosRouter(): express.Router {
         return res.status(400).json({ message: "Campos obrigatórios ausentes" });
       }
 
-      const executar = async (client: FinanceiroClient) =>
-        client.criarLancamento(payload);
-
-      let client: FinanceiroClient;
-      try {
-        client = await getClientWithRetry();
-        const item = await executar(client);
-        return res.status(201).json(item);
-      } catch (err) {
-        const retryClient = await getClientAfterRefresh();
-        const item = await executar(retryClient);
-        return res.status(201).json(item);
-      }
+      const item = await executeWithTagPlusRetry((client) => client.criarLancamento(payload));
+      await upsertFinanceiroCacheItem(item);
+      return res.status(201).json(item);
     } catch (error) {
       logError(
         "[financeiro] Erro ao criar lançamento:",
@@ -378,19 +365,9 @@ export function createLancamentosRouter(): express.Router {
 
       const payload = req.body as BaixaPayload;
 
-      const executar = async (client: FinanceiroClient) =>
-        client.baixarLancamento(id, payload);
-
-      let client: FinanceiroClient;
-      try {
-        client = await getClientWithRetry();
-        const item = await executar(client);
-        return res.status(200).json(item);
-      } catch (err) {
-        const retryClient = await getClientAfterRefresh();
-        const item = await executar(retryClient);
-        return res.status(200).json(item);
-      }
+      const item = await executeWithTagPlusRetry((client) => client.baixarLancamento(id, payload));
+      await upsertFinanceiroCacheItem(item);
+      return res.status(200).json(item);
     } catch (error) {
       logError(
         "[financeiro] Erro ao atualizar lançamento:",

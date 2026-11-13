@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useFinanceiroSession } from './hooks/useFinanceiroSession';
 import { LoginScreen, createGoogleLogin } from './components/auth/LoginScreen';
 import { FinanceiroShell } from './components/layout/FinanceiroShell';
+import type { Page } from './components/layout/FinanceiroShell';
 import { DashboardPage } from './pages/DashboardPage';
 import { ContasReceberPage } from './pages/ContasReceberPage';
 import { ContasPagarPage } from './pages/ContasPagarPage';
+import { PedidosPage } from './pages/PedidosPage';
 import { configured } from './api';
-
-type Page = 'dashboard' | 'receber' | 'pagar';
 
 export default function App() {
     const { user, loading } = useFinanceiroSession();
@@ -46,6 +46,8 @@ export default function App() {
         >
             {page === 'dashboard' ? (
                 <DashboardPage />
+            ) : page === 'pedidos' ? (
+                <PedidosPage />
             ) : page === 'receber' ? (
                 <ContasReceberPage />
             ) : (

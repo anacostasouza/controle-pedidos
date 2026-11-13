@@ -92,20 +92,20 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
         }
     }, [user]);
 
-    async function verifyAuthorization(): Promise<boolean> {
-        if (!user) return false;
+    async function verifyAuthorizationWithStatus(): Promise<{ ok: boolean; shouldSignOut: boolean }> {
+        if (!user) return { ok: false, shouldSignOut: false };
         const token = await user.getIdToken();
         const apiUrl = ATENDIMENTO_API_BASE_URL;
 
         try {
-            const response = await fetch(`${apiUrl}/filaAtendimento`, {
+            const response = await fetch(`${apiUrl}/auth/verify`, {
                 method: "GET",
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
             });
 
-            if (response.status === 403) {
+            if (response.status === 401 || response.status === 403) {
                 const data = await response.json().catch(() => ({}));
                 const message = data.message || "Acesso negado";
 
@@ -122,29 +122,40 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
                     setAuthDenialReason(message);
                 }
 
-                return false;
+                return { ok: false, shouldSignOut: true };
             }
 
             if (response.status === 200) {
                 setAccountDisabled(false);
                 setAuthDenialReason(null);
+                return { ok: true, shouldSignOut: false };
             }
 
-            return response.status === 200;
+            const errorMsg = response.status === 429
+                ? "Muitas requisições no momento. Aguarde alguns instantes e tente novamente."
+                : "Serviço de verificação temporariamente indisponível.";
+            setAuthDenialReason(errorMsg);
+            return { ok: false, shouldSignOut: false };
         } catch (e) {
             if (import.meta.env.DEV) {
                 console.error("Falha na verificação de autorização:", e);
             }
-            return false;
+            setAuthDenialReason("Não foi possível validar sua sessão. Verifique sua conexão e tente novamente.");
+            return { ok: false, shouldSignOut: false };
         }
+    }
+
+    async function verifyAuthorization(): Promise<boolean> {
+        const result = await verifyAuthorizationWithStatus();
+        return result.ok;
     }
 
     useEffect(() => {
         let isMounted = true;
         if (user) {
-            verifyAuthorization().then((ok) => {
+            verifyAuthorizationWithStatus().then(({ ok, shouldSignOut }) => {
                 if (isMounted) setAuthorized(ok);
-                if (!ok) signOut(auth);
+                if (!ok && shouldSignOut) signOut(auth);
             });
         } else {
             setAuthorized(null);

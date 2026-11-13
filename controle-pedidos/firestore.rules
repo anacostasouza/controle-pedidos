@@ -11,6 +11,12 @@ service cloud.firestore {
       allow read, create, update, delete: if isUsuarioInterno();
     }
 
+    // Coleção de auditoria de pedidos excluídos (imutável via client-side, somente backend)
+    match /pedidos_excluidos/{logId} {
+      allow write: if false;
+      allow read: if isUsuarioInterno();
+    }
+
     match /servicos/{servicoId} {
       allow read, write: if isUsuarioInterno();
     }

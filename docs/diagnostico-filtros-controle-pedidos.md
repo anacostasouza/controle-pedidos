@@ -1,77 +1,104 @@
-# Diagnóstico e Solução — Paginação do Dashboard (Controle de Pedidos)
+# Auditoria de Requisições, Rate Limit e Otimização — Controle de Pedidos
 
-Este documento registra a análise e o plano de solução recomendado para o problema remanescente na paginação do Dashboard de Controle de Pedidos (item **5.2** do diagnóstico anterior).
+Este documento registra a análise técnica das causas de **excesso de requisições HTTP**, bloqueios pelo **limite por IP (HTTP 429)** e **alto volume de leituras no Firestore** no sistema de Controle de Pedidos, juntamente com o plano recomendado para otimização de performance e redução de custos.
 
-> **Histórico**: Todos os problemas anteriores (duplicação de cláusula de status, falhas de índice no Firestore, busca de cliente/responsável, ocultação de pedidos entregues ao filtrar por usuário e persistência do dropdown de status) já foram corrigidos e validados em produção.
-
----
-
-## 1. Descrição do Problema
-
-Ao navegar pela paginação do Dashboard:
-- A barra de paginação indica uma página a mais do que o conjunto real de pedidos (ex.: exibe **Página X de 4**, quando a **página 3** já representa o último lote efetivo).
-- Ao clicar em **Próximo** para ir até a última página (ex.: página 4), a tabela mantém exibidas **as mesmas informações da página anterior** em vez de apresentar novos registros ou encerrar na página 3.
+> **Histórico**: As correções anteriores de filtros, ocultamento de entregues e paginação já foram implementadas e validadas em dev.
 
 ---
 
-## 2. Por que isso acontece?
+## 1. Diagnóstico: Por que ocorrem requisições acima do necessário e bloqueio por IP?
 
-Foram identificadas três causas combinadas entre o frontend (`Dashboard.tsx` / `PedidosTable.tsx`) e o backend (`protectedDashboardRoutes.ts` / `filtrosUtils.ts`):
+Após inspecionar [Dashboard.tsx](file:///c:/Users/PLOTAGEM01/desenhar/controle-pedidos/src/pages/Dashboard/Dashboard.tsx), [AuthContext.tsx](file:///c:/Users/PLOTAGEM01/desenhar/controle-pedidos/src/context/AuthContext.tsx), [DashboardHeader.tsx](file:///c:/Users/PLOTAGEM01/desenhar/controle-pedidos/src/pages/Dashboard/components/DashboardHeader.tsx), [funcControlePedidos.ts](file:///c:/Users/PLOTAGEM01/desenhar/functions/src/controle-pedidos/funcControlePedidos.ts), [protectedDashboardRoutes.ts](file:///c:/Users/PLOTAGEM01/desenhar/functions/src/controle-pedidos/routes/protected/protectedDashboardRoutes.ts) e [httpMiddleware.ts](file:///c:/Users/PLOTAGEM01/desenhar/functions/src/utils/httpMiddleware.ts), foram encontrados **6 gargalos críticos**:
 
-### 2.1 Descompasso entre a contagem no Backend e a renderização na Tabela
-- No backend ([protectedDashboardRoutes.ts](file:///c:/Users/PLOTAGEM01/desenhar/functions/src/controle-pedidos/routes/protected/protectedDashboardRoutes.ts)), `executarBuscaPedidos` calcula `total = filtered.length` sobre todos os documentos retornados do Firestore, sem validar se o documento possui os campos obrigatórios para renderização.
-- No frontend ([PedidosTable.tsx](file:///c:/Users/PLOTAGEM01/desenhar/controle-pedidos/src/pages/Dashboard/components/PedidosTable.tsx#L44-L45)), a tabela aplica um filtro antes de exibir:
-  ```tsx
-  .filter(p => p && p.servico && p.statusAtual && p.prazos)
-  ```
-- Como [`ordenarPedidosPorEntrega`](file:///c:/Users/PLOTAGEM01/desenhar/functions/src/controle-pedidos/utils/filtrosUtils.ts) empurra pedidos sem `prazos.entrega` para o **final absoluto** da fila, esses registros incompletos inflam o `total` em 1 página extra (ex.: 30 pedidos válidos + 2 incompletos = 32 -> `Math.ceil(32 / 10) = 4 páginas`).
+### 1.1 Rate Limit por IP compartilhado + Ausência de `trust proxy` (`httpMiddleware.ts` / `funcControlePedidos.ts`)
+- **Configuração atual**: `createDefaultRateLimiter()` limita a **200 requisições a cada 5 minutos por IP**.
+- **Falta de `app.set("trust proxy", 1)`**: No `appControlePedidos` (rodando atrás do load balancer do Google Cloud Run / Firebase Functions v2), não há configuração de `trust proxy`. Sem ela, `req.ip` pode identificar o IP do proxy interno em vez do cliente real em `x-forwarded-for`, fazendo vários usuários compartilharem o mesmo balde de limite.
+- **Rede corporativa (NAT único)**: Mesmo com `trust proxy`, todos os colaboradores no mesmo escritório saem para a internet pelo **mesmo IP público**. Com 5 a 10 pessoas pesquisando no Dashboard ao mesmo tempo, 200 requisições / 5 min equivalem a apenas ~4 a 8 ações por minuto por colaborador, esgotando o limite rapidamente.
 
-### 2.2 Persistência dos dados anteriores + Debounce + Ausência de indicador de `loading`
-- Em [Dashboard.tsx](file:///c:/Users/PLOTAGEM01/desenhar/controle-pedidos/src/pages/Dashboard/Dashboard.tsx), o estado `loading` é atualizado (`_loading`), mas **não é utilizado na interface** e os botões de paginação não são bloqueados durante a busca.
-- Além disso, a mudança de página passa pelo mesmo `debounce(..., 300)` da digitação. Ao clicar em **Próximo**, o texto muda imediatamente para `Página 4 de 4`, mas a lista da página 3 continua visível na tela enquanto aguarda ou se a requisição for cancelada/falhar mantendo o estado `pedidos` anterior.
+### 1.2 Bug de Disparo Duplo e Cancelamento de Debounce ao digitar estando na Página 2+ (`Dashboard.tsx`)
+- Em [Dashboard.tsx](file:///c:/Users/PLOTAGEM01/desenhar/controle-pedidos/src/pages/Dashboard/Dashboard.tsx), existe um `useEffect` de fetch e outro `useEffect` separado que reseta `setCurrentPage(1)` sempre que um filtro muda.
+- Se o usuário estiver na **página 2 ou superior** e digitar 1 letra no campo de cliente ou responsável:
+  1. **Render 1**: `buscaCliente` muda, `prevSearchRef.current` é atualizado para o novo texto e agenda o debounce (300ms). Logo após, o outro `useEffect` dispara `setCurrentPage(1)`.
+  2. **Render 2** (causado por `currentPage: 2 → 1`): `prevSearchRef.current` já contém o texto digitado no Render 1, fazendo `searchChanged` retornar **`false`**.
+  3. Como resultado, o sistema interpreta como uma troca simples de página, **cancela o debounce e envia uma requisição HTTP imediata a cada tecla digitada**!
 
-### 2.3 Ciclo redundante de cursores legados (`lastEntregas`, `lastIds`, `lastResponsaveis`)
-- Em [Dashboard.tsx](file:///c:/Users/PLOTAGEM01/desenhar/controle-pedidos/src/pages/Dashboard/Dashboard.tsx#L133-L147), os arrays de cursor (`lastEntregas`, `lastIds`, `lastResponsaveis`) ainda fazem parte das dependências do `useCallback` de `buildFetchParams`.
-- Toda vez que uma página termina de carregar e grava `setLastEntregas(...)`, a referência de `buildFetchParams` muda e dispara o `useEffect` novamente, criando requisições repetidas e potencial cancelamento/sobreposição de estado no `debouncedFetchPedidos`.
+### 1.3 Debounce curto (300ms) e busca disparada com apenas 1 caractere
+- O atraso de `300ms` é curto para digitação pausada, gerando requisições intermediárias (`"p"`, `"pa"`, `"pad"`, `"pada"`).
+- Além disso, dispara busca no servidor mesmo com 1 único caractere alfabético, retornando conjuntos amplos e consumindo cota desnecessariamente.
 
----
-
-## 3. Melhor Solução Recomendada
-
-A solução definitiva consiste em tornar a paginação **determinística, síncrona com o estado da tabela e livre de cursores legados**:
-
-### Passo 1: Validar estrutura mínima do pedido já no Backend ([filtrosUtils.ts](file:///c:/Users/PLOTAGEM01/desenhar/functions/src/controle-pedidos/utils/filtrosUtils.ts))
-- Exigir na função `filtrarPedidosEmMemoria` (quando usada para listagem do Dashboard) que o pedido possua os campos mínimos renderizáveis:
+### 1.4 Re-leitura completa de todos os pedidos ativos a cada requisição (`protectedDashboardRoutes.ts`)
+- Toda chamada em `/dashboard/buscarPedidos` (cada letra digitada, cada troca de dropdown, cada clique em Próximo/Anterior) executa:
   ```ts
-  if (!p || !p.servico || !p.statusAtual || !p.prazos) {
-    return false;
-  }
+  col.where("statusAtual", "!=", "Entregue").get()
   ```
-- **Resultado**: O valor `total` retornado pelo backend será **100% idêntico** à quantidade de pedidos renderizados na tabela, eliminando qualquer página fantasma gerada por registros incompletos no banco.
+- Isso lê **todos os pedidos ativos do Firestore** repetidamente em cada interação.
+- **Impacto de custo**: Se houver 300 pedidos ativos e um usuário digitar um nome em 3 pausas + navegar 3 páginas, são **1.800 leituras de documentos no Firestore** para visualizar apenas 10 linhas por página.
 
-### Passo 2: Remover cursores legados (`lastEntregas`, `lastIds`, `lastResponsaveis`) no Frontend ([Dashboard.tsx](file:///c:/Users/PLOTAGEM01/desenhar/controle-pedidos/src/pages/Dashboard/Dashboard.tsx))
-- Como o backend já realiza paginação exata por `pagina` e `itensPorPagina`, remover completamente os estados `lastEntregas`, `lastIds` e `lastResponsaveis` do `Dashboard.tsx`.
-- **Resultado**: Elimina re-renderizações em cascata e requisições duplicadas disparadas pelo `useEffect`.
+### 1.5 Verificação de Auth chamando o endpoint pesado de Pedidos (`AuthContext.tsx`)
+- Em [AuthContext.tsx](file:///c:/Users/PLOTAGEM01/desenhar/controle-pedidos/src/context/AuthContext.tsx#L101), a função `verifyAuthorization()` chama:
+  ```ts
+  const url = `${API_URL}/dashboard/buscarPedidos?itensPorPagina=1`;
+  ```
+- A cada abertura ou recarregamento de página, o sistema consome uma requisição no limitador da API de pedidos e força o Firestore a ler **até 1.000 documentos** apenas para saber se o endpoint responde `200` ou `403`.
+- **Risco crítico**: Se a API retornar HTTP `429` (rate limit), `response.status === 200` falha e o `AuthContext` **executa `signOut(auth)`, deslogando o usuário**.
 
-### Passo 3: Separar paginação imediata vs debounce de busca e proteger contra corrida de requisições
-- Aplicar `debounce` apenas quando filtros digitados (`buscaCliente`, `filtroResponsavel`) mudam; ao clicar em **Anterior** ou **Próximo**, buscar a página imediatamente.
-- Adicionar controle de sequência (`requestIdRef`) para garantir que somente a resposta da última requisição solicitada atualize `pedidos` e `totalPedidosFiltrados`.
-- Caso a página retornada venha vazia com `total > 0` (por exemplo, se pedidos acabaram de ser entregues por outro usuário), ajustar automaticamente `currentPage` para a última página válida (`Math.max(1, Math.ceil(total / itemsPerPage))`).
-
-### Passo 4: Exibir estado de carregamento (`loading`) e desabilitar paginação durante a busca
-- Usar o estado `loading` (antes ignorado como `_loading`) para:
-  - Desabilitar os botões `Anterior` e `Próximo` enquanto a página carrega;
-  - Exibir feedback visual discreto de carregamento na área da tabela (ex.: indicador *"Carregando pedidos..."* ou redução de opacidade durante a transição), garantindo que os registros da página anterior nunca sejam confundidos com os da nova página.
-
-### Passo 5: Consistência na camada de renderização ([PedidosTable.tsx](file:///c:/Users/PLOTAGEM01/desenhar/controle-pedidos/src/pages/Dashboard/components/PedidosTable.tsx))
-- Calcular `pedidosValidos` antes da verificação de lista vazia, evitando que uma página sem registros renderizáveis exiba apenas o cabeçalho vazio sem a mensagem *"Nenhum pedido encontrado."*.
+### 1.6 Leituras repetidas de catálogos (`servicosStatus` e `usuarios`) no Frontend
+- `DashboardHeader.tsx` e `Dashboard.tsx` chamam `fetchAllServicosStatus()` separadamente sem cache compartilhado em memória/sessão.
+- `Dashboard.tsx` lê toda a coleção `usuarios` (`getDocs(collection(db, "usuarios"))`) a cada montagem da página.
 
 ---
 
-## 4. Resumo das Alterações Planejadas
+## 2. Plano de Otimização (Performance, Limite de API e Redução de Custos)
 
-| Arquivo | Mudança | Benefício Direto |
-| :--- | :--- | :--- |
-| `functions/src/controle-pedidos/utils/filtrosUtils.ts` | Filtrar registros sem `servico`, `statusAtual` ou `prazos` em `filtrarPedidosEmMemoria` (ou via opção do Dashboard) | Garante `totalPages` exato sem páginas extras vazias |
-| `controle-pedidos/src/pages/Dashboard/Dashboard.tsx` | Remover `lastEntregas`/`lastIds`/`lastResponsaveis`; paginação imediata com `requestIdRef` e exibição de `loading` | Evita buscas duplicadas e garante que a troca de página mostre exatamente os dados da nova página |
-| `controle-pedidos/src/pages/Dashboard/components/PedidosTable.tsx` | Validar `pedidosValidos.length` antes de renderizar a tabela | Evita cabeçalho vazio sem mensagem ao usuário |
+| Prioridade | Melhoria | Impacto em Requisições e Custos |
+| :---: | :--- | :--- |
+| **1** | **Cache em memória no Backend (TTL 30–60s) ou Carregamento Único no Dashboard** | Reduz em **80% a 95%** as leituras no Firestore durante paginação e pesquisas seguidas. |
+| **2** | **Corrigir `trust proxy` e chave de Rate Limit por usuário autenticado (`uid`)** | Elimina falsos positivos de HTTP 429 quando vários colaboradores usam a mesma rede (NAT). |
+| **3** | **Endpoint leve `/auth/status` e proteção contra logout em erro 429** | Reduz leituras de auth de centenas/1.000 docs para **0 leituras na coleção `pedidos`** e impede logout acidental. |
+| **4** | **Resetar página diretamente no `onChange` (remover bug de disparo duplo) + Debounce 500ms + Mínimo 2 chars** | Corta em **50% a 75%** o número de requisições HTTP geradas durante a digitação. |
+| **5** | **Cache compartilhado (Singleton + TTL) para `servicosStatus` e `usuarios`** | Reduz leituras diretas do Firestore no cliente para no máximo 1 vez por sessão/TTL. |
+
+---
+
+### Detalhamento Técnico das Soluções
+
+#### A. Otimização de Leituras e Requisições do Dashboard (Duas estratégias complementares)
+1. **Cache em memória no Backend (`protectedDashboardRoutes.ts`)**:
+   - Armazenar em cache na instância da Cloud Function a lista de pedidos ativos (`statusAtual != "Entregue"`) com TTL curto (ex.: **30 a 60 segundos**).
+   - Invalidar o cache imediatamente sempre que ocorrer qualquer mutação nas rotas `/dashboard/criarPedido`, `/dashboard/editarPedido`, `/dashboard/deletarPedido` e `/dashboard/marcarComoEntregue` (ou adicionar query `?refresh=true` se o usuário clicar em atualizar).
+   - Dessa forma, trocar de página (`1 → 2 → 3`) ou filtrar vários campos em sequência consome **0 leituras adicionais no Firestore**.
+2. **Paginação & Filtros instantâneos no Frontend (Opcional — máxima economia)**:
+   - Como o backend já lê o conjunto de pedidos ativos de uma só vez, alternativamente pode-se retornar todos os pedidos ativos em **1 única chamada** na entrada do Dashboard (com revalidação a cada 2 minutos ou após edições) e aplicar paginação/filtros instantaneamente em memória no navegador (**0 requisições HTTP** ao digitar ou trocar de página).
+
+#### B. Correção do Rate Limiter em Duas Camadas (`httpMiddleware.ts` + `funcControlePedidos.ts`)
+- Configurar `appControlePedidos.set("trust proxy", 1);` logo na criação do Express (confiando exatamente em 1 salto do Load Balancer do Cloud Run — nunca usar `true`, evitando spoofing de `X-Forwarded-For`).
+- **Camada 1 (Pré-Auth — Proteção contra DDoS / força bruta por IP)**: Manter `createDefaultRateLimiter()` **antes** do `authMiddleware` com teto comportando escritórios em NAT (ex.: `600` req / 5 min por IP real).
+- **Camada 2 (Pós-Auth — Limite justo por Usuário `uid`)**: Adicionar rate limiter após `authMiddleware` usando `req.user?.uid` como chave (ex.: `150`–`200` req / 5 min por usuário autenticado), impedindo abuso individual sem afetar outros colegas na mesma rede.
+
+#### C. Endpoint dedicado de Autorização (`AuthContext.tsx` + `protectedDashboardRoutes.ts`)
+- Criar rota leve `GET /auth/verify` protegida pelo `authMiddleware` completo, retornando `{ authorized: true }` sem tocar na coleção `pedidos`.
+- Em `AuthContext.tsx`, atualizar `verifyAuthorization()` para consumir `/auth/verify`, mantendo bloqueio/logout imediato em `401` e `403`, e tratando apenas `429`/`503` como indisponibilidade temporária sem deslogar o usuário.
+
+#### D. Correção do Debounce e Reset de Página (`Dashboard.tsx`)
+- Remover o `useEffect` secundário que zera `currentPage` após a renderização. Em vez disso, resetar `setCurrentPage(1)` diretamente nos callbacks passados para `DashboardHeader` (ou criar um helper `atualizarFiltro(setter, valor)` que atualiza o filtro e seta `currentPage(1)` no mesmo lote de renderização do React).
+- Aumentar o debounce da busca textual para **500ms–600ms** e exigir ao menos **2 caracteres** para busca por nome de cliente/responsável (permitindo 1+ caractere apenas quando for busca numérica de `numeroPedido`).
+
+#### E. Cache em Memória no Cliente (`FirestoreUtils.ts` / `Dashboard.tsx`)
+- Transformar `fetchAllServicosStatus()` e a listagem de `usuarios` (`uid` e `displayName` apenas) em cache singleton **em memória JavaScript** com TTL (ex.: 5 minutos), evitando re-leituras repetidas sem gravar dados em `localStorage`/`sessionStorage`.
+
+---
+
+## 3. Garantias e Cuidados de Segurança do Planejamento
+
+Todas as otimizações acima preservam integralmente os controles de segurança do sistema:
+
+1. **Autenticação e Autorização Estritas no Servidor ([authMiddleware.ts](file:///c:/Users/PLOTAGEM01/desenhar/functions/src/utils/authMiddleware.ts))**:
+   - Tanto `/dashboard/buscarPedidos` quanto `/auth/verify` passam obrigatoriamente pelo `authMiddleware`, que valida assinatura do token JWT Firebase (`verifyIdToken`), verifica domínio corporativo permitido e checa em tempo real no Firestore se o usuário existe e possui `statusConta !== false`.
+2. **Proteção contra Spoofing e DDoS**:
+   - Usar `trust proxy = 1` (em vez de `true`) confia apenas no proxy do Google Cloud Run, impedindo que um atacante forje o header `X-Forwarded-For` para burlar o limite por IP.
+   - Manter o limitador por IP **antes** da autenticação protege o Firebase Auth e o Firestore contra rajadas não autenticadas; o limitador por `uid` **após** o auth impede abuso por contas autenticadas.
+3. **Integridade do Cache e Permissões de Escrita**:
+   - Todas as mutações (`criarPedido`, `editarPedido`, `deletarPedido`, `marcarComoEntregue`) continuam validando permissões de setor/responsável (`permissaoUtils.ts`) diretamente sobre o documento real do Firestore no servidor — nunca confiando em cache para autorizar alterações.
+   - O cache em memória de pedidos ativos só é servido após passar pelo `authMiddleware`, pois a visibilidade da fila do Dashboard é compartilhada entre todos os colaboradores autorizados.
+4. **Zero Exposição Desnecessária no Navegador**:
+   - Caches no frontend ficam apenas na memória da aba (descartados ao fechar) e armazenam apenas o estritamente necessário (`uid` e `displayName` para o filtro de responsáveis, e sequências de status), sem salvar dados sensíveis ou tokens em `sessionStorage`/`localStorage`.

@@ -98,7 +98,7 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
     async function verifyAuthorization(): Promise<boolean> {
         if (!user) return false;
         const token = await user.getIdToken();
-        const url = `${API_URL}/dashboard/buscarPedidos?itensPorPagina=1`;
+        const url = `${API_URL}/auth/verify`;
 
         try {
             const response = await fetch(url, {
@@ -107,6 +107,10 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
                     Authorization: `Bearer ${token}`,
                 },
             });
+
+            if (response.status === 401) {
+                return false;
+            }
             
             // Se retornar 403, extrair o motivo
             if (response.status === 403) {
@@ -128,6 +132,14 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
                 }
                 
                 return false;
+            }
+
+            // Em 429 (rate limit) ou 503 (indisponibilidade), não derruba sessão já autenticada
+            if (response.status === 429 || response.status >= 500) {
+                if (import.meta.env.DEV) {
+                    console.warn("Verificação temporariamente indisponível:", response.status);
+                }
+                return true;
             }
             
             // Se autorizado, limpar qualquer motivo de negação anterior

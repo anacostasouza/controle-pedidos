@@ -247,6 +247,7 @@ export async function setStatusSequence(
     },
     { merge: true }
   );
+  servicosCache = null;
 }
 
 // ---------------------- Listagem de serviços ----------------------
@@ -258,16 +259,79 @@ export interface ServicoStatus {
   sequenciaStatus: string[];
 }
 
-export async function fetchAllServicosStatus(): Promise<ServicoStatus[]> {
-  const snapshot = await getDocs(collection(db, "servicosStatus"));
-  const servicos: ServicoStatus[] = snapshot.docs.map((docu) => ({
-    id: docu.id,
-    ...(docu.data() as Omit<ServicoStatus, "id">),
-  }));
+const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
+let servicosCache: { items: ServicoStatus[]; expiresAt: number } | null = null;
+let servicosInFlight: Promise<ServicoStatus[]> | null = null;
 
-  return servicos.sort((a, b) =>
-    (a.tipo || "").toLowerCase().localeCompare((b.tipo || "").toLowerCase())
-  );
+export async function fetchAllServicosStatus(): Promise<ServicoStatus[]> {
+  if (servicosCache && Date.now() < servicosCache.expiresAt) {
+    return servicosCache.items;
+  }
+  if (servicosInFlight) {
+    return servicosInFlight;
+  }
+
+  servicosInFlight = getDocs(collection(db, "servicosStatus"))
+    .then((snapshot) => {
+      const servicos: ServicoStatus[] = snapshot.docs
+        .map((docu) => ({
+          id: docu.id,
+          ...(docu.data() as Omit<ServicoStatus, "id">),
+        }))
+        .sort((a, b) =>
+          (a.tipo || "").toLowerCase().localeCompare((b.tipo || "").toLowerCase())
+        );
+
+      servicosCache = {
+        items: servicos,
+        expiresAt: Date.now() + CATALOG_CACHE_TTL_MS,
+      };
+      return servicos;
+    })
+    .finally(() => {
+      servicosInFlight = null;
+    });
+
+  return servicosInFlight;
+}
+
+export interface ResponsavelOption {
+  uid: string;
+  displayName: string;
+}
+
+let responsaveisCache: { items: ResponsavelOption[]; expiresAt: number } | null = null;
+let responsaveisInFlight: Promise<ResponsavelOption[]> | null = null;
+
+export async function fetchResponsaveisCached(): Promise<ResponsavelOption[]> {
+  if (responsaveisCache && Date.now() < responsaveisCache.expiresAt) {
+    return responsaveisCache.items;
+  }
+  if (responsaveisInFlight) {
+    return responsaveisInFlight;
+  }
+
+  responsaveisInFlight = getDocs(collection(db, "usuarios"))
+    .then((snapshot) => {
+      const list = snapshot.docs
+        .map((docu) => ({
+          uid: docu.id,
+          displayName: String(docu.data().displayName || ""),
+        }))
+        .filter((u) => u.displayName)
+        .sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+      responsaveisCache = {
+        items: list,
+        expiresAt: Date.now() + CATALOG_CACHE_TTL_MS,
+      };
+      return list;
+    })
+    .finally(() => {
+      responsaveisInFlight = null;
+    });
+
+  return responsaveisInFlight;
 }
 
 // ---------------------- Função de etapas ----------------------

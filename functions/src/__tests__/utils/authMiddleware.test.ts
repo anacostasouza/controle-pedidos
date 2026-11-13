@@ -1,5 +1,10 @@
 import type { Request, Response, NextFunction } from "express";
-import { authMiddleware } from "../../utils/authMiddleware";
+import {
+  authMiddleware,
+  createSetorMiddleware,
+  invalidateUserAuthCache,
+  normalizeSetor,
+} from "../../utils/authMiddleware";
 
 const mockVerifyIdToken = jest.fn();
 const mockDocGet = jest.fn();
@@ -35,8 +40,20 @@ function createMockResponse(): MockResponse {
 }
 
 describe("authMiddleware", () => {
+  const previousCacheTtl = process.env.USER_AUTH_CACHE_TTL_MS;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    invalidateUserAuthCache();
+    delete process.env.USER_AUTH_CACHE_TTL_MS;
+  });
+
+  afterAll(() => {
+    if (previousCacheTtl === undefined) {
+      delete process.env.USER_AUTH_CACHE_TTL_MS;
+    } else {
+      process.env.USER_AUTH_CACHE_TTL_MS = previousCacheTtl;
+    }
   });
 
   it("returns 401 when authorization header is missing", async () => {
@@ -109,5 +126,71 @@ describe("authMiddleware", () => {
     expect(res.status).not.toHaveBeenCalledWith(401);
     expect(res.status).not.toHaveBeenCalledWith(403);
     expect(res.status).not.toHaveBeenCalledWith(503);
+  });
+
+  it("reuses cached user profile within TTL and refreshes after invalidation", async () => {
+    process.env.USER_AUTH_CACHE_TTL_MS = "10000";
+
+    mockVerifyIdToken.mockResolvedValue({
+      uid: "user-cached",
+      email: "user@desenhardigital.com.br",
+      name: "Cached User",
+    });
+    mockDocGet.mockResolvedValue({
+      exists: true,
+      data: () => ({
+        statusConta: true,
+        setor: "FINANCEIRO",
+        setorNome: "Financeiro",
+        displayName: "Cached User",
+      }),
+    });
+
+    const req1 = { headers: { authorization: "Bearer token-1" } } as Request;
+    const req2 = { headers: { authorization: "Bearer token-2" } } as Request;
+    const next = jest.fn() as NextFunction;
+
+    await authMiddleware(req1, createMockResponse() as unknown as Response, next);
+    await authMiddleware(req2, createMockResponse() as unknown as Response, next);
+
+    expect(mockDocGet).toHaveBeenCalledTimes(1);
+    expect(next).toHaveBeenCalledTimes(2);
+
+    invalidateUserAuthCache("user-cached");
+    const req3 = { headers: { authorization: "Bearer token-3" } } as Request;
+    await authMiddleware(req3, createMockResponse() as unknown as Response, next);
+    expect(mockDocGet).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("createSetorMiddleware", () => {
+  it("normaliza acentos e permite setores autorizados", () => {
+    expect(normalizeSetor("Gestão")).toBe("GESTAO");
+
+    const middleware = createSetorMiddleware(["GESTAO", "SUPORTE"]);
+    const req = {
+      user: { uid: "u1", setorNome: "Gestão" },
+    } as unknown as Request;
+    const res = createMockResponse();
+    const next = jest.fn() as NextFunction;
+
+    middleware(req, res as unknown as Response, next);
+
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it("bloqueia setores não autorizados com 403", () => {
+    const middleware = createSetorMiddleware(["FINANCEIRO", "GESTAO"]);
+    const req = {
+      user: { uid: "u2", setor: "BALCAO", setorNome: "Balcão" },
+    } as unknown as Request;
+    const res = createMockResponse();
+    const next = jest.fn() as NextFunction;
+
+    middleware(req, res as unknown as Response, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(next).not.toHaveBeenCalled();
   });
 });

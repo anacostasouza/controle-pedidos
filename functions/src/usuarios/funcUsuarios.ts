@@ -1,15 +1,21 @@
 import { onRequest } from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import express from "express";
-import { authMiddleware } from "../utils/authMiddleware";
+import {
+  authMiddleware,
+  createSetorMiddleware,
+  invalidateUserAuthCache,
+} from "../utils/authMiddleware";
 import {
   applySecurityHeaders,
   applyStandardCors,
+  createAuthenticatedRateLimiter,
   createDefaultRateLimiter,
 } from "../utils/httpMiddleware";
 import { logDev, logError } from "../utils/logger";
 
 export const appUsuarios = express();
+appUsuarios.set("trust proxy", 1);
 const db = admin.firestore();
 const adminAuth = admin.auth();
 
@@ -26,52 +32,22 @@ const setorLabels: Record<string, string> = {
   CAIXA: "Caixa",
 };
 
-const normalizeSetor = (value: unknown): string => {
-  if (typeof value !== "string") return "";
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
-};
-
 applyStandardCors(appUsuarios, { preflightMode: "send" });
 applySecurityHeaders(appUsuarios);
 
-appUsuarios.use(createDefaultRateLimiter());
+appUsuarios.use(createDefaultRateLimiter({ max: 600 }));
 
 appUsuarios.use(express.json());
 
 const router = express.Router();
-
-// Middleware para verificar se é admin (Suporte ou Gestão)
-const isAdminMiddleware = async (
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction
-) => {
-  try {
-    const user = (req as any).user;
-    if (!user || !user.uid) {
-      return res.status(401).json({ message: "Usuário não autenticado." });
-    }
-
-    const userDoc = await db.collection("usuarios").doc(user.uid).get();
-    const userData = userDoc.data();
-
-    const setorNome = normalizeSetor(userData?.setorNome);
-    const setor = normalizeSetor(userData?.setor);
-    const isAdmin = setorNome === "SUPORTE" || setorNome === "GESTAO" || setor === "SUPORTE" || setor === "GESTAO";
-
-    if (!isAdmin) {
-      return res.status(403).json({ message: "Acesso negado. Apenas admins podem gerenciar usuários." });
-    }
-
-    next();
-  } catch (error) {
-    logError("Erro ao verificar permissão de admin:", error);
-    res.status(500).json({ message: "Erro ao verificar permissão." });
-  }
-};
+const authRateLimiter = createAuthenticatedRateLimiter({ max: 250 });
+const isAdminMiddleware = createSetorMiddleware(
+  ["SUPORTE", "GESTAO"],
+  "Acesso negado. Apenas admins podem gerenciar usuários."
+);
 
 // GET /usuarios/listar - Listar todos os usuários
-router.get("/listar", authMiddleware, isAdminMiddleware, async (req: express.Request, res: express.Response) => {
+router.get("/listar", authMiddleware, authRateLimiter, isAdminMiddleware, async (req: express.Request, res: express.Response) => {
   try {
     const usersSnapshots = await db.collection("usuarios").get();
     const users = usersSnapshots.docs.map((doc) => ({
@@ -87,7 +63,7 @@ router.get("/listar", authMiddleware, isAdminMiddleware, async (req: express.Req
 });
 
 // GET /usuarios/:uid - Obter dados de um usuário específico
-router.get("/:uid", authMiddleware, isAdminMiddleware, async (req: express.Request, res: express.Response) => {
+router.get("/:uid", authMiddleware, authRateLimiter, isAdminMiddleware, async (req: express.Request, res: express.Response) => {
   try {
     const { uid } = req.params;
     const userDoc = await db.collection("usuarios").doc(uid).get();
@@ -107,7 +83,7 @@ router.get("/:uid", authMiddleware, isAdminMiddleware, async (req: express.Reque
 });
 
 // POST /usuarios/criar - Criar novo usuário
-router.post("/criar", authMiddleware, isAdminMiddleware, async (req: express.Request, res: express.Response) => {
+router.post("/criar", authMiddleware, authRateLimiter, isAdminMiddleware, async (req: express.Request, res: express.Response) => {
   try {
     const { email, displayName, setor } = req.body;
 
@@ -191,7 +167,7 @@ router.post("/criar", authMiddleware, isAdminMiddleware, async (req: express.Req
 });
 
 // PATCH /usuarios/:uid - Atualizar usuário
-router.patch("/:uid", authMiddleware, isAdminMiddleware, async (req: express.Request, res: express.Response) => {
+router.patch("/:uid", authMiddleware, authRateLimiter, isAdminMiddleware, async (req: express.Request, res: express.Response) => {
   try {
     const { uid } = req.params;
     const { displayName, setor, statusConta } = req.body;
@@ -206,20 +182,30 @@ router.patch("/:uid", authMiddleware, isAdminMiddleware, async (req: express.Req
     };
 
     if (displayName !== undefined) {
-      updateData.displayName = displayName;
+      if (typeof displayName !== "string" || !displayName.trim() || displayName.trim().length > 120) {
+        return res.status(400).json({ message: "Nome inválido (máximo 120 caracteres)." });
+      }
+      updateData.displayName = displayName.trim();
       // Nota: Não atualizamos no Firebase Auth pois o sistema usa apenas Google Login
     }
 
     if (setor !== undefined) {
+      if (typeof setor !== "string" || !Object.prototype.hasOwnProperty.call(setorLabels, setor)) {
+        return res.status(400).json({ message: "Setor inválido." });
+      }
       updateData.setor = setor;
-      updateData.setorNome = setorLabels[setor] ?? setor;
+      updateData.setorNome = setorLabels[setor];
     }
 
     if (statusConta !== undefined) {
+      if (typeof statusConta !== "boolean") {
+        return res.status(400).json({ message: "statusConta deve ser booleano." });
+      }
       updateData.statusConta = statusConta;
     }
 
     await db.collection("usuarios").doc(uid).update(updateData);
+    invalidateUserAuthCache(uid);
 
     res.status(200).json({
       message: "Usuário atualizado com sucesso.",
@@ -233,7 +219,7 @@ router.patch("/:uid", authMiddleware, isAdminMiddleware, async (req: express.Req
 });
 
 // PATCH /usuarios/:uid/desativar - Desativar usuário (soft delete)
-router.patch("/:uid/desativar", authMiddleware, isAdminMiddleware, async (req: express.Request, res: express.Response) => {
+router.patch("/:uid/desativar", authMiddleware, authRateLimiter, isAdminMiddleware, async (req: express.Request, res: express.Response) => {
   try {
     const { uid } = req.params;
 
@@ -252,6 +238,7 @@ router.patch("/:uid/desativar", authMiddleware, isAdminMiddleware, async (req: e
       statusConta: false,
       updatedAt: Date.now(),
     });
+    invalidateUserAuthCache(uid);
 
     res.status(200).json({
       message: "Usuário desativado com sucesso.",
@@ -264,7 +251,7 @@ router.patch("/:uid/desativar", authMiddleware, isAdminMiddleware, async (req: e
 });
 
 // PATCH /usuarios/:uid/ativar - Ativar usuário (reverter soft delete)
-router.patch("/:uid/ativar", authMiddleware, isAdminMiddleware, async (req: express.Request, res: express.Response) => {
+router.patch("/:uid/ativar", authMiddleware, authRateLimiter, isAdminMiddleware, async (req: express.Request, res: express.Response) => {
   try {
     const { uid } = req.params;
 
@@ -282,6 +269,7 @@ router.patch("/:uid/ativar", authMiddleware, isAdminMiddleware, async (req: expr
       statusConta: true,
       updatedAt: Date.now(),
     });
+    invalidateUserAuthCache(uid);
 
     res.status(200).json({
       message: "Usuário ativado com sucesso.",
@@ -294,7 +282,7 @@ router.patch("/:uid/ativar", authMiddleware, isAdminMiddleware, async (req: expr
 });
 
 // DELETE /usuarios/:uid - Deletar usuário permanentemente
-router.delete("/:uid", authMiddleware, isAdminMiddleware, async (req: express.Request, res: express.Response) => {
+router.delete("/:uid", authMiddleware, authRateLimiter, isAdminMiddleware, async (req: express.Request, res: express.Response) => {
   try {
     const { uid } = req.params;
     const currentUid = (req as any).user?.uid;
@@ -310,6 +298,7 @@ router.delete("/:uid", authMiddleware, isAdminMiddleware, async (req: express.Re
 
     // Deletar do Firestore
     await db.collection("usuarios").doc(uid).delete();
+    invalidateUserAuthCache(uid);
 
     // Tentar deletar do Firebase Auth (se existir)
     // Nota: Depois que um usuário faz login com Google, seu email fica no Firebase Auth

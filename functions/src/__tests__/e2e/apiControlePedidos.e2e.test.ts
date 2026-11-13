@@ -67,6 +67,8 @@ describe("E2E - apiControlePedidos", () => {
           id: "pedido-1",
           data: () => ({
             nomeCliente: "CLIENTE TESTE",
+            servico: { tipo: "IMPRESSAO_DIGITAL", subTipo: null },
+            statusAtual: "Em Produção",
             prazos: { entrega: { _seconds: 1710000000 } },
           }),
         },
@@ -106,5 +108,20 @@ describe("E2E - apiControlePedidos", () => {
     expect(response.body.total).toBe(1);
     expect(Array.isArray(response.body.pedidos)).toBe(true);
     expect(response.body.pedidos[0].id).toBe("pedido-1");
+  });
+
+  it("valida autorização no endpoint leve /auth/verify sem consultar pedidos", async () => {
+    const response = await request(appControlePedidos)
+      .get("/auth/verify")
+      .set("Authorization", "Bearer token-valido")
+      .set("Origin", "http://localhost:5173");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      authorized: true,
+      uid: "user-123",
+      setor: "PRODUCAO",
+    });
+    expect(mockPedidosGet).not.toHaveBeenCalled();
   });
 });

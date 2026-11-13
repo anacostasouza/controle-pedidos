@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { all, api, displayDate, money } from "./services/crmApi";
-import type { Bootstrap, Client, Company, Page, Row } from "./services/crmApi";
+import type { Bootstrap, Client, Company, Row } from "./services/crmApi";
 import { AsyncForm, Empty, Field, Modal, str } from "./components";
 import { CompanySelect } from "./CompanySelect";
 
@@ -15,7 +15,6 @@ export function Catalogs({
 }) {
   const [rows, setRows] = useState<RecordRow[]>([]),
     [companies, setCompanies] = useState<Company[]>([]),
-    [clients, setClients] = useState<Client[]>([]),
     [query, setQuery] = useState(""),
     [editing, setEditing] = useState<RecordRow | null>(null),
     [error, setError] = useState(""),
@@ -27,14 +26,18 @@ export function Catalogs({
   );
   const isAdmin = boot.actor.role === "admin";
   async function load() {
-    const [records, companyRows, clientRows] = await Promise.all([
-      all<RecordRow>(`/${kind}`),
+    if (kind === "companies") {
+      const companyRows = await all<Company>("/companies");
+      setRows(companyRows);
+      setCompanies(companyRows);
+      return;
+    }
+    const [companyRows, clientRows] = await Promise.all([
       all<Company>("/companies"),
       all<Client>("/clients"),
     ]);
-    setRows(records);
+    setRows(clientRows);
     setCompanies(companyRows);
-    setClients(clientRows);
   }
   useEffect(() => {
     load().catch((e) => setError(e.message));
@@ -43,28 +46,13 @@ export function Catalogs({
     let current = true;
     setRelated([]);
     if (view) {
-      const ids =
+      const filterParam =
         kind === "clients"
-          ? [view.id]
-          : clients
-              .filter((client) => client.companyId === view.id)
-              .map((client) => client.id);
-      Promise.all(
-        ids.map(async (clientId) => {
-          const result: Row[] = [];
-          let offset: number | null = 0;
-          while (offset !== null) {
-            const response: Page<Row> = await api<Page<Row>>(
-              `/opportunities?clientId=${clientId}&limit=100&offset=${offset}`,
-            );
-            result.push(...response.items);
-            offset = response.nextOffset;
-          }
-          return result;
-        }),
-      )
+          ? `clientId=${encodeURIComponent(view.id)}`
+          : `companyId=${encodeURIComponent(view.id)}`;
+      all<Row>(`/opportunities?${filterParam}`)
         .then((result) => {
-          if (current) setRelated(result.flat());
+          if (current) setRelated(result);
         })
         .catch((e) => {
           if (current) setError(e.message);
@@ -73,7 +61,7 @@ export function Catalogs({
     return () => {
       current = false;
     };
-  }, [view, kind, clients]);
+  }, [view, kind]);
   const filtered = rows.filter((row) =>
     `${row.name} ${"email" in row ? row.email : ""} ${"phone" in row ? row.phone : ""} ${"cnpj" in row ? row.cnpj : ""} ${"companyId" in row ? companies.find((company) => company.id === row.companyId)?.name : ""}`
       .toLocaleLowerCase()

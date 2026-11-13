@@ -1,14 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import FinalizarOpcoes from "./FinalizarOpcoes";
-import {
-  deletarAtendimento,
-  logDeleteAtendimento,
-} from "../../../services/AtendimentoServices";
-import { getAuth } from "firebase/auth";
-import { getFirestore, doc, getDoc, Timestamp } from "firebase/firestore";
+import { deletarAtendimento } from "../../../services/AtendimentoServices";
 
-const auth = getAuth();
+function LiveElapsedTime({
+  item,
+  calcular,
+}: {
+  item: any;
+  calcular: (item: any) => string;
+}) {
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return <strong>{calcular(item)}</strong>;
+}
 
 export default function FilaAtendimentoItem({
   item,
@@ -25,35 +35,26 @@ export default function FilaAtendimentoItem({
 }: any) {
   const [showJustificativa, setShowJustificativa] = useState(false);
   const [justificativa, setJustificativa] = useState("");
+  const [erroAcao, setErroAcao] = useState("");
 
   const handleDelete = async () => {
-    if (!justificativa.trim()) {
-      alert("Por favor, informe a justificativa.");
+    const trimmedJustificativa = justificativa.trim();
+    if (!trimmedJustificativa) {
+      setErroAcao("Por favor, informe a justificativa.");
       return;
     }
 
-    await deletarAtendimento(item.id);
-    const user = auth.currentUser;
-    let responsavelNome = "";
-
-    if (user) {
-      const db = getFirestore();
-      const userDoc = await getDoc(doc(db, "usuarios", user.uid));
-      responsavelNome = userDoc.exists()
-        ? userDoc.data().displayName || ""
-        : "";
+    try {
+      setErroAcao("");
+      await deletarAtendimento(item.id, trimmedJustificativa);
+      setFila((prev: any[]) => prev.filter((i) => i.id !== item.id));
+      setShowJustificativa(false);
+      setJustificativa("");
+    } catch (error) {
+      setErroAcao(
+        error instanceof Error ? error.message : "Erro ao deletar atendimento."
+      );
     }
-
-    await logDeleteAtendimento({
-      atendimentoId: item.id,
-      nomeCliente: item.nomeCliente,
-      justificativa,
-      data: Timestamp.now(),
-      responsavelNome,
-    });
-    setFila((prev: any[]) => prev.filter((i) => i.id !== item.id));
-    setShowJustificativa(false);
-    setJustificativa("");
   };
 
   return (
@@ -88,12 +89,12 @@ export default function FilaAtendimentoItem({
         )}
         {item.status === "Aguardando" && (
           <span>
-            Esperando: <strong>{tempoAguardando(item)}</strong>
+            Esperando: <LiveElapsedTime item={item} calcular={tempoAguardando} />
           </span>
         )}
         {item.status === "Em Atendimento" && (
           <span>
-            Tempo de atendimento: <strong>{tempoAtendimento(item)}</strong>
+            Tempo de atendimento: <LiveElapsedTime item={item} calcular={tempoAtendimento} />
           </span>
         )}
         {item.tempoAtendimento && (
@@ -145,6 +146,11 @@ export default function FilaAtendimentoItem({
 
         {showJustificativa && (
           <div className="modal-justificativa">
+            {erroAcao && (
+              <p role="alert" style={{ color: "#b91c1c", marginBottom: "8px" }}>
+                {erroAcao}
+              </p>
+            )}
             <label>
               Justificativa para exclusão:
               <textarea
@@ -155,7 +161,7 @@ export default function FilaAtendimentoItem({
             </label>
             <div className="modal-buttons">
               <button onClick={handleDelete}>Confirmar exclusão</button>
-              <button onClick={() => setShowJustificativa(false)}>
+              <button onClick={() => { setErroAcao(""); setShowJustificativa(false); }}>
                 Cancelar
               </button>
             </div>

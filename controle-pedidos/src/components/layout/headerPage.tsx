@@ -6,7 +6,7 @@ import { signOut } from "firebase/auth";
 import "../../styles/HeaderPage.css";
 import type { Usuario } from "../../types/Usuario";
 import logo from "../../assets/LogoColorida.png";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, Trash2 } from "lucide-react";
 
 interface UserProfile {
   nome: Usuario["displayName"];
@@ -21,10 +21,12 @@ const HeaderPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const isRelatorios = location.pathname.includes("/relatorios");
+  const isPedidosExcluidos = location.pathname.includes("/pedidos-excluidos");
 
   const mostrarRelatorios = (usuario: UserProfile): boolean => {
     const setor = usuario.setorNome?.trim().toLowerCase();
-    return setor === "suporte" || setor === "gestão";
+    const setorCode = usuario.setor?.trim().toUpperCase();
+    return setor === "suporte" || setor === "gestão" || setor === "gestao" || setorCode === "SUPORTE" || setorCode === "GESTAO";
   };
 
   useEffect(() => {
@@ -90,10 +92,24 @@ const HeaderPage: React.FC = () => {
         </Link>
 
         <h2 className="app-title">
-          {isRelatorios ? "Relatórios" : "Controle de Pedidos"}
+          {isRelatorios
+            ? "Relatórios"
+            : isPedidosExcluidos
+            ? "Auditoria de Pedidos Excluídos"
+            : "Controle de Pedidos"}
         </h2>
 
         <div className="header-actions">
+          {userProfile && mostrarRelatorios(userProfile) && !isPedidosExcluidos && (
+            <button
+              className="header-icon-button"
+              title="Auditoria de Pedidos Excluídos (Suporte & Gestão)"
+              onClick={() => navigate("/pedidos-excluidos")}
+            >
+              <Trash2 size={22} />
+            </button>
+          )}
+
           {userProfile && mostrarRelatorios(userProfile) && !isRelatorios && (
             <button
               className="header-icon-button"

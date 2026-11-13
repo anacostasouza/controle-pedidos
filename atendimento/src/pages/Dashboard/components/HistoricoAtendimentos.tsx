@@ -1,10 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
-import { getDocs, collection } from "firebase/firestore";
-import { db } from "../../../services/firebase";
 import { formatarTempoHHMMSS } from "../../../utils/timeUtils";
 import { RelatorioAtendimentos } from "./RelatorioAtendimentos";
-import { buscarHistoricoComFiltros, buscarServicosAtendimento } from "../../../services/AtendimentoServices";
+import {
+  buscarAtendentes,
+  buscarHistoricoComFiltros,
+  buscarServicosAtendimento,
+} from "../../../services/AtendimentoServices";
 
 import "../../../styles/HistoricoAtendimentos.css";
 
@@ -42,6 +44,7 @@ export function HistoricoAtendimento() {
   const [itensPorPagina, setItensPorPagina] = useState<number>(50);
   const [temMais, setTemMais] = useState<boolean>(false);
   const [exportandoRelatorio, setExportandoRelatorio] = useState(false);
+  const [erroBusca, setErroBusca] = useState<string>("");
 
   const totalPaginas = Math.max(1, Math.ceil(totalResultados / itensPorPagina));
 
@@ -94,6 +97,7 @@ export function HistoricoAtendimento() {
     
     setCarregando(true);
     setCarregado(false);
+    setErroBusca("");
 
     try {
       const resultado = await buscarHistoricoComFiltros(dataInicio, dataFim, {
@@ -110,7 +114,7 @@ export function HistoricoAtendimento() {
       setCarregado(true);
     } catch (error) {
       console.error("Erro ao buscar histórico:", error);
-      alert("Erro ao buscar histórico. Tente novamente.");
+      setErroBusca("Erro ao buscar histórico. Tente novamente.");
     } finally {
       setCarregando(false);
     }
@@ -125,13 +129,12 @@ export function HistoricoAtendimento() {
 
   useEffect(() => {
     async function fetchAtendentes() {
-      const snap = await getDocs(collection(db, "usuarios"));
-      const map: Record<string, string> = {};
-      snap.forEach(doc => {
-        const d = doc.data();
-        map[doc.id] = d.displayName || d.nome || doc.id;
-      });
-      setAtendentesMap(map);
+      try {
+        const map = await buscarAtendentes();
+        setAtendentesMap(map);
+      } catch (error) {
+        console.error("Erro ao carregar atendentes:", error);
+      }
     }
     fetchAtendentes();
   }, []);
@@ -151,7 +154,12 @@ export function HistoricoAtendimento() {
   ];
   
   const atendentesUnicosUid = Array.from(
-    new Set(atendimentos.map((a) => a.atendenteUid).filter(Boolean))
+    new Set([
+      ...Object.keys(atendentesMap),
+      ...atendimentos.map((a) => a.atendenteUid).filter(Boolean),
+    ])
+  ).sort((a, b) =>
+    (atendentesMap[a] || a).localeCompare(atendentesMap[b] || b, "pt-BR")
   );
 
   const limparFiltros = () => {
@@ -195,6 +203,11 @@ export function HistoricoAtendimento() {
         </div>
       </div>
       
+      {erroBusca && (
+        <p style={{ textAlign: "center", marginTop: "12px", color: "#b91c1c" }} role="alert">
+          {erroBusca}
+        </p>
+      )}
       {!carregado && !carregando && (
         <p style={{ textAlign: "center", marginTop: "20px" }} className="aviso">
           Preencha as datas e clique em "Buscar" para carregar o histórico.

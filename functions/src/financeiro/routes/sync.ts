@@ -20,21 +20,6 @@ export function createSyncRouter(): express.Router {
       .json({ message: "Sincronização iniciada em background" });
   });
 
-  // GET /financeiro/sync/now — permite disparo direto de sync
-  router.get("/sync/now", (req, res) => {
-    const force = req.query.force === "true";
-    syncFinanceiro(force).catch((error: unknown) => {
-      logError(
-        "[financeiro] Erro no sync em background:",
-        error instanceof Error ? error.message : error
-      );
-    });
-
-    return res
-      .status(202)
-      .json({ message: "Sincronização disparada" });
-  });
-
   // GET /financeiro/sync/status — retorna getSyncMeta()
   router.get("/sync/status", async (req, res) => {
     try {

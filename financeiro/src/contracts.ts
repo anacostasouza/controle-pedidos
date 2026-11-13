@@ -92,3 +92,88 @@ export interface ResumoFinanceiro {
   syncedAt: string | null;
   syncStatus: 'ok' | 'error' | 'running';
 }
+
+export type StatusPedidoVenda = 'aberto' | 'confirmado' | 'cancelado';
+
+export interface ItemPedidoVenda {
+  id?: number | string;
+  descricao: string;
+  codigo?: string | null;
+  quantidade: number;
+  valor_unitario: number;
+  valor_desconto?: number;
+  valor_total: number;
+}
+
+export interface ParcelaVenda {
+  parcela: number;
+  total_parcelas: number;
+  documento?: string | null;
+  valor: number;
+  data_vencimento?: string | null;
+  confirmado?: boolean;
+}
+
+export interface PedidoVenda {
+  id: number;
+  numero: string | number;
+  codigo?: string | null;
+  data_emissao: string;
+  data_criacao?: string;
+  data_faturamento?: string | null;
+  status: StatusPedidoVenda;
+  confirmado: boolean;
+  valor_total: number;
+  valor_desconto?: number;
+  cliente_id?: number | null;
+  cliente_nome: string;
+  cliente_documento?: string | null;
+  cliente_telefone?: string | null;
+  cliente_email?: string | null;
+  cliente_endereco?: string | null;
+  vendedor_id?: number | null;
+  vendedor_nome?: string | null;
+  funcionario_nome?: string | null;
+  departamento_nome?: string | null;
+  conta_bancaria_nome?: string | null;
+  categoria_nome?: string | null;
+  numero_documento?: string | null;
+  modelo?: string | null;
+  parcelas?: ParcelaVenda[];
+  forma_pagamento_nome?: string | null;
+  observacoes?: string | null;
+  itens?: ItemPedidoVenda[];
+}
+
+export interface VendedorTagPlus {
+  id: number;
+  nome: string;
+  email?: string | null;
+  ativo?: boolean;
+}
+
+export interface FiltrosPedidosVenda {
+  status?: StatusPedidoVenda | 'todos';
+  data_inicio?: string;
+  data_fim?: string;
+  vendedor_id?: number;
+  q?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PagedPedidosVenda {
+  items: PedidoVenda[];
+  total: number;
+  page: number;
+  totalPages: number;
+  kpis: {
+    totalPedidos: number;
+    totalValor: number;
+    totalConfirmados: number;
+    totalValorConfirmados: number;
+    totalAbertos: number;
+    totalValorAbertos: number;
+    ticketMedio: number;
+  };
+}

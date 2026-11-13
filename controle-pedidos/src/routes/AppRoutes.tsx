@@ -24,6 +24,9 @@ const NovoPedido = lazy(() => import("../pages/NovoPedido"));
 const EditarPedido = lazy(() => import("../pages/EditarPedidos/EditarPedido"));
 const ProfileEdit = lazy(() => import("../pages/ProfileEdit/ProfileEdit"));
 const RelatoriosPage = lazy(() => import("../pages/Relatorios/Relatorios"));
+const PedidosExcluidosPage = lazy(
+  () => import("../pages/PedidosExcluidos/PedidosExcluidos")
+);
 
 import type { User } from "firebase/auth";
 import type { JSX } from "react/jsx-dev-runtime";
@@ -148,6 +151,10 @@ export default function AppRoutes(): JSX.Element {
           <Route
             path="/relatorios"
             element={<ProtectedRoute Component={RelatoriosPage} />}
+          />
+          <Route
+            path="/pedidos-excluidos"
+            element={<ProtectedRoute Component={PedidosExcluidosPage} />}
           />
         </Routes>
       </Suspense>
